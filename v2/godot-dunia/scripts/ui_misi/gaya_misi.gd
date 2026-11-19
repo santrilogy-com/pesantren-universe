@@ -32,11 +32,17 @@ const _FONT_TEBAL := "res://fonts/Baloo2-Bold.tres"
 
 ## ---------- GRADIEN v2 (Sinta, 19 Nov 2026 — Konsep UI v2 ACC Mas) ----------
 ## StyleBoxFlat tidak bisa gradien — gradien dibakar ke ImageTexture
-## (sekali per panel, 96x96 px, murah) lalu dipakai StyleBoxTexture
-## 9-slice (texture_margins = radius) atau TextureRect latar.
+## (sekali per panel) lalu dipakai StyleBoxTexture 9-slice
+## (texture_margins = radius) atau TextureRect latar.
 ## Tekstur membawa sudut membulat + rim + pita/strip sekaligus.
 ## GradientTexture2D sengaja tidak dipakai: ia tidak bisa membawa
 ## sudut membulat + rim dalam satu tekstur.
+## UKURAN BAKAR (pelajaran 19 Nov 2026): TextureRect latar direntang
+## penuh ke ukuran panel — panggang HARUS seukuran panel sebenarnya
+## (dialog 660x560, banner 560x88, pop-up 480x460). Panggang 96x96
+## direntang ~7x bikin sudut bergerigi/tangga saat di-zoom (foto
+## dialog v2 + "pita robek" pop-up). StyleBoxTexture 9-slice (tab,
+## tombol) aman di 96 px karena sudut TIDAK direntang.
 
 static func buat_tekstur_gradien(warna_atas: Color, warna_bawah: Color, radius: int, rim: Color, rim_lebar: int, pita: Color = Color(0, 0, 0, 0), pita_tinggi: int = 0, strip_bawah: Color = Color(0, 0, 0, 0), strip_tinggi: int = 0, ukuran := Vector2i(96, 96)) -> ImageTexture:
 	var img := Image.create(ukuran.x, ukuran.y, false, Image.FORMAT_RGBA8)
@@ -101,9 +107,11 @@ static func gaya_panel_gradien() -> StyleBoxFlat:
 ## TextureRect latar gradien vertikal — dipakai sebagai anak PERTAMA
 ## PanelContainer (PanelContainer menaruh semua anak di rect yang
 ## sama, jadi latar jatuh di belakang isi). Radius = radius panel - 3.
-static func buat_latar_gradien(warna_atas: Color, warna_bawah: Color, radius: int) -> TextureRect:
+## `ukuran` = ukuran panel sebenarnya (1:1, tanpa rentang) — WAJIB
+## diisi pemanggil; default 480x460 (pola pop-up) hanya jaga-jaga.
+static func buat_latar_gradien(warna_atas: Color, warna_bawah: Color, radius: int, ukuran := Vector2i(480, 460)) -> TextureRect:
 	var t := TextureRect.new()
-	t.texture = buat_tekstur_gradien(warna_atas, warna_bawah, radius, Color(0, 0, 0, 0), 0)
+	t.texture = buat_tekstur_gradien(warna_atas, warna_bawah, radius, Color(0, 0, 0, 0), 0, Color(0, 0, 0, 0), 0, Color(0, 0, 0, 0), 0, ukuran)
 	t.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	t.stretch_mode = TextureRect.STRETCH_SCALE
 	t.mouse_filter = Control.MOUSE_FILTER_IGNORE

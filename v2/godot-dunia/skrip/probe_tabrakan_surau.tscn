@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://probe-tabrakan-surau"]
+
+[ext_resource type="Script" path="res://skrip/probe_tabrakan_surau.gd" id="1"]
+
+[node name="ProbeTabrakanSurau" type="Node"]
+script = ExtResource("1")

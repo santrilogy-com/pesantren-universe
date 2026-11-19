@@ -823,6 +823,9 @@ func _spawn_npcs() -> void:
 	outfit_bilal["kulit"] = "#8a5a33"
 	outfit_bilal["kacamata"] = true
 	outfit_bilal["songkok"] = "#1a1a1a"
+	# KONSEP SONGKOK v1 (ACC Mas 14:07): model peci campur 50/50 acak
+	# tapi tetap per NPC — hash nama (SantriPlayer.peci_model_untuk).
+	outfit_bilal["peci_model"] = SantriPlayer.peci_model_untuk("Bilal")
 	var npc1 := SantriNPC.new()
 	# RONDE 20: Bilal PINDAH (4,4) -> (-4,4) sisi PUTRA — spawn lama
 	# jatuh di AREA PUTRI setelah pagar dibangun.
@@ -837,6 +840,9 @@ func _spawn_npcs() -> void:
 	outfit_faris["kulit"] = "#e8b98a"
 	outfit_faris["kacamata"] = false
 	outfit_faris["songkok"] = "#faf7f0"
+	# KONSEP SONGKOK v1 (ACC Mas 14:07): model peci campur 50/50 acak
+	# tapi tetap per NPC — hash nama (SantriPlayer.peci_model_untuk).
+	outfit_faris["peci_model"] = SantriPlayer.peci_model_untuk("Faris")
 	var npc2 := SantriNPC.new()
 	npc2.setup("Faris", Vector3(-5, 0, 8), wps, outfit_faris)
 	add_child(npc2)
@@ -852,8 +858,14 @@ func _spawn_npcs() -> void:
 	# khusyu'.. sesekali keliling pondok untuk ngontrol"): Kyai TIDAK
 	# LAGI diam di serambi — default DUDUK di dalam Surau membaca
 	# kitab (kursi (5.6,-305) lokal, hadap kiblat), sesekali PATROLI
-	# area putra/plaza: pintu Surau -> (-4,4) -> (-8,8) -> (-4,12) ->
-	# (0,20) kawasan bersama -> (-8,18) -> (-2,2) -> pintu Surau.
+	# area putra/plaza: pintu Surau -> (0,2) -> (-4,4) -> (-8,8) ->
+	# (-4,12) -> (0,20) kawasan bersama -> (-8,20) -> (0,2) ->
+	# pintu Surau.
+	# RONDE 25 (Raka): (-8,18) -> (-8,20) — titik lama TEPAT di
+	# batang pohon; (-2,2) -> (0,2) — segmen akhir lurus x=0 lewat
+	# celah tiang serambi; (0,2) disisipkan sebagai titik PERTAMA —
+	# kaki pintu->(-4,4) lama menyerempet tiang (-1,-1,1) (pusat
+	# jalur hanya 0,175 m dari tiang; tes: TABRAK @ (-0,8,-1,0)).
 	# Serambi TETAP jadi "rumah" luar-nya (tujuan pulang sholat +
 	# jangkar patroli) — lihat _mulai_sholat/_rute_pulang.
 	# REVISI (Mas 17 Nov 22:51 WIB: Surau lurus) — KOREKSI 23:15 WIB
@@ -871,8 +883,9 @@ func _spawn_npcs() -> void:
 		"spawn_dalam": _interior_spawn,
 		"pintu_luar": _outdoor_exit,
 		"rute_luar": [
-			Vector3(-4, 0, 4), Vector3(-8, 0, 8), Vector3(-4, 0, 12),
-			Vector3(0, 0, 20), Vector3(-8, 0, 18), Vector3(-2, 0, 2),
+			Vector3(0, 0, 2), Vector3(-4, 0, 4), Vector3(-8, 0, 8),
+			Vector3(-4, 0, 12), Vector3(0, 0, 20), Vector3(-8, 0, 20),
+			Vector3(0, 0, 2),
 		],
 	}
 	var npc3 := SantriNPC.new()
@@ -896,7 +909,19 @@ func _spawn_npcs() -> void:
 	# (134,-17); patroli di dalam kawasan putri, semua di timur
 	# tembok x=14: depan Musholla (134,-14) -> jalan internal x=142
 	# depan Cangkruk/Kelas Putri (142,-6) -> (142,6) -> dekat Kantor
-	# Ustadzah (148,-24) -> pintu musholla. Saat sesi sholat ia
+	# Ustadzah (148,-24) -> (142,-14) -> (134,-14) -> pintu musholla.
+	# RONDE 25 (Raka): (142,-14) disisipkan SETELAH (148,-24) —
+	# kaki (148,-24)->pintu (134,-17,5) lama memotong sudut
+	# timur-laut Musholla (masuk (140,1,-20,0), keluar (136,8,-19,1);
+	# tes: TABRAK + DI DALAM CANGKANG). Via (142,-14): kaki
+	# (148,-24)->(142,-14) di timur tapak (x>=142), lalu
+	# (142,-14)->(134,-14) di selatan pagar/serambi (z=-14).
+	# KOREKSI (19 Nov, dari hasil tes): kaki (142,-14)->pintu
+	# LANGSUNG menabrak PagarMusholla + SerambiMusholla (pagar di
+	# z~-17, serambi di (135,8,-16,6)) — pintu hanya bisa didekati
+	# dari selatan sepanjang x=134 (kaki pertama siklus, terbukti
+	# bersih). Jadi (134,-14) ditambahkan sebagai titik TERAKHIR
+	# sebelum pintu: (142,-14)->(134,-14)->pintu. Saat sesi sholat ia
 	# memimpin sisi putri sebagai IMAM di Musholla Ar-Raudhah
 	# (bukan ke Surau). "Rumah" luar-nya: dekat pintu musholla
 	# (tujuan pulang sholat).
@@ -909,6 +934,7 @@ func _spawn_npcs() -> void:
 		"rute_luar": [
 			Vector3(134, 0, -14), Vector3(142, 0, -6),
 			Vector3(142, 0, 6), Vector3(148, 0, -24),
+			Vector3(142, 0, -14), Vector3(134, 0, -14),
 		],
 	}
 	var npc4 := SantriNPC.new()
@@ -3930,6 +3956,10 @@ func _posisi_imam_musholla() -> Vector3:
 ## dari dict build — pintu + keluar x 1,5 m). Kalau dari utara
 ## musholla (z < -14, seharusnya tidak terjadi — patroli putri di
 ## selatan), keluar ke z=-14 dulu supaya tidak menembus musholla.
+## RONDE 25 (Raka): langkah "ke z=-14 dulu" BUTA tapak — dari
+## (148,-24) segmen (148,-24)->(148,-14) menembus sudut Madrasah
+## (tapak x 147..157). Bila x di dalam rentang itu, geser dulu ke
+## x=142 (jalan internal, titik patroli Mariyah) baru ke utara.
 ## Tidak ada koridor barat/timur: area putri terbuka, satu-satunya
 ## bangunan di jalur ini adalah musholla itu sendiri. Titik selatan
 ## lama (18,-14) ikut pindah ke (134,-14) mengikuti Musholla
@@ -3937,7 +3967,11 @@ func _posisi_imam_musholla() -> Vector3:
 func _rute_ke_pintu_musholla(dari: Vector3) -> Array[Vector3]:
 	var rute: Array[Vector3] = []
 	if dari.z < -14.0:
-		rute.append(Vector3(dari.x, 0, -14.0))
+		if dari.x >= 147.0 and dari.x <= 157.0:
+			rute.append(Vector3(142, 0, dari.z))
+			rute.append(Vector3(142, 0, -14.0))
+		else:
+			rute.append(Vector3(dari.x, 0, -14.0))
 	# RONDE 22 (Sinta): tembok keliling kampus putri (x=115,
 	# z -52..+22; gerbang barat (115,0)). Kalau Ustadzah kebetulan di
 	# barat tembok, garis lurus ke (134,-14) MEMOTONG tembok di
@@ -3963,31 +3997,59 @@ func _rute_ke_pintu_musholla(dari: Vector3) -> Array[Vector3]:
 ## baru x=-28: 1 m di barat dinding cangkruk, 2 m dari pohon (-26,-8)
 ## dan lampu (-30,-2); pohon (-20,-26) + lampu (-20,-28) kini di
 ## timur koridor (koridor lama x=-20 akan menabrak pohon itu kalau
-## diperpanjang ke utara). Titik plaza (-2,2) TETAP — 7,3 m di selatan
-## dinding selatan Surau, segmen (-2,2) -> depan pintu tidak menabrak
-## dinding (terverifikasi geometris: kedua ujung di sisi luar).
+## diperpanjang ke utara).
+## RONDE 25 (Raka — perbaikan tembusan): titik plaza (-2,2) -> (0,2).
+## Segmen lama (-2,2)->(0,-2.3) memotong tiang serambi (-1,-1.1) —
+## tiang 0,4 m di z=-1,1, x=-2,9/-1/+1/+2,9; segmen baru (0,2)->
+## (0,-2.3) lurus sepanjang x=0, lewat celah 2 m antar tiang -1/+1
+## (satu perubahan menutup SEMUA tembusan tiang: patroli Kyai,
+## ke-pintu 14/14, pulang). Titik (0,2) 6 m di selatan dinding
+## selatan Surau, segaris sumbu pintu.
+## RONDE 25: dari SELATAN (z >= -7) jangan garis lurus ke plaza —
+## dari (-20,18)/(-32,24) garis lurus memotong sudut tenggara Asrama
+## (tapak x -33.25..-14.75, z 4..16). Bila dari.x < -11, lewat
+## koridor timur Asrama dulu: (-11,18) -> (-11,2) -> (0,2).
+## RONDE 25: dari UTARA di selatan Cangkruk (x -27..-17, z > -22,
+## mis. waypoint (-24,-10)) — garis lurus ke utara (dari.x,-27)
+## menembus Cangkruk; keluar dulu ke koridor barat (x=-28) di garis
+## lintang yang sama.
 ## Urutan: (1) ke koridor utara z=-27 kalau masih di utara;
 ## (2) ke barat x=-28; (3) ke selatan sampai plaza (z=2);
-## (4) ke depan pintu (-2, 2); (5) depan pintu (pintu + 1,5 m ke
+## (4) ke depan pintu (0, 2); (5) depan pintu (pintu + 1,5 m ke
 ## arah luar/plaza — RONDE 21: (-4.01,-5.39), bukan (-2.75,-6.11) lagi).
 ## BATASAN (jujur): NPC yang PERSIS di dalam tapak bangunan saat sesi
 ## mulai (transien keliling bebas yang memang sudah menembus dinding
-## di segmen (8,-2)<->(0,-20)) tetap jalan lurus keluar — kasus langka,
-## sama seperti keliling bebas yang sudah ada.
+## sebelum D di npc.gd) tetap jalan lurus keluar — kasus langka yang
+## makin hilang setelah validasi segmen di _pick_target.
 func _rute_ke_pintu_surau(dari: Vector3) -> Array[Vector3]:
 	var rute: Array[Vector3] = []
 	if dari.z < -7.0:
-		if dari.z > -27.0:
+		if dari.x >= -27.0 and dari.x <= -17.0 and dari.z > -22.0:
+			# RONDE 25: di selatan Cangkruk — ke utara menembusnya.
+			rute.append(Vector3(-28, 0, dari.z))
+		elif dari.z > -27.0:
 			rute.append(Vector3(dari.x, 0, -27.0))
 		if dari.x > -28.0:
 			rute.append(Vector3(-28, 0, -27.0))
 		rute.append(Vector3(-28, 0, 2.0))
-	rute.append(Vector3(-2, 0, 2.0))
+		rute.append(Vector3(0, 0, 2.0))
+	elif dari.x < -10.0:
+		# RONDE 25: selatan-barat Asrama — ke koridor timur Asrama.
+		# KOREKSI (19 Nov, dari hasil tes): koridor x=-11 MENABRAK
+		# AnnexTangga — annex menjorok sampai x=-11,5 (jendela di
+		# -11,44) jadi koridor lama hanya 0,5 m dari muka annex.
+		# Koridor baru x=-10: 1,5 m timur annex + 2 m barat dinding
+		# barat Surau (x=-8) — kedua sisinya lega.
+		rute.append(Vector3(-10, 0, 18.0))
+		rute.append(Vector3(-10, 0, 2.0))
+		rute.append(Vector3(0, 0, 2.0))
+	else:
+		rute.append(Vector3(0, 0, 2.0))
 	# REVISI (Mas 17 Nov 22:51 WIB: Surau lurus) — KOREKSI 23:15 WIB
 	# (lurus = -90°): titik akhir rute = depan pintu (0,-3.8) +
 	# 1,5 m ke selatan = (0,-2.3) (di atas lantai serambi).
-	# Segmen (-2,2) -> (0,-2.3) tidak menabrak dinding depan
-	# (z=-4) — segmen berakhir 1,5 m di selatannya.
+	# RONDE 25: segmen (0,2) -> (0,-2.3) lurus sepanjang x=0 —
+	# lewat celah tiang, tidak menabrak dinding depan (z=-4).
 	rute.append(_outdoor_door + _surau_keluar * 1.5)
 	return rute
 
@@ -3997,7 +4059,8 @@ func _rute_ke_pintu_surau(dari: Vector3) -> Array[Vector3]:
 ## diagonal menembus Surau dari plaza.
 ## RONDE 21: koridor barat putra -20 -> -28 (cangkruk pindah ke
 ## (-22,-18); koridor utara -22 -> -27 (Surau geser ke (0,-14)));
-## plaza (-2,2) tetap (di barat tembok). Ustadzah
+## plaza (0,2) (RONDE 25: (-2,2) -> (0,2), lurus x=0 lewat celah
+## tiang serambi). Ustadzah
 ## Mariyah pulang ke area PUTRI BARU dengan rute SENDIRI: dari pintu
 ## musholla baru (_musholla_exit, dari dict build) keluar ke selatan
 ## dulu (134,-14) lalu langsung ke rumah — tanpa koridor barat/plaza
@@ -4031,7 +4094,10 @@ func _rute_pulang(npc: SantriNPC) -> Array[Vector3]:
 	if dari.z < -7.0:
 		# Masih di utara (tidak seharusnya dari pintu keluar, tapi
 		# aman): keluar ke koridor utara dulu.
-		if dari.z > -27.0:
+		if dari.x >= -27.0 and dari.x <= -17.0 and dari.z > -22.0:
+			# RONDE 25: di selatan Cangkruk — ke utara menembusnya.
+			rute.append(Vector3(-28, 0, dari.z))
+		elif dari.z > -27.0:
 			rute.append(Vector3(dari.x, 0, -27.0))
 		if dari.x > -28.0:
 			rute.append(Vector3(-28, 0, -27.0))
@@ -4040,12 +4106,37 @@ func _rute_pulang(npc: SantriNPC) -> Array[Vector3]:
 		# Rumah di utara: lewat koridor barat + utara.
 		rute.append(Vector3(-28, 0, 2.0))
 		rute.append(Vector3(-28, 0, -27.0))
-		if rumah.x > -28.0:
+		if rumah.x >= -27.0 and rumah.x <= -17.0:
+			# RONDE 25: rumah di selatan Cangkruk (mis. (-24,-10)) —
+			# garis lurus (rumah.x,-27)->rumah menembus Cangkruk.
+			# Turun koridor barat sampai garis lintang rumah, baru timur.
+			rute.append(Vector3(-28, 0, rumah.z))
+		elif rumah.x > -28.0:
 			rute.append(Vector3(rumah.x, 0, -27.0))
 		rute.append(rumah)
 		return rute
-	if rumah.distance_to(Vector3(-2, 0, 2.0)) > 0.5:
-		rute.append(Vector3(-2, 0, 2.0))
+	# RONDE 25 (Raka — perbaikan tembusan): plaza (-2,2) -> (0,2),
+	# segmen akhir lurus sepanjang x=0 lewat celah tiang serambi.
+	# (a) Rumah + posisi saat ini sama-sama di jalur serambi
+	# (z di (-4,-1.1) — selatan dinding Surau, utara tiang):
+	# langsung saja; mampir plaza justru memotong tiang saat kembali
+	# (repro: Kyai (0,2)->(-3.5,-2) menyerempet tiang (-2.9,-1.1)).
+	if dari.z > -4.0 and dari.z < -1.1 and rumah.z > -4.0 and rumah.z < -1.1:
+		rute.append(rumah)
+		return rute
+	# (b) Rumah di barat Asrama (x < -10) dan selatan plaza (z > 2):
+	# dari plaza lewat koridor timur Asrama (-10,2) -> (-10,18).
+	# KOREKSI (19 Nov): x=-11 menabrak AnnexTangga (annex sampai
+	# x=-11,5) — koridor baru x=-10 (lihat _rute_ke_pintu_surau).
+	if rumah.x < -10.0 and rumah.z > 2.0:
+		if rumah.distance_to(Vector3(0, 0, 2.0)) > 0.5:
+			rute.append(Vector3(0, 0, 2.0))
+		rute.append(Vector3(-10, 0, 2.0))
+		rute.append(Vector3(-10, 0, 18.0))
+		rute.append(rumah)
+		return rute
+	if rumah.distance_to(Vector3(0, 0, 2.0)) > 0.5:
+		rute.append(Vector3(0, 0, 2.0))
 	rute.append(rumah)
 	return rute
 

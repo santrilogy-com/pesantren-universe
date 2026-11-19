@@ -42,7 +42,11 @@ func _ready() -> void:
 	# (gaya_panel_gradien, transparan — gradien dari TextureRect latar
 	# di bawah, anak pertama panel).
 	add_theme_stylebox_override("panel", GayaMisi.gaya_panel_gradien())
-	add_child(GayaMisi.buat_latar_gradien(GayaMisi.ZAMRUD, GayaMisi.ZAMRUD_GELAP, 23))
+	# v2-perbaikan sudut (Sinta, 19 Nov 2026): latar dibakar 660x560
+	# (ukuran panel sebenarnya, LEBAR_PANEL x TINGGI_DIALOG) — 1:1,
+	# tanpa rentang. Panggang 96x96 lama direntang ~7x bikin sudut
+	# bergerigi/tangga saat di-zoom (foto dialog v2).
+	add_child(GayaMisi.buat_latar_gradien(GayaMisi.ZAMRUD, GayaMisi.ZAMRUD_GELAP, 23, Vector2i(660, 560)))
 	# Animasi masuk memakai pivot tengah — jaga tetap di tengah.
 	resized.connect(func() -> void: pivot_offset = size * 0.5)
 

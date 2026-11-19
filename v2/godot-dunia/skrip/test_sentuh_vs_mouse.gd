@@ -148,12 +148,16 @@ func _varian(nama: String, b: Button, pos: Vector2) -> int:
 			await _tunggu(6)
 			_sentuh_lepas(pos)
 		"T5":
+			# Double-fire browser: event mouse kompatibilitas datang
+			# SEGERA setelah touchend — frame yang SAMA (atau
+			# sebelahnya), bukan 3 frame kemudian. Dorong ke-4 event
+			# tanpa jeda frame: jeda frame di harness VM (frame
+			# ~100-300 ms, render software) menggelembungkan jarak
+			# wall-clock kedua `pressed` melewati jendela debounce
+			# 200 ms — padahal di HP 60 fps jaraknya ~16-50 ms.
 			_sentuh_tekan(pos)
-			await _tunggu(1)
 			_sentuh_lepas(pos)
-			await _tunggu(2)
 			_mouse_tekan(pos)
-			await _tunggu(1)
 			_mouse_lepas(pos)
 		"T6":
 			_sentuh_tekan(pos)
@@ -261,8 +265,8 @@ func _run() -> void:
 	ui.close_aksi()
 	_cek("A1: T1 sentuh murni △ pressed=1", aksi_t1_pressed == 1)
 	_cek("A2: T1 sentuh murni △ panel TERBUKA", aksi_t1_buka)
-	_cek("A3: T5 sentuh+mouse △ pressed=1 (debounce menelan event ke-2)", aksi_t5_pressed == 1)
-	_cek("A4: T5 sentuh+mouse △ panel TETAP TERBUKA (debounce)", aksi_t5_buka)
+	_cek("A3: T5 sentuh+mouse △ pressed TETAP 2 (emisi ganda di level sinyal — debounce bekerja di handler)", aksi_t5_pressed == 2)
+	_cek("A4: T5 sentuh+mouse △ panel TETAP TERBUKA (debounce menelan aksi ke-2)", aksi_t5_buka)
 
 	# ===== B. TOMBOL TOGGLE □ CHAT — pressed + keadaan akhir panel =====
 	var chat_t1_pressed := -1
@@ -283,8 +287,8 @@ func _run() -> void:
 	ui.close_chat()
 	_cek("B1: T1 sentuh murni □ pressed=1", chat_t1_pressed == 1)
 	_cek("B2: T1 sentuh murni □ panel TERBUKA", chat_t1_buka)
-	_cek("B3: T5 sentuh+mouse □ pressed=1 (debounce menelan event ke-2)", chat_t5_pressed == 1)
-	_cek("B4: T5 sentuh+mouse □ panel TETAP TERBUKA (debounce)", chat_t5_buka)
+	_cek("B3: T5 sentuh+mouse □ pressed TETAP 2 (emisi ganda di level sinyal — debounce bekerja di handler)", chat_t5_pressed == 2)
+	_cek("B4: T5 sentuh+mouse □ panel TETAP TERBUKA (debounce menelan aksi ke-2)", chat_t5_buka)
 
 	# ===== C. TOGGLE peta / kartu / kualitas — pressed + keadaan akhir =====
 	for v in ["T1", "T2", "T5"]:

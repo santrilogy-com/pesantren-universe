@@ -442,7 +442,11 @@ static func misi_aktif(save: Dictionary, jenis_kelamin: String = "putra") -> Dic
 ## JANGAN panggil buat_sanusi() dua kali (satu Sanusi saja).
 static func buat_sanusi(parent: Node) -> SantriNPC:
 	var npc := SantriNPC.new()
-	npc.setup("Ust. Sanusi", Vector3(0, 0, -14), [Vector3(0, 0, -14)], OUTFIT_SANUSI, true)
+	# KONSEP SONGKOK v1 (ACC Mas 14:07): model peci campur 50/50 acak
+	# tapi tetap per NPC — hash nama (SantriPlayer.peci_model_untuk).
+	var outfit_sanusi := OUTFIT_SANUSI.duplicate()
+	outfit_sanusi["peci_model"] = SantriPlayer.peci_model_untuk("Ust. Sanusi")
+	npc.setup("Ust. Sanusi", Vector3(0, 0, -14), [Vector3(0, 0, -14)], outfit_sanusi, true)
 	parent.add_child(npc)
 	return npc
 

@@ -763,6 +763,17 @@ static func _kitab() -> Node3D:
 	return k
 
 
+## KONSEP SONGKOK v1 (Kirana, 19 Nov 2026 — ACC Mas 14:07): model peci
+## santri putra: "bulat" (songkok bulat putih, posisi baru — mata
+## terlihat penuh) atau "nasional" (peci hitam nasional, atas rata).
+## Campur 50/50 acak tapi TETAP per NPC — hash nama, supaya model
+## peci seseorang tidak ganti-ganti tiap masuk. Dipakai main.gd
+## (Bilal/Faris), onboarding.gd (Sanusi), dan Raka untuk 20 NPC baru
+## (DESAIN-SISTEM-NPC-v1). JANGAN ubah nama/aturan hash ini.
+static func peci_model_untuk(nama: String) -> String:
+	return "nasional" if abs(nama.hash()) % 2 == 0 else "bulat"
+
+
 static func build_visual(nama: String, outfit: Dictionary) -> Dictionary:
 	var koko: Color = Color(String(outfit.get("koko", "#faf7f0")))
 	var songkok: Color = Color(String(outfit.get("songkok", "#faf7f0")))
@@ -1236,22 +1247,36 @@ static func build_visual(nama: String, outfit: Dictionary) -> Dictionary:
 		root.add_child(rambut)
 		# Songkok (RONDE 10): kubah LEBIH BESAR dari kepala (r=0.265 >
 		# kepala 0.24) supaya menutupi ubun-ubun 360° — dari depan,
-		# samping, DAN belakang, atas kepala PUTIH. Duduk rendah
-		# (pusat y=1.77, tepi bawah ~1.70 di atas mata 1.69), puncak
-		# 1.934 (0.034 di atas puncak kepala 1.90). Lis lama diganti
-		# PeciBand yang mengikuti radius kubah baru (0.26/0.27 di y=1.75).
-		# KARAKTER PRIMITIF (Kirana, 17 Nov 2026): peci BERKUBAH — skala y
-		# 0.62 -> 0.70 (puncak 1.934 -> 1.956, total tetap < 2.10 audit):
-		# kubah lebih bulat, tidak lagi datar seperti helm; band tetap
-		# mengikuti radius kubah di y=1.75 (0.26/0.27 vs kubah 0.265).
-		peci = Palette.sphere(0.265, Vector3(0, 1.77, 0), songkok)
-		peci.scale = Vector3(1.0, 0.70, 1.0)
-		peci.name = "Peci"
-		root.add_child(peci)
-		# Lis songkok: pita tipis di tepi bawah kubah (sedikit lebih gelap).
-		peci_band = Palette.cylinder(0.26, 0.27, 0.04, Vector3(0, 1.75, 0), songkok.darkened(0.12))
-		peci_band.name = "PeciBand"
-		root.add_child(peci_band)
+		# samping, DAN belakang, atas kepala PUTIH.
+		# KONSEP SONGKOK v1 (Kirana, 19 Nov 2026 — ACC Mas 14:07):
+		# songkok lama menutupi SETENGAH ATAS mata (tepi bawah y=1.688
+		# di posisi mata). Perbaikan: pusat naik (0,1.77,0) -> (0,1.82,0),
+		# skala y 0.70 -> 0.68, band (0.26/0.27 @ y=1.75) ->
+		# (0.255/0.265 @ y=1.80) — tepi bawah di mata jadi y=1.740
+		# (1,9 cm di atas puncak mata 1.721); puncak kubah 2.00
+		# (tetap < 2.10 audit).
+		# Kunci outfit "peci_model": "bulat" (default, songkok bulat)
+		# atau "nasional" (peci hitam nasional, atas RATA — kerucut
+		# terpancung, selalu hitam #151515 apa pun warna "songkok").
+		# Node varian nasional tetap bernama "Peci" supaya audit +
+		# terapkan_outfit tidak perlu diubah.
+		var peci_model: String = String(outfit.get("peci_model", "bulat"))
+		if peci_model == "nasional":
+			peci = Palette.cylinder(0.205, 0.235, 0.18, Vector3(0, 1.825, 0), Color("#151515"))
+			peci.name = "Peci"
+			root.add_child(peci)
+			peci_band = Palette.cylinder(0.235, 0.24, 0.03, Vector3(0, 1.75, 0), Color("#0d0d0d"))
+			peci_band.name = "PeciBand"
+			root.add_child(peci_band)
+		else:
+			peci = Palette.sphere(0.265, Vector3(0, 1.82, 0), songkok)
+			peci.scale = Vector3(1.0, 0.68, 1.0)
+			peci.name = "Peci"
+			root.add_child(peci)
+			# Lis songkok: pita tipis di tepi bawah kubah (sedikit lebih gelap).
+			peci_band = Palette.cylinder(0.255, 0.265, 0.04, Vector3(0, 1.80, 0), songkok.darkened(0.12))
+			peci_band.name = "PeciBand"
+			root.add_child(peci_band)
 	# Kacamata (RONDE 11, Mas: karakter harus beda-beda): bingkai
 	# hitam + lensa, opsional (outfit "kacamata"). Dua lensa kotak di
 	# depan mata (±0.085, 1.69) + jembatan hidung + gagang ke telinga.
@@ -1517,13 +1542,19 @@ func terapkan_outfit(outfit: Dictionary) -> void:
 			# KARAKTER PRIMITIF: bagian kain tetap kain jersey saat
 			# ganti baju (bukan kembali ke Palette.mat polos).
 			(n as MeshInstance3D).material_override = _bahan_kain(warna_baju)
+	# KONSEP SONGKOK v1 (Kirana, 19 Nov 2026 — ACC Mas 14:07): peci
+	# nasional SELALU hitam (#151515, lis #0d0d0d) apa pun warna
+	# "songkok" outfit — jangan diwarnai ulang jadi putih.
+	var model_peci: String = String(outfit.get("peci_model", "bulat"))
 	var peci := _visual.find_child("Peci", true, false)
 	if peci is MeshInstance3D:
-		(peci as MeshInstance3D).material_override = Palette.mat(songkok, 0.0, 0.45)
+		var warna_peci: Color = Color("#151515") if model_peci == "nasional" else songkok
+		(peci as MeshInstance3D).material_override = Palette.mat(warna_peci, 0.0, 0.45)
 	# RONDE 9: lis songkok ikut warna songkok (sedikit lebih gelap).
 	var peci_band := _visual.find_child("PeciBand", true, false)
 	if peci_band is MeshInstance3D:
-		(peci_band as MeshInstance3D).material_override = Palette.mat(songkok.darkened(0.12), 0.0, 0.45)
+		var warna_lis: Color = Color("#0d0d0d") if model_peci == "nasional" else songkok.darkened(0.12)
+		(peci_band as MeshInstance3D).material_override = Palette.mat(warna_lis, 0.0, 0.45)
 	var sarung := _visual.find_child("Sarung", true, false)
 	if sarung is MeshInstance3D:
 		(sarung as MeshInstance3D).material_override = _motif_sarung(sarung_color)

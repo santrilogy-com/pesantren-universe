@@ -11,6 +11,18 @@ class_name SantriNPC
 
 const SPEED := 1.6
 
+## RONDE 25 (Raka — perbaikan tembusan, D): tapak cangkang besar.
+## NPC luar TIDAK PERNAH boleh berada di dalam tapak (masuk ruangan
+## hanya via teleport GTA). Disalin dari skrip/test_npc_tembus.gd —
+## bila tapak berubah, ubah di kedua tempat.
+const TAPAK := {
+	"Surau": [Vector2(-8, -24), Vector2(8, -4)],
+	"Cangkruk": [Vector2(-27, -22), Vector2(-17, -14)],
+	"AsramaPutra": [Vector2(-33.25, 4), Vector2(-14.75, 16)],
+	"Musholla": [Vector2(128, -29), Vector2(140, -19)],
+	"AsramaPutri": [Vector2(146, 3), Vector2(164, 15)],
+}
+
 ## RONDE 13 — sholat berjamaah: NPC selesai menempuh satu rute
 ## (ke pintu / ke sajadah / pulang) — main.gd memutuskan langkah
 ## berikutnya (teleport masuk/keluar interior, mulai pose sholat).
@@ -216,10 +228,84 @@ func say(teks: String, durasi: float = 5.0) -> void:
 	pesan.emit(_nama, Palette.rapikan_bubble(teks, 100))
 
 
+## RONDE 25 (Raka — perbaikan tembusan, D): apakah segmen lurus
+## dari->ke bersih dari tabrakan? Jaring pengaman jalan bebas —
+## NPC jalan lurus tanpa fisika, jadi satu-satunya pertahanan adalah
+## tidak memilih target yang jalurnya tertutup. Ceknya sama seperti
+## skrip/test_npc_tembus.gd: 3 raycast paralel (±0,3 m, y=0,9) +
+## sampel tapak tiap 1 m. Hanya StaticBody3D yang dihitung.
+func _segmen_bersih(dari: Vector3, ke: Vector3) -> bool:
+	var d := Vector2(ke.x - dari.x, ke.z - dari.z)
+	var panjang := d.length()
+	if panjang < 0.05:
+		return true
+	var ruang := get_viewport().get_world_3d().direct_space_state
+	var arah := d / panjang
+	var tegak := Vector2(-arah.y, arah.x)
+	for jalur: float in [-0.3, 0.0, 0.3]:
+		var off := tegak * jalur
+		var q := PhysicsRayQueryParameters3D.create(
+			Vector3(dari.x + off.x, 0.9, dari.z + off.y),
+			Vector3(ke.x + off.x, 0.9, ke.z + off.y))
+		q.collision_mask = 0xFFFFFFFF
+		q.collide_with_areas = false
+		q.collide_with_bodies = true
+		var hit := ruang.intersect_ray(q)
+		if not hit.is_empty():
+			var c := hit.get("collider") as Node
+			if c != null and (c is StaticBody3D):
+				return false
+	var n := int(panjang / 1.0) + 1
+	for i in range(n + 1):
+		var t := float(i) / float(n)
+		var p := Vector2(dari.x, dari.z) + d * t
+		for nama in TAPAK:
+			var r: Array = TAPAK[nama]
+			var mn: Vector2 = r[0]
+			var mx: Vector2 = r[1]
+			if p.x >= mn.x and p.x <= mx.x and p.y >= mn.y and p.y <= mx.y:
+				return false
+	return true
+
+
 func _pick_target() -> void:
 	if _waypoints.is_empty():
 		return
-	_target = _waypoints[_rng.randi_range(0, _waypoints.size() - 1)]
+	# RONDE 25 (Raka — perbaikan tembusan, D): tolak target yang
+	# segmennya menabrak (raycast + tapak, lihat _segmen_bersih).
+	# Belum masuk tree (setup() sebelum add_child): belum bisa
+	# raycast — ambil waypoint TERDEKAT saja (segmen pendek di
+	# plaza terbuka, aman); pilihan acak berikutnya (sudah di
+	# dalam tree) divalidasi penuh.
+	if not is_inside_tree():
+		_target = _waypoint_terdekat()
+		return
+	var urutan: Array[Vector3] = _waypoints.duplicate()
+	# Acak urutan coba dengan _rng (bukan shuffle global).
+	for i in range(urutan.size() - 1, 0, -1):
+		var j := _rng.randi_range(0, i)
+		var tmp := urutan[i]
+		urutan[i] = urutan[j]
+		urutan[j] = tmp
+	for w in urutan:
+		if _segmen_bersih(position, w):
+			_target = w
+			return
+	# Fallback (jujur): tidak ada target bersih — mis. NPC sedang
+	# di dalam tapak (transien sebelum D). Ambil yang terdekat
+	# (berusaha keluar); pilihan berikutnya divalidasi lagi.
+	_target = _waypoint_terdekat()
+
+
+func _waypoint_terdekat() -> Vector3:
+	var terdekat := _waypoints[0]
+	var jarak_min := position.distance_squared_to(terdekat)
+	for w in _waypoints:
+		var j := position.distance_squared_to(w)
+		if j < jarak_min:
+			jarak_min = j
+			terdekat = w
+	return terdekat
 
 
 func _process(delta: float) -> void:

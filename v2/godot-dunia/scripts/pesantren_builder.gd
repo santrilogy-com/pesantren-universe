@@ -202,31 +202,38 @@ const NPC_WAYPOINTS: Array[Vector3] = [
 	Vector3(4, 0, 4),
 	Vector3(-4, 0, 6),
 	Vector3(8, 0, -2),
-	Vector3(-6, 0, -4),
+	# RONDE 25 (Raka — perbaikan tembusan): (-6,-4) PERSIS di garis
+	# dinding selatan Surau (z=-4) — pindah 2 m ke selatan.
+	# KOREKSI TANDA (19 Nov, dari hasil tes): -z = utara, jadi
+	# (-6,-6) yang pertama kali ditulis justru 2 m ke UTARA (di
+	# DALAM tapak Surau z -24..-4); yang benar 2 m ke SELATAN
+	# dinding (z=-4) adalah z=-2. Tes membuktikan (-6,-6) di dalam
+	# cangkang + rute darinya menabrak dinding + tiang.
+	Vector3(-6, 0, -2),
 	Vector3(2, 0, 12),
 	Vector3(-8, 0, 8),
 	Vector3(10, 0, 8),
 	# RONDE 4: peta membesar — NPC ikut menjelajah lebih jauh.
-	Vector3(20, 0, 20),
+	# RONDE 25: waypoint TIMUR (20,20)/(32,28)/(60,30)/(100,60) +
+	# (24,-10)/(40,-100) dan UTARA (-40,120)/(-100,80) DIHAPUS
+	# (keputusan Mas 14:15 WIB) — satu-satunya jalan ke sana adalah
+	# gerbang (14,0) yang TERTUTUP / PagarBata tanpa gerbang; NPC
+	# hanya bisa ke sana dengan menembus tembok/pagar.
 	Vector3(-20, 0, 18),
-	Vector3(24, 0, -10),
 	# SUSULAN Ronde 21: (-24,-12) -> (-24,-10) — Cangkruk pindah ke
 	# (-22,-18); segmen (0,-20)->(-24,-12) menyerempet sudut
 	# tenggara Cangkruk baru ~0,3 m (NPC menembus sudut). Titik
 	# baru 4 m dari dinding selatan Cangkruk, segmen bersih ~1 m.
 	Vector3(-24, 0, -10),
-	Vector3(0, 0, 30),
-	Vector3(0, 0, -20),
+	# RONDE 25: (0,30) DIHAPUS — di dalam taman berpagar (pintu
+	# hanya di (0,25.5)); (0,-20) DIHAPUS — di dalam tapak Surau
+	# (x -8..8, z -24..-4), NPC tak pernah boleh di dalam bangunan.
 	Vector3(-32, 0, 24),
-	Vector3(32, 0, 28),
 	# RONDE 5: peta membesar (800 m) — NPC ikut menjelajah lebih jauh,
 	# sampai sawah + kaki gunung.
-	Vector3(60, 0, 30),
-	Vector3(-60, 0, -40),
-	Vector3(100, 0, 60),
-	Vector3(-100, 0, 80),
-	Vector3(40, 0, -100),
-	Vector3(-40, 0, 120),
+	# RONDE 25: (-60,-40) TEPAT di batang pohon — geser ke (-58,-38)
+	# (pohonnya BENAR di tempatnya, waypoint-nya yang geser).
+	Vector3(-58, 0, -38),
 ]
 
 

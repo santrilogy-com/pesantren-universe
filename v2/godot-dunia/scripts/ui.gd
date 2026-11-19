@@ -4584,7 +4584,11 @@ func _build_petunjuk_misi_banner() -> void:
 	_petunjuk_misi_banner.visible = false
 	add_child(_petunjuk_misi_banner)
 	_layout_petunjuk_misi_banner()
-	var latar := GayaMisi.buat_latar_gradien(GayaMisi.ZAMRUD, GayaMisi.ZAMRUD_GELAP, 14)
+	# v2-perbaikan sudut (Sinta, 19 Nov 2026): latar dibakar 560x88
+	# (ukuran banner sebenarnya, _layout_petunjuk_misi_banner) — 1:1.
+	# Panggang 96x96 lama direntang ~6x bikin sudut bergerigi, sama
+	# seperti dialog.
+	var latar := GayaMisi.buat_latar_gradien(GayaMisi.ZAMRUD, GayaMisi.ZAMRUD_GELAP, 14, Vector2i(560, 88))
 	_petunjuk_misi_banner.add_child(latar)
 	var margin := MarginContainer.new()
 	margin.add_theme_constant_override("margin_left", 14)

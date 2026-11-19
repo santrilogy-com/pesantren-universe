@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://skrip/foto_dialog_sudut_halus.gd" id="1_foto_dlg_sudut"]
+
+[node name="FotoDialogSudutHalus" type="Node"]
+script = ExtResource("1_foto_dlg_sudut")

@@ -203,7 +203,7 @@ const OUTFIT_USTADZAH := {"koko": "#065f46", "songkok": "#faf7f0", "sarung": "#0
 ## terbaca sebagai petugas, bukan santri. NPC diam di pos (3,3).
 ## KARAKTER PRIMITIF (Kirana, 17 Nov 2026): "lencana": true — lencana
 ## emas di dada kiri (dibangun build_visual, player.gd).
-const OUTFIT_SATPAM := {"koko": "#2b3a4a", "songkok": "#1a1a1a", "sarung": "#2b2b2b", "kulit": "#c68e5e", "kacamata": false, "lencana": true}
+const OUTFIT_SATPAM := {"koko": "#2b3a4a", "songkok": "#1a1a1a", "sarung": "#2b2b2b", "kulit": "#c68e5e", "kacamata": false, "lencana": true, "peci_model": "nasional"}
 ## RONDE TEKA-TEKI (Raka, 18 Nov 2026 — keputusan Mas 23:03 WIB Opsi B
 ## + koreksi Mas 23:04 WIB "Satpamnya cewe ya"): outfit Penjaga Pos
 ## Jaga putri — CEWE: abaya + jilbab (muslimah, kunci "hijab"/"abaya"
