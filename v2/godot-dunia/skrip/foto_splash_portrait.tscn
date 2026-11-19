@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://skrip/foto_splash_portrait.gd" id="1_foto_splash_portr"]
+
+[node name="FotoSplashPortrait" type="Node"]
+script = ExtResource("1_foto_splash_portr")

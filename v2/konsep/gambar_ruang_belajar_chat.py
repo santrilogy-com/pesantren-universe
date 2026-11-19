@@ -213,32 +213,33 @@ def mockup_b():
     avatar_sanusi(d, px0 + 22, y + 24, 22)
     y += gelembung_ustadz(d, px0 + 56, y, 700,
         "kalam itu artinya adalah susunan kalimat. Kalimat disini maksudnya adalah kata dalam bahasa indonesia. Paham?",
-        font(19), jam="12:01") + 14
+        font(19), jam="12:01") + 10
     # jawaban player
-    y += gelembung_pemain(d, px1, y, 420, "Belum, jelaskan lagi.", font(19), jam="12:02") + 14
+    y += gelembung_pemain(d, px1, y, 420, "Belum, jelaskan lagi.", font(19)) + 10
     # pesan ustadz SEDANG DIKETIK (huruf muncul sebagian + kursor)
     avatar_sanusi(d, px0 + 22, y + 24, 22)
     teks_ketik = ("Baik, coba contoh ini: Qaama Muhammadun — “Muhammad telah berdiri.” "
                   "Itu kalam, karena pendengar sudah paham dan tidak bertanya lagi. ▍")
     y += gelembung_ustadz(d, px0 + 56, y, 700, teks_ketik, font(19)) + 6
     d.text((px0 + 56, y), "Ust. Sanusi sedang mengetik…", font=font(15), fill=EMAS_T)
-    # tombol jawaban TERKUNCI (redup)
-    by = 548
+    # tombol jawaban TERKUNCI (redup) — tanpa label tambahan: status
+    # "sedang mengetik…" di atas sudah menjelaskan kenapa terkunci.
+    # by=560 (bukan 548 seperti mockup A): gelembung 1 membawa jam
+    # (+18 px) sehingga isi chat B lebih tinggi 18 px.
+    by = 560
     tombol(d, px0, by, 500, 52, "Paham, lanjut  ›", font(20), emas=True, redup=True)
     tombol(d, px0 + 540, by, 500, 52, "Belum, jelaskan lagi", font(20), emas=False, redup=True)
-    d.text((px0 + 520, by - 26), "Tunggu Ustadz selesai mengetik…",
-           font=font(16), fill=KREM_R, anchor="mm")
     footer(img, d, px0, px1, 636,
            "Pesan 4 dari 14  •  Materi — penjelasan ulang 1 dari 2", progres=4 / 14)
     img.save(f"{OUT}/konsep-ruang-belajar-chat-ketik-v1.png")
 
 # ---------------------------------------------------------------- C. DIAGRAM ALUR
-def kotak(d, x, y, w, h, judul, sub, isi=ZAMRUD_KARTU, garis=EMAS, tj=EMAS):
+def kotak(d, x, y, w, h, judul, sub, isi=ZAMRUD_KARTU, garis=EMAS, tj=EMAS, ts=KREM):
     d.rounded_rectangle([x, y, x + w, y + h], radius=12, fill=isi, outline=garis, width=2)
     d.text((x + w / 2, y + 12), judul, font=font(19), fill=tj, anchor="mt")
     if sub:
         for i, ln in enumerate(sub.split("\n")):
-            d.text((x + w / 2, y + 40 + i * 19), ln, font=font(15), fill=KREM, anchor="mt")
+            d.text((x + w / 2, y + 40 + i * 19), ln, font=font(15), fill=ts, anchor="mt")
 
 def panah(d, x0, y, x1, putus=False):
     if putus:
@@ -285,6 +286,7 @@ def diagram():
     kotak(d, 380, y2, 320, h2, "7 · LATIHAN  L1–L5", "soal chat, 4 opsi  •  salah → ustadz\njelaskan + soal yang sama")
     panah(d, 700, y2 + h2 / 2, 736)
     kotak(d, 736, y2, 320, h2, "+15 POIN LATIHAN", "setelah 5 soal benar")
+    panah(d, 1056, y2 + h2 / 2, 1092)
     kotak(d, 1092, y2, 164, h2, "8 · KUIS  K1", "1 soal bank N1.T", isi=(13, 59, 46))
     # baris 3: selesai
     y3, h3 = 470, 86
@@ -294,7 +296,12 @@ def diagram():
           isi=ZAMRUD, garis=EMAS_T, tj=EMAS_T)
     panah(d, 800, y3 + h3 / 2, 836)
     kotak(d, 836, y3, 420, h3, "TUTUP DI TENGAH?", "lanjut dari pesan terakhir\n(rb_chat_pos) — poin langkah\nselesai TIDAK hilang",
-          isi=(255, 251, 235), garis=EMAS, tj=ZAMRUD_G)
+          isi=(255, 251, 235), garis=EMAS, tj=ZAMRUD_G, ts=ZAMRUD_G)
+    # konektor siku: baris 1 (kanan, kotak 5) -> baris 2 (kiri, kotak 6)
+    d.line([(1036, y1 + h1), (1036, 312)], fill=EMAS, width=3)
+    d.line([(1036, 312), (184, 312)], fill=EMAS, width=3)
+    d.line([(184, 312), (184, y2)], fill=EMAS, width=3)
+    d.polygon([(184, y2), (178, y2 - 10), (190, y2 - 10)], fill=EMAS)
     # catatan bawah
     d.text((24, 590), "Aturan main",
            font=font(22), fill=ZAMRUD_G)

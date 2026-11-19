@@ -120,11 +120,17 @@ func _ready() -> void:
 	# frame (gambar B identik byte-per-byte) — pindah ke sumbu
 	# kamera + kamera mundur/naik + bidik sedikit ke bawah.
 	_main._teleport_player(Vector3(137.5, 0, -14.5), atan2(134.0 - 137.5, -19.0 - (-14.5)))
+	# AKAR SNAP-BACK (run 2-4): pemain default PUTRA — _cek_batas
+	# (main.gd:2316) menarik balik tiap frame posisi x>14 ke
+	# _pos_legal_terakhir. Jangkar disetel ke posisi foto supaya
+	# snap-back jadi no-op (skrip foto saja, bukan kode game).
+	_main._pos_legal_terakhir = Vector3(137.5, 0, -14.5)
+	_main._punya_pos_legal = true
 	_main._player.set_process(false)
 	for i in 10:
 		await get_tree().process_frame
 	_sembunyikan_label_nama(_main._player)
-	await _foto("konsep-splash-b-musholla.png", Vector3(142, 4.5, -6), Vector3(134, 2.0, -23))
+	await _foto("konsep-splash-b-musholla.png", Vector3(140, 3.0, -9), Vector3(134, 3.0, -23))
 
 	# --- C: KARAKTER. Kyai + santri di PLAZA selatan tangga serambi
 	# (run 1: keduanya di atas/di balik lantai serambi y~0.5 — Kyai
@@ -135,6 +141,15 @@ func _ready() -> void:
 	# _terapkan_pakaian snap) SEBELUM dibekukan, kalau tidak ia tetap
 	# bersila (run 2).
 	var kyai: Node = _main._kyai
+	# Bersihkan frame dari NPC lain (run 5: Bilal masuk frame kiri +
+	# label namanya terlihat). Bekukan + sembunyikan label + pindah
+	# ke titik tunggu jauh di selatan (di luar frame). Kyai dilewati.
+	for npc in _main._npcs:
+		if npc == kyai:
+			continue
+		_sembunyikan_label_nama(npc)
+		npc.global_position = Vector3(30, 0, 30)
+		npc.set_process(false)
 	kyai.global_position = Vector3(-1.5, 0, 2.0)
 	kyai._visual.rotation.y = 0.0
 	kyai._visual.position.y = 0.0
