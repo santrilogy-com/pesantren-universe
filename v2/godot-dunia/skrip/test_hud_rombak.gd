@@ -19,8 +19,8 @@ extends Node
 ## Jalankan di Xvfb (bukan --headless, supaya resize portrait jalan):
 ##   DISPLAY=:98 godot --path . skrip/test_hud_rombak.tscn
 ## MENGUKUR (bukan "terlihat"):
-## 1. Bar atas icon-only: 5 tombol 64x64 (kartu/peta/kamera/speaker/
-##    expand), tiap tombol punya IkonHUD putih tanpa bayangan, font
+## 1. Bar atas icon-only: 6 tombol 64x64 (kartu/peta/kamera/speaker/
+##    expand/kualitas — tombol Kualitas ke-6, Rangga 19 Nov 2026),
 ##    transparan (teks tak tampil), bar tidak menabrak label misi di
 ##    portrait 720x1560; wajah putih translusen 64x64; icon kamera
 ##    varian "lensa_zamrud" (titik lensa zamrud gelap).
@@ -219,7 +219,7 @@ func _ready() -> void:
 	_cek("bar ikon atas ada", bar != null)
 	if bar != null:
 		var anak := bar.get_children()
-		_cek("bar ikon berisi 5 tombol", anak.size() == 5)
+		_cek("bar ikon berisi 6 tombol", anak.size() == 6)
 		var jenis: Array[String] = []
 		var semua_ikon := true
 		var semua_transparan := true
@@ -240,7 +240,7 @@ func _ready() -> void:
 				semua_tanpa_bayangan = false
 			if b.get_theme_color("font_color").a > 0.01:
 				semua_transparan = false
-		_cek("urutan ikon kartu/peta/kamera/speaker/expand", jenis == ["kartu", "peta", "kamera", "speaker", "expand"])
+		_cek("urutan ikon kartu/peta/kamera/speaker/expand/kualitas", jenis == ["kartu", "peta", "kamera", "speaker", "expand", "kualitas"])
 		_cek("semua tombol bar atas punya IkonHUD", semua_ikon)
 		_cek("icon bar atas tanpa bayangan (v3)", semua_tanpa_bayangan)
 		_cek("teks tombol bar atas transparan (tak tampil)", semua_transparan)
@@ -400,7 +400,7 @@ func _ready() -> void:
 				bar_wajah = false
 			if not _wajah_tengah_putih(a as Button, 0.5):
 				bar_putih = false
-	_cek("v3: 5 tombol bar atas punya wajah 64x64", bar_wajah)
+	_cek("v3: 6 tombol bar atas punya wajah 64x64", bar_wajah)
 	_cek("v3: wajah bar atas putih tengah alpha 0.5", bar_putih)
 	_cek("B rev1: Main Bersama punya wajah pill 200x56 kaca alpha 150", _punya_wajah(ui._mp_gabung_btn, 200, 56) and _wajah_tengah_kaca(ui._mp_gabung_btn, 150.0 / 255.0))
 	_cek("B rev1: teks pill Main Bersama ZAMRUD GELAP", ui._mp_gabung_btn.get_theme_color("font_color").is_equal_approx(GayaTombol.ZAMRUD_GELAP))

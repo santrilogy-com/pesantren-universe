@@ -49,6 +49,10 @@ func _ready() -> void:
 	ui.show_petunjuk_misi(true)
 	_cek("Teks putri persis (Ustadzah)", ui.teks_petunjuk_misi() == "ayo mulai misi santri barumu! Sowan ke Ustadzah sekarang")
 	_cek("Banner tidak memakan sentuhan (IGNORE)", ui._petunjuk_misi_banner.mouse_filter == Control.MOUSE_FILTER_IGNORE)
+	# v2 (Sinta, 19 Nov 2026): banner masuk dengan animasi geser turun
+	# 220 ms (dari y=184 ke y=200) — tunggu animasi selesai dulu baru
+	# cek posisi AKHIR. Ambang TIDAK diubah: tetap y=200 persis.
+	await get_tree().create_timer(0.3).timeout
 	_cek("Banner di y=200 (lewat di bawah tombol Main Bersama + banner sholat)", ui._petunjuk_misi_banner.offset_top == 200.0)
 	_cek("Banner tidak selebar layar penuh (<=560)", ui._petunjuk_misi_banner.offset_right - ui._petunjuk_misi_banner.offset_left <= 560.0)
 	ui.hide_petunjuk_misi()

@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://skrip/test_sentuh_vs_mouse.gd" id="1_s"]
+
+[node name="TestSentuhVsMouse" type="Node"]
+script = ExtResource("1_s")

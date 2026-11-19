@@ -31,32 +31,32 @@ theme/default_font="res://fonts/Baloo2-SemiBold.tres"
 [input_devices]
 
 pointing/emulate_touch_from_mouse=true
-# Tara 19 Nov 2026 (Opsi A, keputusan Xam): MATIKAN emulasi mouse dari
-# sentuhan. Tiap sentuhan jari di web export menghasilkan
-# InputEventScreenTouch + InputEventMouseButton; BaseButton memproses
-# keduanya -> `pressed` 2x -> tombol TOGGLE (△/□/strip) buka lalu
-# tutup lagi dalam satu ketukan dan tampak "mati" di HP Mas (T1
-# 19 Nov 08:18; bukti test_diag_toggle). Semua kontrol sudah menangani
-# InputEventScreenTouch langsung (ui.gd/main.gd/virtual_joystick.gd),
-# dan klik mouse desktop tetap jalan via emulate_touch_from_mouse=true.
-# Pin lama 18 Nov "sentuhan HARUS menghasilkan event mouse" DIBATALKAN.
+; Tara 19 Nov 2026 (Opsi A, keputusan Xam): MATIKAN emulasi mouse dari
+; sentuhan. Tiap sentuhan jari di web export menghasilkan
+; InputEventScreenTouch + InputEventMouseButton; BaseButton memproses
+; keduanya -> `pressed` 2x -> tombol TOGGLE (△/□/strip) buka lalu
+; tutup lagi dalam satu ketukan dan tampak "mati" di HP Mas (T1
+; 19 Nov 08:18; bukti test_diag_toggle). Semua kontrol sudah menangani
+; InputEventScreenTouch langsung (ui.gd/main.gd/virtual_joystick.gd),
+; dan klik mouse desktop tetap jalan via emulate_touch_from_mouse=true.
+; Pin lama 18 Nov "sentuhan HARUS menghasilkan event mouse" DIBATALKAN.
 pointing/emulate_mouse_from_touch=false
 
 [rendering]
 
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
-# PERBAIKAN PERFORMA 19 Nov 2026 (Rangga — laporan Mas "game berat di
-# beberapa HP"): render 3D di 0,75x lalu upscale bilinear — layar HP
-# 1080x2340 tidak perlu raster penuh. mode=1 adalah Bilinear
-# (Viewport SCALING_3D_MODE_BILINEAR); UI/canvas tidak ikut mengecil.
-# PERHATIAN — TERBUKTI TIDAK AKTIF (19 Nov): renderer proyek ini GL
-# Compatibility (wajib untuk web export) TIDAK mendukung scaling_3d —
-# setter viewport menolak BILINEAR (tetap 0) dan setting ini dibaca
-# kembali 0/1.0, baik headless maupun Xvfb. Baris di bawah ini
-# dibiarkan sebagai niat (aktif bila renderer ganti Forward+), tapi
-# JANGAN dihitung sebagai perbaikan — penahan fill-rate yang jalan
-# saat ini hanya Engine.max_fps=60 (main.gd).
+; PERBAIKAN PERFORMA 19 Nov 2026 (Rangga — laporan Mas "game berat di
+; beberapa HP"): render 3D di 0,75x lalu upscale bilinear — layar HP
+; 1080x2340 tidak perlu raster penuh. mode=1 adalah Bilinear
+; (Viewport SCALING_3D_MODE_BILINEAR); UI/canvas tidak ikut mengecil.
+; PERHATIAN — TERBUKTI TIDAK AKTIF (19 Nov): renderer proyek ini GL
+; Compatibility (wajib untuk web export) TIDAK mendukung scaling_3d —
+; setter viewport menolak BILINEAR (tetap 0) dan setting ini dibaca
+; kembali 0/1.0, baik headless maupun Xvfb. Baris di bawah ini
+; dibiarkan sebagai niat (aktif bila renderer ganti Forward+), tapi
+; JANGAN dihitung sebagai perbaikan — penahan fill-rate yang jalan
+; saat ini hanya Engine.max_fps=60 (main.gd).
 rendering/scaling_3d/mode=1
 rendering/scaling_3d/scale=0.75
 

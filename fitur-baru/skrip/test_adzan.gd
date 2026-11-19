@@ -49,6 +49,14 @@ func _ready() -> void:
 	await get_tree().process_frame
 	await get_tree().process_frame
 	_audio = _main._audio
+	# ISOLASI SUARA (Eka, gate 20261119-2): save lokal bisa tersisa
+	# "suara_mati=true" dari tes lain yang mengetuk tombol suara —
+	# main.gd menerapkan mute dari save saat _ready, sehingga adzan
+	# dilewati ("suara dimatikan pemain") dan tes gagal — BUKAN bug
+	# produk. Tes ini mengukur adzan, jadi paksa bunyi di sini.
+	_main._save["suara_mati"] = false
+	_audio.set_mute(false)
+	_main._ui.set_suara_mati(false)
 	# Simulasi gestur pertama (di headless tidak ada _input).
 	_audio.mulai()
 

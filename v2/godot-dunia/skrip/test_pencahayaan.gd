@@ -57,6 +57,13 @@ func _ready() -> void:
 	_main._masuk_pesantren("Tes cahaya")
 	for i in 3:
 		await get_tree().process_frame
+	# ISOLASI TINGKAT KUALITAS (Eka, gate 20261119-2): energi lampu
+	# diukur pada pengali 1,0x (Sedang). Tanpa pin ini, save lokal
+	# yang tersisa dari test_kualitas_adaptif (tingkat "ringan",
+	# pengali 0,6x) membuat cek malam gagal tepat 0,6x — BUKAN bug
+	# produk. atur_mode("sedang") juga mematikan probe/pantau.
+	if _main._kualitas != null:
+		_main._kualitas.atur_mode("sedang")
 	var omni_sebelum := _hitung_omni(_main)
 	print("OMNI SEBELUM: %d" % omni_sebelum)
 	_modul = PencahayaanV2.pasang(_main, _main._outdoor_door)
@@ -136,12 +143,13 @@ func _ready() -> void:
 	if om1 != null:
 		e_mus_malam = om1.light_energy
 	_cek("Modulasi malam: Musholla ~2,6 (dapat %.2f)" % e_mus_malam, absf(e_mus_malam - 2.6) < 0.05)
-	# Modulasi siang: energi kembali ke dasar.
+	# Modulasi siang: lampu MATI (energi ~0) — perubahan disengaja
+	# Rangga 19 Nov 2026 (lampu omni mati siang, malam 2x).
 	LangitDinamis.debug_jam = 12.0
 	for i in 10:
 		await get_tree().process_frame
 	var e_siang := _modul.energi_lampu("LampuV2_PintuSurau")
-	_cek("Modulasi siang: PintuSurau ~1,0 (dapat %.2f)" % e_siang, absf(e_siang - 1.0) < 0.05)
+	_cek("Modulasi siang: PintuSurau ~0,0 (dapat %.2f)" % e_siang, absf(e_siang - 0.0) < 0.05)
 	# Jalan maju masih jalan (regresi gerak).
 	var awal: Vector3 = _main._player.global_position
 	_main._ui._joystick.output = Vector2(0, -1)

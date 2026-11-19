@@ -16,6 +16,12 @@ func _ready() -> void:
 	_main._masuk_pesantren("Cek setting")
 	for i in 5:
 		await get_tree().process_frame
+	# ISOLASI TINGKAT KUALITAS (Eka, gate 20261119-2): tes ini memeriksa
+	# nilai DEFAULT Sedang (max_fps 60, far 450). Tanpa pin ini, save
+	# lokal yang tersisa dari test_kualitas_adaptif (tingkat "ringan":
+	# max_fps 30, far 350) membuat tes gagal — BUKAN bug produk.
+	if _main._kualitas != null:
+		_main._kualitas.atur_mode("sedang")
 	var mode: int = int(ProjectSettings.get_setting("rendering/scaling_3d/mode", -1))
 	var skala: float = float(ProjectSettings.get_setting("rendering/scaling_3d/scale", -1.0))
 	var cam := get_viewport().get_camera_3d()

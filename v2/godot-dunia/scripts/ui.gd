@@ -306,7 +306,7 @@ var _outfit_baris: Dictionary = {}
 # ATURAN: Eka menaikkan stempel ini tiap kali staging (N naik per
 # staging di hari yang sama, reset ke 1 tiap tanggal baru), SEBELUM
 # export — supaya stempel di HP Mas selalu = isi source yang di-stage.
-const BUILD_STAMP := "20261119-1"
+const BUILD_STAMP := "20261119-2"
 var _stempel_label: Label
 
 
@@ -480,6 +480,36 @@ func _make_button(teks: String, bg: Color, font_color: Color = Color.WHITE) -> B
 	# bisa memperbesar font + tombol di layar berskala kecil (HP).
 	b.set_meta("font_dasar", 20)
 	return b
+
+
+# DEBOUNCE TOGGLE (Tara, 19 Nov 2026 — perbaikan double-fire HP Mas):
+# Sekali ketuk di HP bisa menghasilkan 2× `pressed` (sentuh + event
+# mouse kompatibilitas browser) dalam <200 ms. Pada tombol TOGGLE itu
+# berarti buka lalu tutup = tampak mati; pada kamera berarti lompat
+# 2 mode. Guard ini mengabaikan `pressed` ke-2 pada tombol YANG SAMA
+# bila datang <200 ms setelah `pressed` sebelumnya yang DITERIMA
+# (timestamp hanya diperbarui saat diterima, supaya rentetan ketuk
+# cepat yang disengaja tidak tertelan semua).
+# Dipasang per-handler (bukan di factory): sinyal `pressed` tidak
+# punya pembatalan — handler yang tersambung di factory tidak bisa
+# menghentikan handler lain; factory-level sejati butuh subclass
+# Button + override `_gui_input`, perubahan kelas seluruh UI di
+# tengah gate. Guard per-handler dengan helper bersama ini
+# menyembuhkan 100% gejala yang dilaporkan dengan diff minimal.
+# Tombol momentary (✕, ○, MASUK, ...) SENGAJA tidak dipasang:
+# double-fire di sana tidak berbahaya (aksi idempoten / sudah
+# terbukti jalan di HP Mas).
+const DEBOUNCE_TOGGLE_MS := 200
+var _debounce_terakhir := {}
+
+
+func _debounce_tekan(b: Button) -> bool:
+	var kini := Time.get_ticks_msec()
+	var lalu: int = int(_debounce_terakhir.get(b, -1000000))
+	if kini - lalu < DEBOUNCE_TOGGLE_MS:
+		return false
+	_debounce_terakhir[b] = kini
+	return true
 
 
 func _make_label(teks: String, size: int, color: Color) -> Label:
@@ -1132,6 +1162,8 @@ func _dukung_layar_penuh() -> bool:
 
 ## Toggle dari tombol HUD "Layar Penuh" / "Keluar Layar".
 func _on_layar_penuh_pressed() -> void:
+	if not _debounce_tekan(_layar_penuh_btn):
+		return
 	if _apakah_layar_penuh():
 		_keluar_layar_penuh()
 		return
@@ -1240,11 +1272,17 @@ func _build_hud() -> void:
 	_hud.add_child(bar_ikon)
 	# RONDE 4: tombol Kartu Santri — membuka dashboard (toggle).
 	var kartu_btn := _buat_tombol_ikon("kartu", HIJAU)
-	kartu_btn.pressed.connect(func() -> void: open_dashboard_requested.emit())
+	kartu_btn.pressed.connect(func() -> void:
+		if _debounce_tekan(kartu_btn):
+			open_dashboard_requested.emit()
+	)
 	bar_ikon.add_child(kartu_btn)
 	# RONDE 4: tombol Peta — membuka overlay peta top-down (toggle).
 	var peta_btn := _buat_tombol_ikon("peta", HIJAU_TERANG)
-	peta_btn.pressed.connect(func() -> void: open_peta_requested.emit())
+	peta_btn.pressed.connect(func() -> void:
+		if _debounce_tekan(peta_btn):
+			open_peta_requested.emit()
+	)
 	bar_ikon.add_child(peta_btn)
 	# VARIAN B rev1 (DI-ACC Mas 18:43 WIB): tombol KAMERA di strip
 	# atas (slot ke-3 dari 5, menggantikan icon amplop Chat — Chat
@@ -1257,12 +1295,18 @@ func _build_hud() -> void:
 	_kamera_ikon_btn.text = "Kamera: Normal"
 	_kamera_ikon_btn.clip_text = true
 	(_ikon_dari(_kamera_ikon_btn) as IkonHUD).varian = "lensa_zamrud"
-	_kamera_ikon_btn.pressed.connect(func() -> void: kamera_mode_pressed.emit())
+	_kamera_ikon_btn.pressed.connect(func() -> void:
+		if _debounce_tekan(_kamera_ikon_btn):
+			kamera_mode_pressed.emit()
+	)
 	bar_ikon.add_child(_kamera_ikon_btn)
 	# RONDE 17: tombol Suara — mute/unmute audio suasana. Icon ikut
 	# keadaan (speaker berombak / dicoret, lihat set_suara_mati).
 	_suara_btn = _buat_tombol_ikon("speaker", HIJAU_TERANG)
-	_suara_btn.pressed.connect(func() -> void: suara_toggled.emit())
+	_suara_btn.pressed.connect(func() -> void:
+		if _debounce_tekan(_suara_btn):
+			suara_toggled.emit()
+	)
 	bar_ikon.add_child(_suara_btn)
 	# FULLSCREEN (Cakra, 17 Nov 2026): tombol toggle "Layar Penuh" /
 	# "Keluar Layar" — jalan keluar yang jelas supaya pemain tidak
@@ -1454,6 +1498,8 @@ func _build_panel_kualitas() -> void:
 
 func _toggle_panel_kualitas() -> void:
 	if _kualitas_panel == null:
+		return
+	if not _debounce_tekan(_kualitas_btn):
 		return
 	_kualitas_panel.visible = not _kualitas_panel.visible
 
@@ -1800,6 +1846,8 @@ func close_chat() -> void:
 
 
 func _toggle_chat() -> void:
+	if not _debounce_tekan(_chat_btn):
+		return
 	_chat_panel.visible = not _chat_panel.visible
 	if _chat_panel.visible:
 		close_aksi()
@@ -1889,6 +1937,9 @@ func is_aksi_visible() -> bool:
 
 
 func _toggle_aksi() -> void:
+	var b := _tombol_gamepad.get("segitiga") as Button
+	if b != null and not _debounce_tekan(b):
+		return
 	_aksi_panel.visible = not _aksi_panel.visible
 	if _aksi_panel.visible:
 		close_chat()

@@ -12,7 +12,7 @@ extends Node
 ## △/□/○, kamera/suara/peta/kartu/Main Bersama/layar penuh,
 ## joystick drag sentuh, ✕ tanpa emulasi mouse (+ kelas event yg
 ## diterima tombol, untuk membuktikan toggle setting berlaku),
-## strip atas 64x64 (perbesar 18 Nov 2026) + bar 344 + tak tumpang.
+## strip atas 64x64 (perbesar 18 Nov 2026) + bar 414 + tak tumpang.
 
 const MAIN_SCENE := "res://main.tscn"
 
@@ -221,11 +221,11 @@ func _run() -> void:
 	# perbesar dari 48x48). Ukuran kanvas + lebar bar + tidak
 	# tumpang tindih + gamepad/joystick TAK berubah. ---
 	var strip_64 := true
-	for jenis in ["kartu", "peta", "kamera", "speaker", "expand"]:
+	for jenis in ["kartu", "peta", "kamera", "speaker", "expand", "kualitas"]:
 		var tb := _cari_tombol_ikon(jenis)
 		if tb == null or tb.custom_minimum_size != Vector2(64, 64):
 			strip_64 = false
-	_cek("strip atas: 5 tombol ikon 64x64 kanvas", strip_64)
+	_cek("strip atas: 6 tombol ikon 64x64 kanvas", strip_64)
 	var bar: HBoxContainer = null
 	for c in ui._hud.get_children():
 		if c is HBoxContainer:
@@ -234,7 +234,7 @@ func _run() -> void:
 				bar = c as HBoxContainer
 	_cek("strip atas: bar ada", bar != null)
 	if bar != null:
-		_cek("strip atas: lebar bar 344 (5x64 + 4x6)", int(bar.size.x) == 344)
+		_cek("strip atas: lebar bar 414 (6x64 + 5x6)", int(bar.size.x) == 414)
 		_cek("strip atas: bar tidak tumpang minimap", not bar.get_global_rect().intersects(ui._minimap.get_global_rect()))
 		_cek("strip atas: bar tidak tumpang pill Main Bersama", not bar.get_global_rect().intersects(ui._mp_gabung_btn.get_global_rect()))
 	_cek("strip atas: pill Main Bersama 200x56", ui._mp_gabung_btn.custom_minimum_size == Vector2(200, 56))
