@@ -24,6 +24,11 @@ signal tanya_dipilih(npc_id: String)
 
 const LEBAR_PANEL := 660.0
 const TINGGI_PANEL := 1120.0
+## Ruang Belajar minta LEBAR (Mas, 19 Nov 2026): panel belajar
+## nyaris full screen di landscape biar enak dibaca — lebar desain
+## 1480 (bukan 660), fraksi layar 0.96. Panel lain TIDAK berubah.
+const LEBAR_RUANG_BELAJAR := 1480.0
+const FRAKSI_RUANG_BELAJAR := 0.96
 ## Dialog isinya pendek (avatar + teks + 2 pilihan) — panel kompak
 ## supaya tidak 75% kosong seperti foto ui-misi v2 (Raka, 18 Nov
 ## 2026). Ruang Belajar/Tes/Panel Misi tetap 1120 (konten panjang
@@ -91,7 +96,7 @@ func buka_teka_teki(nama: String, subjudul: String, avatar: String, teks: String
 
 
 func buka_ruang_belajar(pengajar: String) -> void:
-	_tampilkan(_ruang_belajar)
+	_tampilkan(_ruang_belajar, TINGGI_PANEL, LEBAR_RUANG_BELAJAR, FRAKSI_RUANG_BELAJAR)
 	_ruang_belajar.tampilkan(pengajar)
 
 
@@ -130,17 +135,17 @@ func panel_terbuka() -> String:
 
 ## ---------- dalam ----------
 
-func _tampilkan(panel: PanelContainer, tinggi_target: float = TINGGI_PANEL) -> void:
+func _tampilkan(panel: PanelContainer, tinggi_target: float = TINGGI_PANEL, lebar_desain: float = LEBAR_PANEL, fraksi: float = 0.92) -> void:
 	for p in [_dialog, _ruang_belajar, _tes, _panel_misi]:
 		if p != panel:
 			p.tutup()
 	_terbuka = panel
-	_pusatkan(panel, tinggi_target)
+	_pusatkan(panel, tinggi_target, lebar_desain, fraksi)
 	_dim.visible = true
 	panel.visible = true
 
 
-func _pusatkan(panel: PanelContainer, tinggi_target: float = TINGGI_PANEL) -> void:
+func _pusatkan(panel: PanelContainer, tinggi_target: float = TINGGI_PANEL, lebar_desain: float = LEBAR_PANEL, fraksi: float = 0.92) -> void:
 	var vp := get_viewport().get_visible_rect().size
 	var s := _skala_layar()
 	# Pola ui.gd _pusatkan_panel (Tara/Ronde 4): ukuran target FISIK
@@ -148,8 +153,8 @@ func _pusatkan(panel: PanelContainer, tinggi_target: float = TINGGI_PANEL) -> vo
 	# Xvfb 720x1560) ukuran kanvas diperbesar supaya panel tetap
 	# 660x1120 px fisik. Tanpa ini panel hanya ~51% lebar layar
 	# (cacat foto ui-misi v1: panel 368 px fisik di layar 720).
-	var lebar := minf(vp.x * 0.92, maxf(LEBAR_PANEL, LEBAR_PANEL / s))
-	var tinggi := minf(vp.y * 0.92, maxf(tinggi_target, tinggi_target / s))
+	var lebar := minf(vp.x * fraksi, maxf(lebar_desain, lebar_desain / s))
+	var tinggi := minf(vp.y * fraksi, maxf(tinggi_target, tinggi_target / s))
 	panel.anchor_left = 0.5
 	panel.anchor_right = 0.5
 	panel.anchor_top = 0.5

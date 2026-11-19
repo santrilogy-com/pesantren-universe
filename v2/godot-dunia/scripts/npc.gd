@@ -385,6 +385,15 @@ static func _tinggi_tanah(pos: Vector3) -> float:
 ## Satu langkah jalan ke `target` (animasi jalan yang sama seperti
 ## keliling bebas). Mengembalikan true kalau sudah sampai (< 0,4 m).
 func _langkah_ke(target: Vector3, delta: float) -> bool:
+	# PERBAIKAN 19 Nov 2026 (Kirana — laporan Mas "sarung mekar kek
+	# lagi sila padahal dia jalan"): pulihkan pakaian normal di SETIAP
+	# langkah — satu tempat ini menjangkau semua jalur jalan (patroli
+	# + rute sholat + rute lain). Sebelumnya _terapkan_pakaian(DEFAULT)
+	# hanya ada di 4 fase patroli; jalur sholat tidak pernah memanggil-
+	# nya, jadi Kyai yang habis duduk baca (PAKAIAN_DUDUK: sarung
+	# 1,70x lebar, hem y=0,50) jalan ke sajadah dengan sarung tetap
+	# terhampar. Lerp menyatu dalam ~0,5 dtk (k = delta * 8).
+	_terapkan_pakaian(delta, SantriPlayer.PAKAIAN_DEFAULT)
 	var to: Vector3 = target - position
 	to.y = 0.0
 	if to.length() < 0.4:
@@ -409,6 +418,10 @@ func _langkah_ke(target: Vector3, delta: float) -> bool:
 ## kedua tangan terangkat (takbiratul ihram). STATIS — tidak ada
 ## siklus qiyam/ruku lagi; adegan diakhiri blackout (main.gd).
 func _animasi_sholat(delta: float) -> void:
+	# PERBAIKAN 19 Nov 2026 (Kirana): pose takbir di sajadah juga
+	# bersarung normal — Kyai yang rute sholatnya pendek bisa sampai
+	# di sajadah sebelum lerp pakaian selesai.
+	_terapkan_pakaian(delta, SantriPlayer.PAKAIAN_DEFAULT)
 	var k := minf(1.0, delta * 8.0)
 	_visual.rotation.x = lerpf(_visual.rotation.x, 0.05, k)
 	_arm_l.rotation.x = lerpf(_arm_l.rotation.x, -2.6, k)

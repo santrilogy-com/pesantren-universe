@@ -96,15 +96,16 @@ Foto SEBELUM diambil dari game yang sudah live:
   emas #C9A227, jati #7B4B2A. Tidak ada warna baru.
 - **Font tetap**: Baloo 2 (Latin) + Amiri Bold (Arab). Tidak ganti font.
 - **Isi teks tetap**: kalimat dialog, label tombol, dan teks banner sama
-  persis dengan yang sudah ada (teks dialog tetap "TEKS DRAF" sampai
+  persis dengan yang sudah ada (isi dialog masih draf sampai
   tashih Mas).
 - **Ukuran & posisi kasar tetap**: dialog tetap di bawah layar, pop-up
   tetap di tengah, banner tetap di tengah-atas (y=200). Hanya gaya
   dalamnya yang berubah — jadi tidak mengganggu pemetaan tombol / tes
   sentuh yang sudah ada.
-- **Chip "TEKS DRAF"** tetap ada di dialog (tidak ikut mockup karena
-  mockup memakai foto dialog v2 yang chip-nya di luar crop — di
-  implementasi, chip tetap dipasang seperti sekarang).
+- **Chip "TEKS DRAF" DIHAPUS** atas keputusan Mas 19 Nov 2026 13:05 WIB
+  ("Tidak usah teks draf.. hapus aja kata itu") — chip tidak tampil di
+  mana pun: `buat_pill_draf()` dihapus dari `gaya_misi.gd` beserta semua
+  pemakaiannya (dialog, Ruang Belajar, Tes, Panel Misi) dan cek tesnya.
 
 ## Kalau Mas ACC — langkah bangun (perkiraan)
 

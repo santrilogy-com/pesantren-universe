@@ -7,7 +7,7 @@ extends RefCounted
 ## panel gradien zamrud gelap (di sini StyleBoxFlat datar —
 ## StyleBoxFlat tidak bisa gradien, jadi dipakai warna panel
 ## ZAMRUD_PANEL), rim emas 3, radius ~18, bayangan jatuh;
-## tab judul pill emas; tag "TEKS DRAF" outline emas;
+## tab judul pill emas;
 ## tombol emas isi penuh + tombol outline krem.
 ## Font Latin: default proyek (Baloo 2 SemiBold, lihat
 ## project.godot); Arab: Amiri Bold (FONT_ARAB).
@@ -28,6 +28,206 @@ const FONT_ARAB := "res://fonts/Amiri-Bold.ttf"
 ## teks yang harus tebal (judul tab). Bila berkas tidak ada,
 ## pemanggil tetap memakai font default proyek.
 const _FONT_TEBAL := "res://fonts/Baloo2-Bold.tres"
+
+
+## ---------- GRADIEN v2 (Sinta, 19 Nov 2026 — Konsep UI v2 ACC Mas) ----------
+## StyleBoxFlat tidak bisa gradien — gradien dibakar ke ImageTexture
+## (sekali per panel, 96x96 px, murah) lalu dipakai StyleBoxTexture
+## 9-slice (texture_margins = radius) atau TextureRect latar.
+## Tekstur membawa sudut membulat + rim + pita/strip sekaligus.
+## GradientTexture2D sengaja tidak dipakai: ia tidak bisa membawa
+## sudut membulat + rim dalam satu tekstur.
+
+static func buat_tekstur_gradien(warna_atas: Color, warna_bawah: Color, radius: int, rim: Color, rim_lebar: int, pita: Color = Color(0, 0, 0, 0), pita_tinggi: int = 0, strip_bawah: Color = Color(0, 0, 0, 0), strip_tinggi: int = 0, ukuran := Vector2i(96, 96)) -> ImageTexture:
+	var img := Image.create(ukuran.x, ukuran.y, false, Image.FORMAT_RGBA8)
+	var cx := float(ukuran.x) * 0.5
+	var cy := float(ukuran.y) * 0.5
+	var hw := float(ukuran.x) * 0.5
+	var hh := float(ukuran.y) * 0.5
+	var r := float(radius)
+	for y in range(ukuran.y):
+		var t := float(y) / float(maxi(ukuran.y - 1, 1))
+		var col := warna_atas.lerp(warna_bawah, t)
+		for x in range(ukuran.x):
+			# Jarak bertanda ke kotak bersudut membulat (SDF).
+			var qx := absf(float(x) + 0.5 - cx) - (hw - r)
+			var qy := absf(float(y) + 0.5 - cy) - (hh - r)
+			var d := Vector2(maxf(qx, 0.0), maxf(qy, 0.0)).length() + minf(maxf(qx, qy), 0.0) - r
+			if d > 0.0:
+				img.set_pixel(x, y, Color(0, 0, 0, 0))
+			elif rim_lebar > 0 and d > -float(rim_lebar):
+				img.set_pixel(x, y, rim)
+			elif pita_tinggi > 0 and y < pita_tinggi:
+				img.set_pixel(x, y, pita)
+			elif strip_tinggi > 0 and y >= ukuran.y - strip_tinggi:
+				img.set_pixel(x, y, strip_bawah)
+			else:
+				img.set_pixel(x, y, col)
+	return ImageTexture.create_from_image(img)
+
+
+## StyleBoxTexture gradien dari tekstur bakar (9-slice, sudut = radius).
+static func _kotak_gradien(tekstur: Texture2D, radius: int) -> StyleBoxTexture:
+	var s := StyleBoxTexture.new()
+	s.texture = tekstur
+	s.texture_margin_left = float(radius)
+	s.texture_margin_right = float(radius)
+	s.texture_margin_top = float(radius)
+	s.texture_margin_bottom = float(radius)
+	s.draw_center = true
+	return s
+
+
+## Panel dialog v2: StyleBoxFlat TRANSPARAN (gradien datang dari
+## TextureRect latar, anak pertama panel) + rim emas 2 + radius 26
+## + bayangan lebih besar/lembut. Content margin 3 supaya latar
+## gradien (radius 23) tidak menutupi rim emas.
+static func gaya_panel_gradien() -> StyleBoxFlat:
+	var s := StyleBoxFlat.new()
+	s.bg_color = Color(0, 0, 0, 0)
+	s.border_color = EMAS
+	s.set_border_width_all(2)
+	s.set_corner_radius_all(26)
+	s.shadow_color = Color(0.0, 0.0, 0.0, 100.0 / 255.0)
+	s.shadow_size = 16
+	s.shadow_offset = Vector2(0, 8)
+	s.content_margin_left = 3.0
+	s.content_margin_right = 3.0
+	s.content_margin_top = 3.0
+	s.content_margin_bottom = 3.0
+	return s
+
+
+## TextureRect latar gradien vertikal — dipakai sebagai anak PERTAMA
+## PanelContainer (PanelContainer menaruh semua anak di rect yang
+## sama, jadi latar jatuh di belakang isi). Radius = radius panel - 3.
+static func buat_latar_gradien(warna_atas: Color, warna_bawah: Color, radius: int) -> TextureRect:
+	var t := TextureRect.new()
+	t.texture = buat_tekstur_gradien(warna_atas, warna_bawah, radius, Color(0, 0, 0, 0), 0)
+	t.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	t.stretch_mode = TextureRect.STRETCH_SCALE
+	t.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return t
+
+
+## Tab judul v2: gradien emas terang -> emas, radius 22.
+static func gaya_tab_gradien() -> StyleBoxTexture:
+	var tek := buat_tekstur_gradien(EMAS_TERANG, EMAS, 22, Color(0, 0, 0, 0), 0, Color(0, 0, 0, 0), 0, Color(0, 0, 0, 0), 0, Vector2i(96, 48))
+	return _kotak_gradien(tek, 22)
+
+
+## Tombol emas v2: gradien emas terang -> emas + garis bawah lebih
+## gelap (kesan 3D, bayangan tombol), radius 22.
+static func gaya_tombol_emas_gradien() -> StyleBoxTexture:
+	var tek := buat_tekstur_gradien(EMAS_TERANG, EMAS, 22, Color(0, 0, 0, 0), 0, Color(0, 0, 0, 0), 0, EMAS.darkened(0.25), 4, Vector2i(96, 56))
+	return _kotak_gradien(tek, 22)
+
+
+## Tombol emas v2 saat hover: gradien sedikit lebih terang.
+static func gaya_tombol_emas_gradien_hover() -> StyleBoxTexture:
+	var tek := buat_tekstur_gradien(EMAS_TERANG.lightened(0.12), EMAS.lightened(0.12), 22, Color(0, 0, 0, 0), 0, Color(0, 0, 0, 0), 0, EMAS.darkened(0.2), 4, Vector2i(96, 56))
+	return _kotak_gradien(tek, 22)
+
+
+## Tombol emas v2 saat ditekan: gradien sedikit lebih gelap.
+static func gaya_tombol_emas_gradien_pressed() -> StyleBoxTexture:
+	var tek := buat_tekstur_gradien(EMAS.darkened(0.08), EMAS.darkened(0.18), 22, Color(0, 0, 0, 0), 0, Color(0, 0, 0, 0), 0, EMAS.darkened(0.35), 4, Vector2i(96, 56))
+	return _kotak_gradien(tek, 22)
+
+
+## Subjudul kepala dialog v2: kapital berjarak, emas terang, 14.
+## font_spacing diabaikan engine bila tidak didukung — aman.
+static func buat_label_subjudul(teks: String) -> Label:
+	var l := buat_label(teks.to_upper(), 14, EMAS_TERANG)
+	l.add_theme_constant_override("font_spacing", 2)
+	return l
+
+
+## Titik progres babak: aktif = emas terisi, sisanya outline krem.
+static func buat_dot(aktif: bool) -> Panel:
+	var p := Panel.new()
+	p.custom_minimum_size = Vector2(12, 12)
+	var s := StyleBoxFlat.new()
+	if aktif:
+		s.bg_color = EMAS
+	else:
+		s.bg_color = Color(0, 0, 0, 0)
+		var garis := KREM
+		garis.a = 120.0 / 255.0
+		s.border_color = garis
+		s.set_border_width_all(1)
+	s.set_corner_radius_all(6)
+	p.add_theme_stylebox_override("panel", s)
+	return p
+
+
+static func buat_dot_progres(jumlah: int, aktif: int) -> HBoxContainer:
+	var h := HBoxContainer.new()
+	h.add_theme_constant_override("separation", 6)
+	for i in range(jumlah):
+		h.add_child(buat_dot(i + 1 == aktif))
+	return h
+
+
+## Chip keycap footer ("✕ Lanjut" / "□ Chat"): kotak gelap
+## berbingkai krem tipis, radius 6, padding 8/4.
+static func buat_chip_kunci(teks: String) -> PanelContainer:
+	var p := PanelContainer.new()
+	var s := StyleBoxFlat.new()
+	s.bg_color = ZAMRUD_KARTU
+	var garis := KREM
+	garis.a = 150.0 / 255.0
+	s.border_color = garis
+	s.set_border_width_all(1)
+	s.set_corner_radius_all(6)
+	p.add_theme_stylebox_override("panel", s)
+	p.add_theme_constant_override("margin_left", 8)
+	p.add_theme_constant_override("margin_right", 8)
+	p.add_theme_constant_override("margin_top", 4)
+	p.add_theme_constant_override("margin_bottom", 4)
+	var l := buat_label(teks, 14, KREM)
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	p.add_child(l)
+	return p
+
+
+## Panah "›" di kanan tombol utama (anak Label, teks tombol TIDAK
+## diubah — tes membaca .text tetap lolos). Dipakai tombol pilihan
+## pertama dialog saja.
+static func tambah_panah_kanan(b: Button) -> void:
+	var panah := buat_label("›", 22, ZAMRUD_GELAP)
+	panah.anchor_left = 1.0
+	panah.anchor_right = 1.0
+	panah.anchor_top = 0.5
+	panah.anchor_bottom = 0.5
+	panah.offset_left = -34.0
+	panah.offset_top = -14.0
+	panah.offset_right = -16.0
+	panah.offset_bottom = 14.0
+	panah.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	panah.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	panah.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	b.add_child(panah)
+
+
+## Umpan tekan v2: tombol mengecil ke 0.97 sesaat saat ditekan lalu
+## kembali — dipasang di buat_tombol_emas (semua tombol emas misi).
+static func pasang_umpan_tekan(b: Button) -> void:
+	b.resized.connect(func() -> void: b.pivot_offset = b.size * 0.5)
+	b.button_down.connect(func() -> void: _tween_tekan(b, 0.97, 0.06))
+	b.button_up.connect(func() -> void: _tween_tekan(b, 1.0, 0.10))
+
+
+static func _tween_tekan(b: Button, target: float, durasi: float) -> void:
+	if b.has_meta("_tween_tekan"):
+		var lama := b.get_meta("_tween_tekan") as Tween
+		if lama != null and lama.is_valid():
+			lama.kill()
+	b.pivot_offset = b.size * 0.5
+	var tw := b.create_tween()
+	tw.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tw.tween_property(b, "scale", Vector2(target, target), durasi)
+	b.set_meta("_tween_tekan", tw)
 
 
 ## Panel utama: zamrud panel alpha 242, rim emas 3, radius 18,
@@ -120,7 +320,7 @@ static func gaya_chip() -> StyleBoxFlat:
 ## ui-misi v1): autowrap di SEMUA label membuat lebar minimum label
 ## kolaps ke ~0 — di HBox (baris atas, footer, baris misi) label
 ## terjepit 1 px dan teks membungkus huruf-per-huruf (tab emas jadi
-## garis vertikal, "TEKS DRAF" vertikal, footer vertikal). Bungkus
+## garis vertikal, footer vertikal). Bungkus
 ## HANYA untuk teks isi panjang di VBox/Scroll (pertanyaan,
 ## petunjuk, catatan) — lewat bungkus=true.
 static func buat_label(teks: String, ukuran: int, warna: Color, bungkus := false) -> Label:
@@ -145,6 +345,7 @@ static func buat_label_arab(teks: String, ukuran: int) -> Label:
 
 
 ## Tombol emas: font 20, teks zamrud gelap, tanpa focus.
+## v2 (19 Nov 2026): gradien emas + umpan tekan 0.97.
 static func buat_tombol_emas(teks: String) -> Button:
 	var b := Button.new()
 	b.text = teks
@@ -153,11 +354,12 @@ static func buat_tombol_emas(teks: String) -> Button:
 	b.add_theme_color_override("font_color", ZAMRUD_GELAP)
 	b.add_theme_color_override("font_hover_color", ZAMRUD_GELAP)
 	b.add_theme_color_override("font_pressed_color", ZAMRUD_GELAP)
-	b.add_theme_stylebox_override("normal", gaya_tombol_emas())
-	b.add_theme_stylebox_override("hover", gaya_tombol_emas_hover())
-	b.add_theme_stylebox_override("pressed", gaya_tombol_emas_pressed())
+	b.add_theme_stylebox_override("normal", gaya_tombol_emas_gradien())
+	b.add_theme_stylebox_override("hover", gaya_tombol_emas_gradien_hover())
+	b.add_theme_stylebox_override("pressed", gaya_tombol_emas_gradien_pressed())
 	b.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
 	b.add_theme_stylebox_override("disabled", gaya_tombol_emas())
+	pasang_umpan_tekan(b)
 	return b
 
 
@@ -193,17 +395,17 @@ static func buat_chip(teks: String) -> PanelContainer:
 	return p
 
 
-## Pill penanda "TEKS DRAF" (isi draf, menunggu tashih).
-static func buat_pill_draf() -> PanelContainer:
-	return buat_chip("TEKS DRAF")
-
+## (Chip "TEKS DRAF" DIHAPUS atas keputusan Mas, 19 Nov 2026
+## 13:05 WIB — fungsi buat_pill_draf() ikut dihapus; jangan
+## dipasang lagi.)
 
 ## Tab judul: pill emas berisi label judul ukuran 24 tebal
 ## warna zamrud gelap, rata tengah. Padding 28 kiri-kanan /
 ## 10 atas-bawah (mockup: lebar tab = lebar teks + 56).
+## v2 (19 Nov 2026): pill bergradien emas terang -> emas.
 static func buat_tab_judul(judul: String) -> PanelContainer:
 	var p := PanelContainer.new()
-	p.add_theme_stylebox_override("panel", gaya_tab())
+	p.add_theme_stylebox_override("panel", gaya_tab_gradien())
 	p.add_theme_constant_override("margin_left", 28)
 	p.add_theme_constant_override("margin_right", 28)
 	p.add_theme_constant_override("margin_top", 10)

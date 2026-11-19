@@ -2,7 +2,7 @@ class_name RuangBelajarUI
 extends PanelContainer
 ## Panel Ruang Belajar Modul 01 — Fase A, A1/A8 (Sinta, 18 Nov 2026).
 ## Mockup ACC Mas: ruang-belajar-v1.png (panel zamrud gelap + rim
-## emas + tab emas "Ruang Belajar" + 3 pill langkah + tag TEKS DRAF
+## emas + tab emas "Ruang Belajar" + 3 pill langkah
 ## + footer "Materi 1 dari 3" / "✕ Lanjut □ Chat").
 ##
 ## Panel ini TIDAK membuat dim sendiri dan TIDAK mengatur anchor
@@ -26,7 +26,10 @@ signal langkah_selesai(jenis: String, poin: int)
 signal selesai(poin_total: int)
 signal ditutup  ## pemain menutup di tengah
 
-const _LEBAR_MIN := 660.0
+## LEBAR (Wulan, 19 Nov 2026 — permintaan Mas 12:48 WIB: Ruang
+## Belajar nyaris full screen landscape). Panel dipusatkan manajer
+## dengan lebar desain 1480 (fraksi 0.96); min ini hanya jaga-jaga.
+const _LEBAR_MIN := 1000.0
 const _NAMA_LANGKAH := ["Materi", "Latihan", "Kuis"]
 const _FOOTER := ["Materi 1 dari 3", "Latihan 2 dari 3", "Kuis 3 dari 3"]
 
@@ -67,17 +70,19 @@ func _ready() -> void:
 	add_theme_stylebox_override("panel", GayaMisi.gaya_panel())
 
 	var margin := MarginContainer.new()
-	margin.add_theme_constant_override("margin_left", 18)
-	margin.add_theme_constant_override("margin_right", 18)
-	margin.add_theme_constant_override("margin_top", 14)
-	margin.add_theme_constant_override("margin_bottom", 14)
+	margin.add_theme_constant_override("margin_left", 28)
+	margin.add_theme_constant_override("margin_right", 28)
+	margin.add_theme_constant_override("margin_top", 18)
+	margin.add_theme_constant_override("margin_bottom", 18)
 	add_child(margin)
 
 	var v := VBoxContainer.new()
-	v.add_theme_constant_override("separation", 12)
+	v.add_theme_constant_override("separation", 16)
 	margin.add_child(v)
 
-	# Baris atas: tab emas + pill TEKS DRAF + tombol ✕.
+	# Baris atas: tab emas + tombol ✕.
+	# (Chip "TEKS DRAF" DIHAPUS atas keputusan Mas, 19 Nov 2026
+	# 13:05 WIB — jangan dipasang lagi di sini.)
 	var atas := HBoxContainer.new()
 	atas.add_theme_constant_override("separation", 8)
 	v.add_child(atas)
@@ -85,20 +90,20 @@ func _ready() -> void:
 	var spasi := Control.new()
 	spasi.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	atas.add_child(spasi)
-	atas.add_child(GayaMisi.buat_pill_draf())
 	var tombol_tutup := Button.new()
 	tombol_tutup.text = "✕"
 	tombol_tutup.tooltip_text = "Tutup"
 	tombol_tutup.flat = true
+	tombol_tutup.add_theme_font_size_override("font_size", 26)
 	tombol_tutup.pressed.connect(_on_tutup_ditekan)
 	atas.add_child(tombol_tutup)
 
 	# Header modul.
-	_judul = GayaMisi.buat_label(DataModul01.JUDUL, 22, GayaMisi.EMAS)
+	_judul = GayaMisi.buat_label(DataModul01.JUDUL, 28, GayaMisi.EMAS)
 	v.add_child(_judul)
-	_subjudul = GayaMisi.buat_label(DataModul01.SUBJUDUL, 15, GayaMisi.KREM)
+	_subjudul = GayaMisi.buat_label(DataModul01.SUBJUDUL, 18, GayaMisi.KREM)
 	v.add_child(_subjudul)
-	_label_pengajar = GayaMisi.buat_label("", 15, GayaMisi.KREM_REDUP)
+	_label_pengajar = GayaMisi.buat_label("", 17, GayaMisi.KREM_REDUP)
 	v.add_child(_label_pengajar)
 
 	# 3 pill langkah.
@@ -108,7 +113,7 @@ func _ready() -> void:
 	for i in range(3):
 		var panel := PanelContainer.new()
 		panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		var lab := GayaMisi.buat_label("%d %s" % [i + 1, _NAMA_LANGKAH[i]], 16, GayaMisi.KREM_REDUP)
+		var lab := GayaMisi.buat_label("%d %s" % [i + 1, _NAMA_LANGKAH[i]], 18, GayaMisi.KREM_REDUP)
 		lab.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		lab.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		panel.add_child(lab)
@@ -116,29 +121,32 @@ func _ready() -> void:
 		_pill_panel.append(panel)
 		_pill_label.append(lab)
 
-	# Isi langkah (bisa digulung — materi panjang).
+	# Isi langkah (bisa digulung — materi panjang). Min 340 supaya
+	# header + footer tetap muat dalam panel 691 px di landscape
+	# 720p (min 420 mendorong footer keluar panel — cacat foto
+	# sesudah v1, 19 Nov 2026).
 	_gulung = ScrollContainer.new()
-	_gulung.custom_minimum_size = Vector2(0, 380)
+	_gulung.custom_minimum_size = Vector2(0, 340)
 	_gulung.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_gulung.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_gulung.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	v.add_child(_gulung)
 
 	_isi = VBoxContainer.new()
-	_isi.add_theme_constant_override("separation", 12)
+	_isi.add_theme_constant_override("separation", 16)
 	_isi.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_gulung.add_child(_isi)
 
 	# Footer: kiri "Materi 1 dari 3" dst, kanan petunjuk tombol.
 	var footer := HBoxContainer.new()
-	footer.add_theme_constant_override("separation", 8)
+	footer.add_theme_constant_override("separation", 10)
 	v.add_child(footer)
-	_footer_kiri = GayaMisi.buat_label(_FOOTER[0], 14, GayaMisi.KREM_REDUP)
+	_footer_kiri = GayaMisi.buat_label(_FOOTER[0], 16, GayaMisi.KREM_REDUP)
 	footer.add_child(_footer_kiri)
 	var spasi_footer := Control.new()
 	spasi_footer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	footer.add_child(spasi_footer)
-	footer.add_child(GayaMisi.buat_label("✕ Lanjut    □ Chat", 14, GayaMisi.KREM_REDUP))
+	footer.add_child(GayaMisi.buat_label("✕ Lanjut    □ Chat", 16, GayaMisi.KREM_REDUP))
 
 
 ## Tampilkan dari langkah 1. Pengajar mis. "Ust. Sanusi" / "Ustzh. Fatimah".
@@ -200,15 +208,15 @@ func _buat_kartu(judul: String) -> VBoxContainer:
 	panel.add_theme_stylebox_override("panel", GayaMisi.gaya_kartu())
 	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var margin := MarginContainer.new()
-	margin.add_theme_constant_override("margin_left", 14)
-	margin.add_theme_constant_override("margin_right", 14)
-	margin.add_theme_constant_override("margin_top", 12)
-	margin.add_theme_constant_override("margin_bottom", 12)
+	margin.add_theme_constant_override("margin_left", 18)
+	margin.add_theme_constant_override("margin_right", 18)
+	margin.add_theme_constant_override("margin_top", 14)
+	margin.add_theme_constant_override("margin_bottom", 14)
 	panel.add_child(margin)
 	var v := VBoxContainer.new()
-	v.add_theme_constant_override("separation", 8)
+	v.add_theme_constant_override("separation", 10)
 	margin.add_child(v)
-	v.add_child(GayaMisi.buat_label(judul, 18, GayaMisi.EMAS))
+	v.add_child(GayaMisi.buat_label(judul, 21, GayaMisi.EMAS))
 	_isi.add_child(panel)
 	return v
 
@@ -225,21 +233,21 @@ func _buat_label_isi(teks: String, ukuran: int, warna: Color) -> Label:
 func _bangun_materi() -> void:
 	# Kartu "Apa itu kalam?".
 	var kartu := _buat_kartu(DataModul01.MATERI_JUDUL)
-	kartu.add_child(_buat_label_isi(DataModul01.MATERI_TEKS, 16, GayaMisi.KREM))
-	var arab := GayaMisi.buat_label_arab(DataModul01.MATERI_ARAB, 30)
+	kartu.add_child(_buat_label_isi(DataModul01.MATERI_TEKS, 19, GayaMisi.KREM))
+	var arab := GayaMisi.buat_label_arab(DataModul01.MATERI_ARAB, 36)
 	arab.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	arab.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	kartu.add_child(arab)
-	var trans := _buat_label_isi(DataModul01.MATERI_TRANSLITERASI, 15, GayaMisi.KREM_REDUP)
+	var trans := _buat_label_isi(DataModul01.MATERI_TRANSLITERASI, 17, GayaMisi.KREM_REDUP)
 	trans.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	kartu.add_child(trans)
-	var catatan := _buat_label_isi(DataModul01.MATERI_CATATAN, 14, GayaMisi.KREM_REDUP)
+	var catatan := _buat_label_isi(DataModul01.MATERI_CATATAN, 16, GayaMisi.KREM_REDUP)
 	catatan.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	kartu.add_child(catatan)
 
 	# 3 kartu kata berdampingan.
 	var baris := HBoxContainer.new()
-	baris.add_theme_constant_override("separation", 8)
+	baris.add_theme_constant_override("separation", 12)
 	_isi.add_child(baris)
 	for k in DataModul01.KARTU_KATA:
 		var kata: Dictionary = k
@@ -255,13 +263,13 @@ func _bangun_materi() -> void:
 		var v := VBoxContainer.new()
 		v.add_theme_constant_override("separation", 4)
 		margin.add_child(v)
-		var nama := _buat_label_isi(String(kata.get("nama", "")), 17, GayaMisi.EMAS)
+		var nama := _buat_label_isi(String(kata.get("nama", "")), 20, GayaMisi.EMAS)
 		nama.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		v.add_child(nama)
-		var ciri := _buat_label_isi(String(kata.get("ciri", "")), 14, GayaMisi.KREM)
+		var ciri := _buat_label_isi(String(kata.get("ciri", "")), 16, GayaMisi.KREM)
 		ciri.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		v.add_child(ciri)
-		var arti := _buat_label_isi(String(kata.get("arti", "")), 13, GayaMisi.KREM_REDUP)
+		var arti := _buat_label_isi(String(kata.get("arti", "")), 15, GayaMisi.KREM_REDUP)
 		arti.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		v.add_child(arti)
 		baris.add_child(panel)
@@ -271,19 +279,19 @@ func _bangun_materi() -> void:
 	var baris_rumus: Array[String] = []
 	for i in range(DataModul01.RUMUS.size()):
 		baris_rumus.append("%d. %s" % [i + 1, String(DataModul01.RUMUS[i])])
-	rumus.add_child(_buat_label_isi("\n".join(baris_rumus), 16, GayaMisi.KREM))
+	rumus.add_child(_buat_label_isi("\n".join(baris_rumus), 19, GayaMisi.KREM))
 
 	# Kartu "Bait hafalan".
 	var bait := _buat_kartu("Bait hafalan")
 	var teks_bait := String(DataModul01.BAIT)
 	if not teks_bait.begins_with("“") and not teks_bait.begins_with("\""):
 		teks_bait = "“" + teks_bait + "”"
-	var lab_bait := _buat_label_isi(teks_bait, 16, GayaMisi.KREM)
+	var lab_bait := _buat_label_isi(teks_bait, 19, GayaMisi.KREM)
 	lab_bait.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	bait.add_child(lab_bait)
 
 	# Alur + chip poin.
-	var alur := _buat_label_isi("Selesai materi → latihan 5 soal → kuis 1 soal", 14, GayaMisi.KREM_REDUP)
+	var alur := _buat_label_isi("Selesai materi → latihan 5 soal → kuis 1 soal", 16, GayaMisi.KREM_REDUP)
 	alur.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_isi.add_child(alur)
 	var chip := HBoxContainer.new()
@@ -328,7 +336,7 @@ func _bangun_kuis() -> void:
 
 ## Kerangka soal dipakai latihan (5 soal) maupun kuis (1 soal).
 func _bangun_soal(nama_langkah: String) -> void:
-	_label_soal = GayaMisi.buat_label("", 16, GayaMisi.EMAS)
+	_label_soal = GayaMisi.buat_label("", 19, GayaMisi.EMAS)
 	_isi.add_child(_label_soal)
 
 	_bilah = GayaMisi.buat_bilah_progres()
@@ -338,18 +346,18 @@ func _bangun_soal(nama_langkah: String) -> void:
 	_isi.add_child(_bilah)
 
 	var kartu := _buat_kartu("Soal")
-	_teks_soal = _buat_label_isi("", 17, GayaMisi.KREM)
+	_teks_soal = _buat_label_isi("", 20, GayaMisi.KREM)
 	kartu.add_child(_teks_soal)
 
 	_opsi_box = VBoxContainer.new()
 	_opsi_box.add_theme_constant_override("separation", 8)
 	_isi.add_child(_opsi_box)
 
-	_umpan = _buat_label_isi("", 16, GayaMisi.EMAS)
+	_umpan = _buat_label_isi("", 19, GayaMisi.EMAS)
 	_umpan.visible = false
 	_isi.add_child(_umpan)
 
-	_petunjuk = _buat_label_isi("", 14, GayaMisi.KREM_REDUP)
+	_petunjuk = _buat_label_isi("", 16, GayaMisi.KREM_REDUP)
 	_petunjuk.visible = false
 	_isi.add_child(_petunjuk)
 
@@ -457,7 +465,7 @@ func _selesaikan_kuis() -> void:
 
 func _bangun_selesai() -> void:
 	var kartu := _buat_kartu("Selesai — %d poin" % _poin_total)
-	kartu.add_child(_buat_label_isi("Materi, latihan, dan kuis Modul 01 tuntas.", 16, GayaMisi.KREM))
+	kartu.add_child(_buat_label_isi("Materi, latihan, dan kuis Modul 01 tuntas.", 19, GayaMisi.KREM))
 	var tutup_btn := GayaMisi.buat_tombol_emas("Tutup")
 	tutup_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	tutup_btn.pressed.connect(tutup)
@@ -466,7 +474,7 @@ func _bangun_selesai() -> void:
 
 func _bangun_error() -> void:
 	_bersihkan_isi()
-	_isi.add_child(_buat_label_isi("Soal belum tersedia — menunggu tashih.", 16, GayaMisi.KREM))
+	_isi.add_child(_buat_label_isi("Soal belum tersedia — menunggu tashih.", 19, GayaMisi.KREM))
 	var tutup_btn := GayaMisi.buat_tombol_emas("Tutup")
 	tutup_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	tutup_btn.pressed.connect(tutup)

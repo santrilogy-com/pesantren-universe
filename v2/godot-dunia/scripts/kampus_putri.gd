@@ -1062,7 +1062,11 @@ static func _halaman_cangkruk(kampus: Node3D) -> void:
 	var mesh_bohlam := SphereMesh.new()
 	mesh_bohlam.radius = 0.22
 	mesh_bohlam.height = 0.44
+	# PERBAIKAN PERFORMA 19 Nov 2026 (Rangga): 12x6 + tanpa bayangan.
+	mesh_bohlam.radial_segments = 12
+	mesh_bohlam.rings = 6
 	bohlam.mesh = mesh_bohlam
+	bohlam.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	bohlam.position = Vector3(0, 3.1, 0)
 	bohlam.material_override = mat_bohlam
 	bohlam.name = "BohlamLampu"

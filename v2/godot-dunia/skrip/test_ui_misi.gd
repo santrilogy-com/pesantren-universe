@@ -100,7 +100,7 @@ func _ready() -> void:
 	# ---------- D. GayaMisi + AvatarMisi ----------
 	var panel_sb := GayaMisi.gaya_panel()
 	_cek("Gaya: panel rim emas 3 + radius 18", panel_sb.border_width_left == 3 and panel_sb.corner_radius_top_left == 18)
-	_cek("Gaya: tombol emas Button + chip DRAF PanelContainer", GayaMisi.buat_tombol_emas("X") is Button and GayaMisi.buat_pill_draf() is PanelContainer)
+	_cek("Gaya: tombol emas Button", GayaMisi.buat_tombol_emas("X") is Button)
 	_cek("Gaya: bilah progres max 1, tanpa persen", GayaMisi.buat_bilah_progres() is ProgressBar and GayaMisi.buat_bilah_progres().max_value == 1.0 and not GayaMisi.buat_bilah_progres().show_percentage)
 	_cek("Gaya: label Arab Amiri + tab judul emas", GayaMisi.buat_label_arab("قَامَ", 40) is Label and GayaMisi.buat_tab_judul("Tes") is PanelContainer)
 	# REGRESI cacat foto ui-misi v1 (Raka, 18 Nov 2026): autowrap di
@@ -108,7 +108,7 @@ func _ready() -> void:
 	# footer terjepit 1 px dan teks vertikal huruf-per-huruf.
 	_cek("Gaya REGRESI: label tanpa bungkus lebar minimum = lebar teks (96 vs 1)", GayaMisi.buat_label("Ust. Aqsal M", 24, GayaMisi.KREM).get_minimum_size().x > 50 and GayaMisi.buat_label("Ust. Aqsal M", 24, GayaMisi.KREM, true).get_minimum_size().x < 5)
 	_cek("Gaya REGRESI: tab judul lebar minimum > 80 (bukan 1 px)", GayaMisi.buat_tab_judul("Ust. Aqsal M").get_minimum_size().x > 80)
-	_cek("Gaya REGRESI: pill DRAF lebar minimum > 60", GayaMisi.buat_pill_draf().get_minimum_size().x > 60)
+	# (Cek pill DRAF dihapus bersama chipnya — keputusan Mas 13:05.)
 	_cek("Gaya REGRESI: bungkus=true mengaktifkan autowrap", GayaMisi.buat_label("teks panjang", 16, GayaMisi.KREM, true).autowrap_mode == TextServer.AUTOWRAP_WORD_SMART)
 	var av := AvatarMisi.new()
 	av.atur_tipe("ustadzah")
@@ -124,7 +124,7 @@ func _ready() -> void:
 	_cek("Dialog UI: hidden saat dibuat", not dlg.visible)
 	dlg.tampilkan("putra")
 	_cek("Dialog UI: tampil + teks babak 1 + footer Babak 1 dari 5", dlg.visible and _ada_teks(dlg, "Ahlan wa sahlan") and _ada_teks(dlg, "Babak 1 dari 5"))
-	_cek("Dialog UI: tab nama Ust. Aqsal M + tag TEKS DRAF", _ada_teks(dlg, "Ust. Aqsal M") and _ada_teks(dlg, "TEKS DRAF"))
+	_cek("Dialog UI: tab nama Ust. Aqsal M + tanpa TEKS DRAF (dihapus Mas 13:05)", _ada_teks(dlg, "Ust. Aqsal M") and not _ada_teks(dlg, "TEKS DRAF"))
 	_cek("Dialog UI REGRESI: tab judul tidak kolaps (min width > 80)", (dlg._tab_wadah.get_child(0) as Control).get_minimum_size().x > 80)
 	var dlg_selesai_ev: Array = []
 	dlg.selesai.connect(func() -> void: dlg_selesai_ev.append(true))
@@ -149,7 +149,7 @@ func _ready() -> void:
 	var rb := RuangBelajarUI.new()
 	add_child(rb)
 	rb.tampilkan("Ust. Sanusi")
-	_cek("RB: tampil langkah 1 materi + pengajar + TEKS DRAF", rb.visible and rb._langkah == 1 and _ada_teks(rb, "Ust. Sanusi") and _ada_teks(rb, "TEKS DRAF"))
+	_cek("RB: tampil langkah 1 materi + pengajar, tanpa TEKS DRAF", rb.visible and rb._langkah == 1 and _ada_teks(rb, "Ust. Sanusi") and not _ada_teks(rb, "TEKS DRAF"))
 	_cek("RB: materi Arab + 3 kartu kata + bait hafalan", _ada_teks(rb, "قَامَ مُحَمَّدٌ") and _ada_teks(rb, "ISIM") and _ada_teks(rb, "Bait hafalan"))
 	var rb_langkah: Array = []
 	var rb_selesai_ev: Array = []
@@ -183,7 +183,7 @@ func _ready() -> void:
 	var tes := TesKenaikanUI.new()
 	add_child(tes)
 	tes.tampilkan("N1")
-	_cek("Tes: tampil N1 + 10 soal + ambang 8 + TEKS DRAF", tes.visible and _ada_teks(tes, "Tes Naik Bagian 2 (N1.T)") and _ada_teks(tes, "8") and _ada_teks(tes, "TEKS DRAF"))
+	_cek("Tes: tampil N1 + 10 soal + ambang 8, tanpa TEKS DRAF", tes.visible and _ada_teks(tes, "Tes Naik Bagian 2 (N1.T)") and _ada_teks(tes, "8") and not _ada_teks(tes, "TEKS DRAF"))
 	var tes_hasil_ev: Array = []
 	tes.tes_selesai.connect(func(lulus: bool, skor: int, bagian: String, mesin: MesinKuis) -> void: tes_hasil_ev.append({"lulus": lulus, "skor": skor, "bagian": bagian, "mesin": mesin}))
 	for i in 10:

@@ -401,7 +401,21 @@ static func _motif_sarung(warna: Color) -> StandardMaterial3D:
 	var img := Image.create(256, 128, false, Image.FORMAT_RGBA8)
 	var krem := Color("#f8f6ee")
 	var emas := Color("#d4a017")
-	var terang := warna.lerp(krem, 0.55)
+	# Pencerahan ADAPTIF (Kirana, 19 Nov 2026 — sarung Kyai terbaca
+	# ZEBRA): pita terang selalu dicerahkan 0,55 ke krem membuat
+	# sarung gelap (#23282e Kyai, #2b2b2b Satpam) jadi garis abu-abu
+	# terang di atas dasar nyaris hitam. Di bawah luminansi 0,25
+	# faktor mengecil mulus ke 0,22 (motif samar gelap-di-atas-gelap
+	# seperti batik hitam sungguhan); di atasnya tetap 0,55 supaya
+	# sarung zamrud/biru/coklat santri tidak berubah.
+	# CATATAN: Color.get_luminance() Godot 4.7 memakai nilai sRGB
+	# TANPA linearisasi (terukur: #23282e -> 0,154; #2b2b2b -> 0,169;
+	# #5a3a22 -> 0,247; #008062 -> 0,387) — ambang di bawah ini
+	# disesuaikan dengan angka terukur itu, bukan luminansi relatif.
+	var lum := warna.get_luminance()
+	var t := clampf((lum - 0.15) / 0.10, 0.0, 1.0)
+	var faktor_terang := lerpf(0.22, 0.55, t * t * (3.0 - 2.0 * t))
+	var terang := warna.lerp(krem, faktor_terang)
 	var gelap := warna.darkened(0.3)
 	var periode := 32.0
 	for y in range(128):
@@ -1332,8 +1346,10 @@ static func build_visual(nama: String, outfit: Dictionary) -> Dictionary:
 
 	# PERBAIKAN PERFORMA 19 Nov 2026 (Rangga): Palette default
 	# cast_shadow OFF — nyalakan lagi untuk bagian karakter yang
-	# besar (>= 0,15 m: koko/sarung/kepala/lengan/kaki/jilbab).
-	# Mata/hidung/senyum/alis/kancing tetap tanpa bayangan.
+	# besar (>= 0,35 m: koko/sarung/kepala/jenggot/serban/songkok/
+	# jilbab). Paha/lengan/sandal/betis/kitab tetap tanpa bayangan —
+	# siluet karakter utuh dari torso + sarung + kepala; ambang 0,30 m
+	# masih menyalakan ~22 mesh/karakter (194 total), 0,15 m dulu 325.
 	# Semua karakter (pemain + NPC + remote MP) lewat build_visual
 	# ini, jadi satu tempat cukup.
 	var tumpuk: Array[Node] = [root]
@@ -1342,7 +1358,7 @@ static func build_visual(nama: String, outfit: Dictionary) -> Dictionary:
 		if n is MeshInstance3D:
 			var mi := n as MeshInstance3D
 			var s: Vector3 = mi.get_aabb().size * mi.scale
-			if maxf(maxf(s.x, s.y), s.z) >= 0.15:
+			if maxf(maxf(s.x, s.y), s.z) >= 0.35:
 				mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 		for ch in n.get_children():
 			tumpuk.append(ch)

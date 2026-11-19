@@ -1588,7 +1588,12 @@ static func _lamp(root: Node3D, pos: Vector3) -> void:
 	var mesh := SphereMesh.new()
 	mesh.radius = 0.22
 	mesh.height = 0.44
+	# PERBAIKAN PERFORMA 19 Nov 2026 (Rangga): 12x6 + tanpa bayangan
+	# (bohlam 0,22 m, pola sama seperti _bola di pencahayaan.gd).
+	mesh.radial_segments = 12
+	mesh.rings = 6
 	bulb.mesh = mesh
+	bulb.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	bulb.position = Vector3(0, 3.1, 0)
 	bulb.material_override = glow_mat
 	# RONDE 5: bohlam masuk grup "LampuJalan" supaya LangitDinamis

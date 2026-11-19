@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://skrip/test_cek_perf_setting.gd" id="1_cekperf"]
+
+[node name="TestCekPerfSetting" type="Node"]
+script = ExtResource("1_cekperf")

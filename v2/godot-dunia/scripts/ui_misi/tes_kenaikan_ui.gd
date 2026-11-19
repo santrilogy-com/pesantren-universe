@@ -5,7 +5,7 @@ extends PanelContainer
 ## §2.1 (tes 10 soal, lulus >= 8/10, +20 poin bila lulus).
 ## Branding: "Pesantren Universe" — panel ini tidak menulis nama
 ## game sama sekali; JANGAN tulis "Verse" di sini.
-## Semua konten bertanda TEKS DRAF (bank soal menunggu tashih).
+## Bank soal menunggu tashih.
 ##
 ## ALUR (catatan implementasi):
 ## - MesinKuis.jawab() langsung maju ke soal berikut, jadi kunci
@@ -228,7 +228,6 @@ func _tambah_header() -> void:
 	var l := GayaMisi.buat_label(judul, 20, GayaMisi.KREM)
 	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	baris.add_child(l)
-	baris.add_child(GayaMisi.buat_pill_draf())
 	_konten.add_child(GayaMisi.buat_label(
 		"10 soal • Lulus bila benar ≥ 8 • +%d poin bila lulus" % POIN_TES,
 		16, GayaMisi.KREM_REDUP, true

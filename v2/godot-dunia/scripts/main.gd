@@ -388,25 +388,71 @@ var _pos_jaga_interior_door: Vector3 = Vector3(178.5, 0, -300)
 var _pos_jaga_interior_spawn: Vector3 = Vector3(179.6, 0, -299.6)
 
 
-## PERBAIKAN PERFORMA 19 Nov 2026 (Rangga): nyalakan lagi bayangan
-## untuk mesh LUAR yang besar (sisi AABB terpanjang >= 2 m — dinding,
-## atap, tembok, gerbang, tiang lampu). Palette default OFF; tanpa ini
-## gedung kehilangan bayangan matahari. LangitDinamis dilewati total
-## (matahari/bulan/awan tidak boleh melempar bayangan). Interior tidak
-## ada di root ini (root terpisah di Main) jadi aman.
+## PERBAIKAN PERFORMA 19 Nov 2026 (Rangga): atur ulang bayangan mesh
+## LUAR (Palette default OFF). Aturan per mesh:
+## - LangitDinamis: dilewati total (matahari/bulan/awan tak berbayang).
+## - GLB pohon (GLB_Pohon*) + gedung GLB (Surau, GLB_Gubuk*): biarkan
+##   ON (default impor) — pohon + Surau + gubuk memang harus berbayang.
+## - GLB pagar/taman/sawah: matikan total (bilah + petak kecil).
+## - Mesh rakitan lain: ON hanya bila bentang horizontal >= 4 m DAN
+##   tinggi >= 1 m (dinding/atap/tembok/gerbang/gunung); OFF bila sisi
+##   terpanjang < 0,5 m (dekor mungil). Sisanya dibiarkan (mesh rakitan
+##   sedang sudah OFF via Palette; atap kerucut mentah tetap ON).
+## REVISI ambang (pengukuran caster 19 Nov): ambang lama >= 2 m
+## menyalakan 843 mesh (pagar, jalan, tiang lampu ikut) — caster total
+## 1.706, jauh di atas target < 500.
 static func _nyalakan_bayangan_gedung(root: Node) -> void:
-	var tumpuk: Array[Node] = [root]
+	var tumpuk: Array = [[root, ""]]
 	while not tumpuk.is_empty():
-		var n: Node = tumpuk.pop_back()
+		var item: Array = tumpuk.pop_back()
+		var n: Node = item[0]
+		var jenis: String = String(item[1])
 		if n.name == "LangitDinamis":
 			continue
+		if String(n.name).begins_with("GLB_Pohon"):
+			jenis = "pohon"
+		elif n.name == "Surau" or String(n.name).begins_with("GLB_Gubuk"):
+			jenis = "gedung"
+		elif n.name == "Sawah" or n.name == "GLB_Taman" or String(n.name).begins_with("GLB_Pagar"):
+			jenis = "mati"
 		if n is MeshInstance3D:
 			var mi := n as MeshInstance3D
-			var s: Vector3 = mi.get_aabb().size * mi.scale
-			if maxf(maxf(s.x, s.y), s.z) >= 2.0:
-				mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+			if jenis == "mati":
+				mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			elif jenis == "pohon" or jenis == "gedung":
+				# Pohon + Surau + gubuk tetap berbayang, KECUALI bagian
+				# kecil (< 1 m: ranting, trim, ornamen) — bayangannya
+				# tak terlihat dari jarak main. REVISI ambang (ukur
+				# caster 19 Nov): biarkan-semua-ON menyisakan ~690
+				# ArrayMesh GLB; potongan ini yang terbesar kedua.
+				var s2: Vector3 = mi.get_aabb().size * mi.scale
+				if maxf(maxf(s2.x, s2.y), s2.z) < 1.0:
+					mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			else:
+				var s: Vector3 = mi.get_aabb().size * mi.scale
+				if maxf(s.x, s.z) >= 4.0 and s.y >= 1.0:
+					mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+				elif maxf(maxf(s.x, s.y), s.z) < 0.5:
+					mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		for ch in n.get_children():
-			tumpuk.append(ch)
+			tumpuk.append([ch, jenis])
+
+
+## PERBAIKAN PERFORMA 19 Nov 2026 (Rangga): semua mesh interior
+## (root "Interior*" di z=-300) tanpa bayangan — ruangan tertutup,
+## matahari tidak masuk; lampu omni interior memang tanpa bayangan.
+## Dipanggil di akhir _ready, setelah semua interior dibangun.
+static func _matikan_bayangan_interior(induk: Node) -> void:
+	for ch in induk.get_children():
+		if not String(ch.name).begins_with("Interior"):
+			continue
+		var tumpuk: Array[Node] = [ch]
+		while not tumpuk.is_empty():
+			var n: Node = tumpuk.pop_back()
+			if n is MeshInstance3D:
+				(n as MeshInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			for c in n.get_children():
+				tumpuk.append(c)
 
 
 func _ready() -> void:
@@ -632,13 +678,15 @@ func _ready() -> void:
 	var cam := Camera3D.new()
 	cam.current = true
 	cam.fov = 60.0
-	# PERBAIKAN PERFORMA 19 Nov 2026 (Rangga): far 4000 -> 300.
-	# Dulu interior z=-300 ikut ter-render dari luar. Gunung di
-	# ±210 m (~250 m dari spawn) masih di dalam 300 m — verifikasi
-	# lewat foto. PERHATIAN: matahari/bulan/bintang di
-	# langit_dinamis.gd berada di 360-380 m — TERPOTONG oleh far ini
-	# (lihat laporan Rangga 19 Nov); perlu ditindaklanjuti terpisah.
-	cam.far = 300.0
+	# PERBAIKAN PERFORMA 19 Nov 2026 (Rangga): far 4000 -> 450.
+	# REVISI nilai (foto A/B 19 Nov): far=300 MEMOTONG puncak gunung
+	# (Gunung_0 331 m dari kamera, puncak ~337 m — foto far300 puncak
+	# DATAR vs far4000 runcing) + bulan (384 m). Premis lama "gunung
+	# ±210 m" SALAH — gunung di 350/360 m dari pusat. 450 mencakup
+	# tepi jauh gunung (~408 m) + matahari+halo (~407 m) + bintang
+	# (360 m) dari spawn; interior z=-300 tetap tak ter-render karena
+	# visible=false saat pemain di luar (bukan karena far).
+	cam.far = 450.0
 	_spring.add_child(cam)
 	_cam = cam
 	_kamera = KameraPesantren.new()
@@ -709,6 +757,9 @@ func _ready() -> void:
 	_player.langkah.connect(_saat_langkah)
 	_refresh_markers()
 	_update_hud()
+	# PERBAIKAN PERFORMA 19 Nov 2026 (Rangga): matikan bayangan semua
+	# interior (lihat _matikan_bayangan_interior).
+	_matikan_bayangan_interior(self)
 	# MULTIPLAYER FASE 1 (Wira): pasang node Players + spawner.
 	_mp_pasang_players()
 
@@ -3666,7 +3717,16 @@ func _mulai_sholat(s: Dictionary) -> void:
 		if not npc.ikut_sholat():
 			continue
 		if npc == _kyai:
-			_npc_rumah[npc] = npc.global_position
+			# RONDE 24 (Raka, 19 Nov 2026 — "Kyai muncul dari tembok"):
+			# JANGAN simpan posisi saat ini sebagai "rumah" kalau NPC
+			# patroli sedang di DALAM ruangan — _rute_pulang akan
+			# menarik garis lurus dari pintu luar ke kursi (z=-300),
+			# menembus dinding timur interior (repro: skrip/
+			# test_kyai_tembok.gd, TABRAK E_timur t=252). NPC patroli
+			# pulang ke rumah LUAR dari setup (-3.5,-2.0); selesai_
+			# sholat() mengantarnya masuk lagi lewat pintu (GTA).
+			if npc._patroli.is_empty():
+				_npc_rumah[npc] = npc.global_position
 			_sajadah_npc[npc] = _posisi_imam()
 			_npc_sholat_fase[npc] = "ke_pintu"
 			npc.say("Ayo sholat berjamaah — saya jadi imam.")
@@ -3677,7 +3737,11 @@ func _mulai_sholat(s: Dictionary) -> void:
 			npc.mulai_rute(_rute_ke_pintu_surau(npc.global_position))
 			continue
 		if npc == _ustadzah:
-			_npc_rumah[npc] = npc.global_position
+			# RONDE 24 (Raka): sama seperti Kyai — jangan simpan kursi
+			# Musholla (z=-300) sebagai "rumah"; pulang ke rumah LUAR
+			# setup (134,-17), masuk lagi lewat pintu.
+			if npc._patroli.is_empty():
+				_npc_rumah[npc] = npc.global_position
 			_sajadah_npc[npc] = _posisi_imam_musholla()
 			npc.say("Ayo sholat berjamaah di Musholla Ar-Raudhah — saya jadi imam.")
 			if npc.di_dalam():
@@ -3689,7 +3753,11 @@ func _mulai_sholat(s: Dictionary) -> void:
 				_npc_sholat_fase[npc] = "ke_pintu"
 				npc.mulai_rute(_rute_ke_pintu_musholla(npc.global_position))
 			continue
-		_npc_rumah[npc] = npc.global_position
+		# RONDE 24 (Raka): "rumah" harus titik luar yang bisa dicapai
+		# jalan kaki — NPC patroli (punya kamus _patroli) tidak
+		# menimpa rumah setup-nya dengan posisi di dalam ruangan.
+		if npc._patroli.is_empty():
+			_npc_rumah[npc] = npc.global_position
 		_sajadah_npc[npc] = _posisi_sajadah(sajadah[j % sajadah.size()])
 		_npc_sholat_fase[npc] = "ke_pintu"
 		npc.say("Ayo sholat berjamaah di Surau!")

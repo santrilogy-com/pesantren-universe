@@ -50,6 +50,13 @@ renderer/rendering_method.mobile="gl_compatibility"
 # beberapa HP"): render 3D di 0,75x lalu upscale bilinear — layar HP
 # 1080x2340 tidak perlu raster penuh. mode=1 adalah Bilinear
 # (Viewport SCALING_3D_MODE_BILINEAR); UI/canvas tidak ikut mengecil.
+# PERHATIAN — TERBUKTI TIDAK AKTIF (19 Nov): renderer proyek ini GL
+# Compatibility (wajib untuk web export) TIDAK mendukung scaling_3d —
+# setter viewport menolak BILINEAR (tetap 0) dan setting ini dibaca
+# kembali 0/1.0, baik headless maupun Xvfb. Baris di bawah ini
+# dibiarkan sebagai niat (aktif bila renderer ganti Forward+), tapi
+# JANGAN dihitung sebagai perbaikan — penahan fill-rate yang jalan
+# saat ini hanya Engine.max_fps=60 (main.gd).
 rendering/scaling_3d/mode=1
 rendering/scaling_3d/scale=0.75
 

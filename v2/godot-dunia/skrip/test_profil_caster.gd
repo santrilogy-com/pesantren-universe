@@ -10,6 +10,8 @@ var _per_kelas_on: Dictionary = {}
 var _per_kelas_off: Dictionary = {}
 var _besar_luar_on := 0
 var _kecil_luar_on := 0
+var _dalam_jangkauan := 0
+var _pos_kamera := Vector3.ZERO
 
 
 func _hitung(n: Node, area: String) -> void:
@@ -23,6 +25,10 @@ func _hitung(n: Node, area: String) -> void:
 		d[kelas] = int(d.get(kelas, 0)) + 1
 		if on:
 			_per_area[area] = int(_per_area.get(area, 0)) + 1
+			# Beban shadow pass nyata = caster dalam jangkauan
+			# directional shadow (~100 m dari kamera), bukan total.
+			if (mi as Node3D).global_position.distance_to(_pos_kamera) <= 100.0:
+				_dalam_jangkauan += 1
 			if area == "Pesantren":
 				var s: Vector3 = mi.get_aabb().size * mi.scale
 				if maxf(maxf(s.x, s.y), s.z) >= 2.0:
@@ -31,6 +37,16 @@ func _hitung(n: Node, area: String) -> void:
 					_kecil_luar_on += 1
 	for ch in n.get_children():
 		_hitung(ch, area)
+
+
+func _hitung_jarak(n: Node) -> void:
+	if n is MeshInstance3D:
+		var mi := n as MeshInstance3D
+		if mi.cast_shadow != GeometryInstance3D.SHADOW_CASTING_SETTING_OFF:
+			if (mi as Node3D).global_position.distance_to(_pos_kamera) <= 100.0:
+				_dalam_jangkauan += 1
+	for ch in n.get_children():
+		_hitung_jarak(ch)
 
 
 func _ready() -> void:
@@ -46,6 +62,15 @@ func _ready() -> void:
 		await get_tree().process_frame
 	for ch in _main.get_children():
 		_hitung(ch, String(ch.name))
+	var cam := get_viewport().get_camera_3d()
+	if cam != null:
+		_pos_kamera = cam.global_position
+		# Hitung ulang dalam-jangkauan dengan posisi kamera benar
+		# (di atas _pos_kamera masih nol saat _hitung jalan).
+		_dalam_jangkauan = 0
+		for ch in _main.get_children():
+			_hitung_jarak(ch)
+	print("CASTER: dalam jangkauan 100 m dari kamera (beban shadow pass nyata) = %d" % _dalam_jangkauan)
 	print("CASTER: ON per area:")
 	for k in _per_area.keys():
 		print("CASTER:   %-28s %d" % [k, int(_per_area[k])])

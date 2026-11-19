@@ -62,6 +62,13 @@ const PETUNJUK_BARIS: Array = [
 	["lingkaran", "Reset"],
 	["x", "Mulai Misi"],
 ]
+# Keterangan tiap baris pop-up (Konsep UI v2, 19 Nov 2026).
+const PETUNJUK_KETERANGAN := {
+	"Aksi": "Berinteraksi dengan NPC & objek",
+	"Chat": "Ngobrol dengan santri lain",
+	"Reset": "Kembali ke posisi awal",
+	"Mulai Misi": "Lanjut ke langkah misi berikutnya",
+}
 const UKURAN_TOMBOL_GAMEPAD := Vector2(100, 100)
 
 const HIJAU := Color("#065f46")
@@ -122,6 +129,7 @@ var _petunjuk_dim: ColorRect
 var _petunjuk_panel: PanelContainer
 var _petunjuk_mengerti_btn: Button
 var _petunjuk_tutup_btn: Button
+var _tween_petunjuk: Tween = null
 # RONDE 17: tombol "Suara"/"Senyap" di HUD (mute audio suasana).
 var _suara_btn: Button
 # VARIAN B rev1 (Tara, 18 Nov 2026 — DI-ACC Mas 18:43 WIB):
@@ -263,6 +271,9 @@ var _sholat_label: Label
 # PETUNJUK MISI SANTRI BARU (Raka, 18 Nov 2026 — perintah Mas 21:32 WIB).
 var _petunjuk_misi_banner: PanelContainer
 var _petunjuk_misi_label: Label
+var _petunjuk_misi_arah: Label
+var _petunjuk_misi_teks := ""
+var _tween_banner: Tween = null
 # RONDE 18 — overlay blackout adegan sholat sinematik (layar menghitam
 # di antara takbir dan selesai). Selalu paling atas (dibangun terakhir).
 var _blackout_overlay: Control
@@ -1355,17 +1366,21 @@ func _build_hud() -> void:
 	_build_chat_panel()
 
 
-# ---------- pop-up "PETUNJUK TOMBOL" (ROMBAKAN HUD v3) ----------
+# ---------- pop-up "PETUNJUK TOMBOL" (ROMBAKAN HUD v3 + v2) ----------
 # Pop-up pemain baru: muncul saat PERTAMA KALI main (flag save
 # "petunjuk_tombol_ditutup", ditulis main.gd lewat sinyal
 # petunjuk_ditutup), bisa di-close via tombol × atau "Mengerti".
-# Isi: judul + 4 baris (bentuk outline + fungsi) + catatan kaki.
-# TEKS + BENTUK HITAM supaya terbaca di atas panel putih translusen
-# (arahan Mas 17:26 WIB: "Tulisan di petunjuk warna hitam aja biar
-# bisa dibaca"). Bentuk outline kecil di baris ikut HITAM (bukan
-# putih) + outline pill "Mengerti" juga hitam — supaya satu baris
-# terbaca utuh di atas panel terang (keputusan Tara, dicatat di sini;
-# kalau Mas mau bentuknya tetap putih, tinggal bilang).
+# v2 (Sinta, 19 Nov 2026 — Konsep UI v2 ACC Mas): kepala rata kiri
+# + subjudul, tiap baris berikon dalam lingkaran + keterangan,
+# catatan kaki dalam strip krem berikon "i", tombol "Mengerti"
+# penuh lebar bergradien emas, panel putih hangat bergradien +
+# pita emas di atas + radius 26 + bayangan lembut, animasi masuk.
+# DIPERTAHANKAN dari B rev1 (dikunci tes gate test_hud_rombak):
+# dim alpha 80, panel alpha 225, judul "PETUNJUK TOMBOL", teks
+# catatan kaki persis, SEMUA ikon + teks HITAM (arahan Mas 17:26 WIB:
+# "Tulisan di petunjuk warna hitam aja biar bisa dibaca") — jadi
+# lingkaran tutup ✕ memakai zamrud lembut + ✕ hitam (bukan lingkaran
+# gelap + ✕ putih seperti mockup), dan dim tetap 80 (bukan 96).
 # Panel di tengah layar (dipusatkan _pusatkan_panel 480x440, maks
 # 92% viewport) — TIDAK menutupi klaster tombol maupun analog
 # (panel berakhir jauh di atas klaster). Dim hitam menutupi layar di
@@ -1382,76 +1397,144 @@ func _build_petunjuk_popup() -> void:
 	_hud.add_child(_petunjuk_dim)
 	_petunjuk_panel = PanelContainer.new()
 	var gaya := StyleBoxFlat.new()
-	gaya.bg_color = Color(1, 1, 1, 225.0 / 255.0)
-	gaya.set_corner_radius_all(20)
-	gaya.content_margin_left = 24
-	gaya.content_margin_right = 24
-	gaya.content_margin_top = 16
-	gaya.content_margin_bottom = 16
+	gaya.bg_color = Color("#fdf8ec")
+	gaya.bg_color.a = 225.0 / 255.0
+	gaya.set_corner_radius_all(26)
+	gaya.shadow_color = Color(0, 0, 0, 70.0 / 255.0)
+	gaya.shadow_size = 16
+	gaya.shadow_offset = Vector2(0, 8)
 	_petunjuk_panel.add_theme_stylebox_override("panel", gaya)
 	_petunjuk_panel.visible = false
 	_hud.add_child(_petunjuk_panel)
 	_pusatkan_panel(_petunjuk_panel, 480.0, 440.0)
+	_petunjuk_panel.resized.connect(func() -> void: _petunjuk_panel.pivot_offset = _petunjuk_panel.size * 0.5)
+	# Latar gradien putih hangat + pita emas di atas (anak pertama —
+	# PanelContainer menaruh semua anak di rect yang sama).
+	var latar := TextureRect.new()
+	latar.texture = GayaMisi.buat_tekstur_gradien(Color("#fdf8ec"), KREM, 26, Color(0, 0, 0, 0), 0, EMAS, 8)
+	latar.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	latar.stretch_mode = TextureRect.STRETCH_SCALE
+	latar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_petunjuk_panel.add_child(latar)
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 24)
+	margin.add_theme_constant_override("margin_right", 24)
+	margin.add_theme_constant_override("margin_top", 20)
+	margin.add_theme_constant_override("margin_bottom", 16)
+	_petunjuk_panel.add_child(margin)
 	var tumpuk := VBoxContainer.new()
 	tumpuk.add_theme_constant_override("separation", 10)
-	_petunjuk_panel.add_child(tumpuk)
-	# Baris judul + tombol tutup × (icon IkonHUD "x" hitam — bukan
-	# teks "×", supaya tidak bergantung pada glif font).
+	margin.add_child(tumpuk)
+	# v2 — Kepala rata kiri: judul + subjudul, tombol tutup ✕ dalam
+	# lingkaran zamrud lembut (icon IkonHUD "x" hitam — bukan teks
+	# "×", supaya tidak bergantung pada glif font).
 	var baris_judul := HBoxContainer.new()
 	baris_judul.add_theme_constant_override("separation", 8)
 	tumpuk.add_child(baris_judul)
+	var kepala_teks := VBoxContainer.new()
+	kepala_teks.add_theme_constant_override("separation", 2)
+	kepala_teks.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	baris_judul.add_child(kepala_teks)
 	var judul := _make_label("PETUNJUK TOMBOL", 24, Color.BLACK)
-	judul.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	judul.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	baris_judul.add_child(judul)
+	judul.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	kepala_teks.add_child(judul)
+	var subjudul := _make_label("Ketuk tombol sesuai kebutuhanmu", 15, Color("#5a5a5a"))
+	subjudul.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	kepala_teks.add_child(subjudul)
 	_petunjuk_tutup_btn = _make_button("", Color(0, 0, 0, 0), Color.BLACK)
-	_petunjuk_tutup_btn.custom_minimum_size = Vector2(36, 36)
+	_petunjuk_tutup_btn.custom_minimum_size = Vector2(40, 40)
+	var gaya_tutup := StyleBoxFlat.new()
+	gaya_tutup.bg_color = Color("#dcefe6")
+	gaya_tutup.set_corner_radius_all(20)
 	for mode in ["normal", "hover", "pressed", "disabled", "focus"]:
-		_petunjuk_tutup_btn.add_theme_stylebox_override(mode, StyleBoxEmpty.new())
+		_petunjuk_tutup_btn.add_theme_stylebox_override(mode, gaya_tutup)
 	var ikon_tutup := IkonHUD.new()
 	ikon_tutup.jenis = "x"
 	ikon_tutup.warna = Color.BLACK
 	ikon_tutup.bayangan = false
-	ikon_tutup.custom_minimum_size = Vector2(24, 24)
+	ikon_tutup.position = Vector2(8, 8)
+	ikon_tutup.size = Vector2(24, 24)
 	ikon_tutup.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_petunjuk_tutup_btn.add_child(ikon_tutup)
 	_petunjuk_tutup_btn.set_meta("ikon", ikon_tutup)
 	_petunjuk_tutup_btn.pressed.connect(_tutup_petunjuk)
 	baris_judul.add_child(_petunjuk_tutup_btn)
-	# 4 baris bentuk + fungsi (dari PETUNJUK_BARIS — urutan tampil).
+	# v2 — 4 baris bentuk + fungsi + keterangan (dari PETUNJUK_BARIS
+	# + PETUNJUK_KETERANGAN — urutan tampil sama).
 	for baris in PETUNJUK_BARIS:
 		var bentuk := String(baris[0])
 		var fungsi := String(baris[1])
 		var baris_h := HBoxContainer.new()
 		baris_h.add_theme_constant_override("separation", 12)
 		tumpuk.add_child(baris_h)
+		var lingkaran := Panel.new()
+		lingkaran.custom_minimum_size = Vector2(44, 44)
+		var gaya_lingkaran := StyleBoxFlat.new()
+		gaya_lingkaran.bg_color = Color("#dcefe6")
+		gaya_lingkaran.set_corner_radius_all(22)
+		lingkaran.add_theme_stylebox_override("panel", gaya_lingkaran)
+		baris_h.add_child(lingkaran)
 		var ikon := IkonHUD.new()
 		ikon.jenis = bentuk
 		ikon.warna = Color.BLACK
 		ikon.bayangan = false
-		ikon.custom_minimum_size = Vector2(28, 28)
+		ikon.position = Vector2(8, 8)
+		ikon.size = Vector2(28, 28)
 		ikon.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		baris_h.add_child(ikon)
+		lingkaran.add_child(ikon)
+		var teks_baris := VBoxContainer.new()
+		teks_baris.add_theme_constant_override("separation", 2)
+		teks_baris.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		baris_h.add_child(teks_baris)
 		var label := _make_label(fungsi, 20, Color.BLACK)
-		baris_h.add_child(label)
-	# Catatan kaki + tombol "Mengerti".
+		teks_baris.add_child(label)
+		var keterangan := _make_label(String(PETUNJUK_KETERANGAN.get(fungsi, "")), 14, Color("#5a5a5a"))
+		teks_baris.add_child(keterangan)
+	# v2 — Catatan kaki dalam strip krem berikon "i" emas.
+	# TEKS DIPERTAHANKAN PERSIS (dikunci tes gate test_hud_rombak).
 	# VARIAN B rev1: kamera kini di menu atas (bukan □ lagi).
-	var catatan := _make_label("Kamera ada di menu atas • Fungsi tombol berubah sesuai misi", 16, Color.BLACK)
-	catatan.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	tumpuk.add_child(catatan)
-	var tengah := CenterContainer.new()
-	tumpuk.add_child(tengah)
+	var strip := PanelContainer.new()
+	var gaya_strip := StyleBoxFlat.new()
+	gaya_strip.bg_color = KREM
+	gaya_strip.set_corner_radius_all(12)
+	strip.add_theme_stylebox_override("panel", gaya_strip)
+	strip.add_theme_constant_override("margin_left", 12)
+	strip.add_theme_constant_override("margin_right", 12)
+	strip.add_theme_constant_override("margin_top", 8)
+	strip.add_theme_constant_override("margin_bottom", 8)
+	tumpuk.add_child(strip)
+	var baris_catatan := HBoxContainer.new()
+	baris_catatan.add_theme_constant_override("separation", 8)
+	strip.add_child(baris_catatan)
+	var ikon_info := PanelContainer.new()
+	ikon_info.custom_minimum_size = Vector2(24, 24)
+	var gaya_info := StyleBoxFlat.new()
+	gaya_info.bg_color = EMAS
+	gaya_info.set_corner_radius_all(12)
+	ikon_info.add_theme_stylebox_override("panel", gaya_info)
+	baris_catatan.add_child(ikon_info)
+	var label_info := _make_label("i", 16, Color.WHITE)
+	label_info.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label_info.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	ikon_info.add_child(label_info)
+	var catatan := _make_label("Kamera ada di menu atas • Fungsi tombol berubah sesuai misi", 15, Color.BLACK)
+	catatan.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	catatan.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	baris_catatan.add_child(catatan)
+	# v2 — Tombol "Mengerti": penuh lebar, gradien emas, 21 tebal.
 	_petunjuk_mengerti_btn = _make_button("Mengerti", Color(0, 0, 0, 0), Color.BLACK)
-	_petunjuk_mengerti_btn.custom_minimum_size = Vector2(180, 44)
-	var gaya_mengerti := StyleBoxFlat.new()
-	gaya_mengerti.bg_color = Color(1, 1, 1, 0.25)
-	gaya_mengerti.border_color = Color.BLACK
-	gaya_mengerti.set_border_width_all(2)
-	gaya_mengerti.set_corner_radius_all(22)
-	for mode in ["normal", "hover", "pressed", "disabled", "focus"]:
-		_petunjuk_mengerti_btn.add_theme_stylebox_override(mode, gaya_mengerti)
+	_petunjuk_mengerti_btn.custom_minimum_size = Vector2(0, 52)
+	_petunjuk_mengerti_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_petunjuk_mengerti_btn.add_theme_font_size_override("font_size", 21)
+	_petunjuk_mengerti_btn.set_meta("font_dasar", 21)
+	_petunjuk_mengerti_btn.add_theme_stylebox_override("normal", GayaMisi.gaya_tombol_emas_gradien())
+	_petunjuk_mengerti_btn.add_theme_stylebox_override("hover", GayaMisi.gaya_tombol_emas_gradien_hover())
+	_petunjuk_mengerti_btn.add_theme_stylebox_override("pressed", GayaMisi.gaya_tombol_emas_gradien_pressed())
+	_petunjuk_mengerti_btn.add_theme_stylebox_override("disabled", GayaMisi.gaya_tombol_emas_gradien())
+	_petunjuk_mengerti_btn.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
 	_petunjuk_mengerti_btn.pressed.connect(_tutup_petunjuk)
-	tengah.add_child(_petunjuk_mengerti_btn)
+	GayaMisi.pasang_umpan_tekan(_petunjuk_mengerti_btn)
+	tumpuk.add_child(_petunjuk_mengerti_btn)
 
 
 ## Tampilkan pop-up sekali saja (dipanggil main.gd dari
@@ -1464,6 +1547,24 @@ func coba_tampilkan_petunjuk_awal(sudah_ditutup: bool) -> void:
 		return
 	_petunjuk_dim.visible = true
 	_petunjuk_panel.visible = true
+	_animasi_petunjuk_masuk()
+
+
+## v2: dim fade 150 ms + panel mengembang (scale 0.96->1.0 + fade,
+## 180 ms ease-out).
+func _animasi_petunjuk_masuk() -> void:
+	if _tween_petunjuk != null and _tween_petunjuk.is_valid():
+		_tween_petunjuk.kill()
+	_petunjuk_panel.pivot_offset = _petunjuk_panel.size * 0.5
+	_petunjuk_panel.scale = Vector2(0.96, 0.96)
+	_petunjuk_panel.modulate.a = 0.0
+	_petunjuk_dim.modulate.a = 0.0
+	_tween_petunjuk = create_tween()
+	_tween_petunjuk.set_parallel(true)
+	_tween_petunjuk.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	_tween_petunjuk.tween_property(_petunjuk_dim, "modulate:a", 1.0, 0.15)
+	_tween_petunjuk.tween_property(_petunjuk_panel, "scale", Vector2.ONE, 0.18)
+	_tween_petunjuk.tween_property(_petunjuk_panel, "modulate:a", 1.0, 0.18)
 
 
 func is_petunjuk_visible() -> bool:
@@ -1471,9 +1572,14 @@ func is_petunjuk_visible() -> bool:
 
 
 func _tutup_petunjuk() -> void:
+	if _tween_petunjuk != null and _tween_petunjuk.is_valid():
+		_tween_petunjuk.kill()
 	if _petunjuk_dim != null:
+		_petunjuk_dim.modulate.a = 1.0
 		_petunjuk_dim.visible = false
 	if _petunjuk_panel != null:
+		_petunjuk_panel.scale = Vector2.ONE
+		_petunjuk_panel.modulate.a = 1.0
 		_petunjuk_panel.visible = false
 	petunjuk_ditutup.emit()
 
@@ -4282,28 +4388,75 @@ const TEKS_PETUNJUK_MISI_PUTRI := "ayo mulai misi santri barumu! Sowan ke Ustadz
 
 func _build_petunjuk_misi_banner() -> void:
 	_petunjuk_misi_banner = PanelContainer.new()
+	# v2 (19 Nov 2026): toast gradien zamrud + rim emas 2 + bayangan
+	# lembut. StyleBoxFlat transparan — gradien dari TextureRect latar.
 	var gaya := StyleBoxFlat.new()
-	gaya.bg_color = Color(0.06, 0.10, 0.09, 0.88)
-	gaya.corner_radius_top_left = 12
-	gaya.corner_radius_top_right = 12
-	gaya.corner_radius_bottom_left = 12
-	gaya.corner_radius_bottom_right = 12
-	gaya.border_color = Color(1, 1, 1, 0.15)
-	gaya.set_border_width_all(1)
-	gaya.content_margin_left = 14.0
-	gaya.content_margin_right = 14.0
-	gaya.content_margin_top = 10.0
-	gaya.content_margin_bottom = 10.0
+	gaya.bg_color = Color(0, 0, 0, 0)
+	gaya.border_color = EMAS
+	gaya.set_border_width_all(2)
+	gaya.set_corner_radius_all(16)
+	gaya.shadow_color = Color(0, 0, 0, 70.0 / 255.0)
+	gaya.shadow_size = 12
+	gaya.shadow_offset = Vector2(0, 5)
+	gaya.content_margin_left = 2.0
+	gaya.content_margin_right = 2.0
+	gaya.content_margin_top = 2.0
+	gaya.content_margin_bottom = 2.0
 	_petunjuk_misi_banner.add_theme_stylebox_override("panel", gaya)
 	_petunjuk_misi_banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_petunjuk_misi_banner.visible = false
 	add_child(_petunjuk_misi_banner)
 	_layout_petunjuk_misi_banner()
-	_petunjuk_misi_label = _make_label("", 19, Color("#f2c14e"))
-	_petunjuk_misi_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_petunjuk_misi_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	var latar := GayaMisi.buat_latar_gradien(GayaMisi.ZAMRUD, GayaMisi.ZAMRUD_GELAP, 14)
+	_petunjuk_misi_banner.add_child(latar)
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 14)
+	margin.add_theme_constant_override("margin_right", 14)
+	margin.add_theme_constant_override("margin_top", 8)
+	margin.add_theme_constant_override("margin_bottom", 8)
+	margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_petunjuk_misi_banner.add_child(margin)
+	var baris := HBoxContainer.new()
+	baris.add_theme_constant_override("separation", 12)
+	baris.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	margin.add_child(baris)
+	# Ikon bintang zamrud gelap dalam lingkaran emas.
+	var lingkaran := Panel.new()
+	lingkaran.custom_minimum_size = Vector2(40, 40)
+	var gaya_lingkaran := StyleBoxFlat.new()
+	gaya_lingkaran.bg_color = EMAS
+	gaya_lingkaran.set_corner_radius_all(20)
+	lingkaran.add_theme_stylebox_override("panel", gaya_lingkaran)
+	lingkaran.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	baris.add_child(lingkaran)
+	var bintang := IkonHUD.new()
+	bintang.jenis = "bintang"
+	bintang.warna = Color("#043b2c")
+	bintang.bayangan = false
+	bintang.position = Vector2(7, 7)
+	bintang.size = Vector2(26, 26)
+	bintang.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	lingkaran.add_child(bintang)
+	# Teks dua baris: ajakan tebal krem + arah emas terang.
+	var teks_baris := VBoxContainer.new()
+	teks_baris.add_theme_constant_override("separation", 2)
+	teks_baris.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	teks_baris.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	teks_baris.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	baris.add_child(teks_baris)
+	_petunjuk_misi_label = _make_label("", 24, Color("#f2ead6"))
+	_petunjuk_misi_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	_petunjuk_misi_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_petunjuk_misi_banner.add_child(_petunjuk_misi_label)
+	teks_baris.add_child(_petunjuk_misi_label)
+	_petunjuk_misi_arah = _make_label("", 18, Color("#e8c45a"))
+	_petunjuk_misi_arah.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	_petunjuk_misi_arah.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	teks_baris.add_child(_petunjuk_misi_arah)
+	# Panah › di kanan (isyarat "ikuti arah ini").
+	var panah := _make_label("›", 28, Color("#e8c45a"))
+	panah.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	panah.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	baris.add_child(panah)
 
 
 func _layout_petunjuk_misi_banner() -> void:
@@ -4318,16 +4471,36 @@ func _layout_petunjuk_misi_banner() -> void:
 	_petunjuk_misi_banner.offset_left = -w * 0.5
 	_petunjuk_misi_banner.offset_right = w * 0.5
 	_petunjuk_misi_banner.offset_top = 200.0
-	_petunjuk_misi_banner.offset_bottom = 200.0 + 76.0
+	_petunjuk_misi_banner.offset_bottom = 200.0 + 88.0
 
 
 func show_petunjuk_misi(putri: bool) -> void:
-	_petunjuk_misi_label.text = TEKS_PETUNJUK_MISI_PUTRI if putri else TEKS_PETUNJUK_MISI_PUTRA
+	_petunjuk_misi_teks = TEKS_PETUNJUK_MISI_PUTRI if putri else TEKS_PETUNJUK_MISI_PUTRA
+	_petunjuk_misi_label.text = "ayo mulai misi santri barumu!"
+	_petunjuk_misi_arah.text = "Sowan ke Ustadzah sekarang" if putri else "Sowan ke Ustadz sekarang"
 	_petunjuk_misi_banner.visible = true
+	_animasi_banner_masuk()
+
+
+## v2: banner geser turun dari atas + fade, 220 ms ease-out.
+func _animasi_banner_masuk() -> void:
+	if _tween_banner != null and _tween_banner.is_valid():
+		_tween_banner.kill()
+	_petunjuk_misi_banner.position.y = 184.0
+	_petunjuk_misi_banner.modulate.a = 0.0
+	_tween_banner = create_tween()
+	_tween_banner.set_parallel(true)
+	_tween_banner.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	_tween_banner.tween_property(_petunjuk_misi_banner, "position:y", 200.0, 0.22)
+	_tween_banner.tween_property(_petunjuk_misi_banner, "modulate:a", 1.0, 0.22)
 
 
 func hide_petunjuk_misi() -> void:
 	if _petunjuk_misi_banner != null:
+		if _tween_banner != null and _tween_banner.is_valid():
+			_tween_banner.kill()
+		_petunjuk_misi_banner.position.y = 200.0
+		_petunjuk_misi_banner.modulate.a = 1.0
 		_petunjuk_misi_banner.visible = false
 
 
@@ -4336,7 +4509,7 @@ func is_petunjuk_misi_visible() -> bool:
 
 
 func teks_petunjuk_misi() -> String:
-	return _petunjuk_misi_label.text if _petunjuk_misi_label != null else ""
+	return _petunjuk_misi_teks
 
 
 # ---------- overlay BLACKOUT adegan sholat (RONDE 18) ----------

@@ -4,7 +4,6 @@ extends PanelContainer
 ## Acuan: mockup panel-misi-v1.png (DI-ACC Mas) + DataMisiBagian.
 ## Branding: "Pesantren Universe" — panel ini tidak menulis nama
 ## game sama sekali; JANGAN tulis "Verse" di sini.
-## Semua konten bertanda TEKS DRAF.
 ##
 ## CATATAN:
 ## - tampilkan(save) membangun ulang seluruh isi dari save, jadi
@@ -112,22 +111,12 @@ func _on_baris_aktif_ditekan() -> void:
 
 func _render() -> void:
 	_bersihkan(_konten)
-	_tambah_header()
 	_tambah_kartu_gelar()
 	_tambah_progres_bagian()
 	_tambah_daftar_misi()
 	_tambah_petunjuk_terakhir()
 	_tambah_strip_tugas()
 	_tambah_kartu_bagian_berikut()
-
-
-func _tambah_header() -> void:
-	var baris := HBoxContainer.new()
-	var spasi := Control.new()
-	spasi.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	baris.add_child(spasi)
-	baris.add_child(GayaMisi.buat_pill_draf())
-	_konten.add_child(baris)
 
 
 func _tambah_kartu_gelar() -> void:

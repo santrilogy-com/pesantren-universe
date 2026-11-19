@@ -281,7 +281,12 @@ static func build() -> Dictionary:
 		var bola_mesh := SphereMesh.new()
 		bola_mesh.radius = 0.12
 		bola_mesh.height = 0.24
+		# PERBAIKAN PERFORMA 19 Nov 2026 (Rangga): 12x6 + tanpa
+		# bayangan (interior; bayangan interior dimatikan total).
+		bola_mesh.radial_segments = 12
+		bola_mesh.rings = 6
 		bola.mesh = bola_mesh
+		bola.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		bola.material_override = Palette.mat(Color("#ffd9a0"), 0.0, 0.45)
 		bola.position = ke_dunia(pos_lampu)
 		root.add_child(bola)
@@ -316,7 +321,11 @@ static func build() -> Dictionary:
 		pilar_mesh.top_radius = 0.22
 		pilar_mesh.bottom_radius = 0.26
 		pilar_mesh.height = 3.4
+		# PERBAIKAN PERFORMA 19 Nov 2026 (Rangga): 12 segmen + tanpa
+		# bayangan (interior; bayangan interior dimatikan total).
+		pilar_mesh.radial_segments = 12
 		pilar.mesh = pilar_mesh
+		pilar.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		pilar.material_override = Palette.mat(Palette.PUTIH, 0.0, 0.45)
 		pilar.position = ke_dunia(p)
 		root.add_child(pilar)
