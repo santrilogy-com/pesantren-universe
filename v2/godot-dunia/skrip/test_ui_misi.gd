@@ -165,11 +165,19 @@ func _ready() -> void:
 	_cek("RB chat: TIDAK ADA teks mengetik / penghitung pesan", not _ada_teks(rb, "mengetik") and not _ada_teks(rb, "dari 14"))
 	_cek("RB chat: sedang bicara + pilihan BELUM tampil + tombol tidak terkunci", rb.sedang_bicara() and rb._pilihan_box.get_child_count() == 0 and not rb.ada_tombol_terkunci())
 	rb._selesaikan_bicara()
-	_cek("RB chat: m1 selesai -> tombol Lanjut tampil, tombol tidak terkunci", not rb.sedang_bicara() and rb._pilihan_box.get_child_count() == 1 and not rb.ada_tombol_terkunci())
+	var jml_lanjut := 0
+	for c in rb._pilihan_box.get_children():
+		if not c.is_queued_for_deletion() and c is Button:
+			jml_lanjut += 1
+	_cek("RB chat: m1 selesai -> tombol Lanjut tampil, tombol tidak terkunci", not rb.sedang_bicara() and jml_lanjut == 1 and not rb.ada_tombol_terkunci())
 	rb._lanjut_pesan()
 	_cek("RB chat: lanjut -> node m2 (kalam) + papan KALAM", rb.node_saat_ini() == "m2" and (rb_papan[-1] as Array)[0] == "KALAM")
 	rb._selesaikan_bicara()
-	_cek("RB chat: m2 selesai -> 2 pilihan (Paham/Belum) aktif penuh", rb._pilihan_box.get_child_count() == 2 and not rb.ada_tombol_terkunci())
+	var jml_pilihan := 0
+	for c in rb._pilihan_box.get_children():
+		if not c.is_queued_for_deletion() and c is Button:
+			jml_pilihan += 1
+	_cek("RB chat: m2 selesai -> 2 pilihan (Paham/Belum) aktif penuh", jml_pilihan == 2 and not rb.ada_tombol_terkunci())
 	var opsi_m2: Array = DataChatModul01.cari("m2").get("opsi", [])
 	rb._on_opsi_ditekan(opsi_m2[0])
 	_cek("RB chat: Paham di m2 -> node m3 + gelembung player tampil", rb.node_saat_ini() == "m3" and rb._gelembung_box.visible)

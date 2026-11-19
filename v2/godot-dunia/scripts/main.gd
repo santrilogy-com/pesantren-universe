@@ -49,6 +49,14 @@ var _kamera: KameraPesantren
 # jarak cubit frame lalu (0 = belum ada cubit dua jari).
 var _sentuh := {}
 var _jarak_cubit_lalu := 0.0
+# F3 HISTERESIS PENJAGA (Raka, 19 Nov 2026 — perbaikan kamera pinch,
+# disetujui Xam): raycast penjaga hidup/mati biner saat melewati tepi
+# tembok — state baru harus bertahan PENJAGA_HISTERESIS frame
+# berturut-turut sebelum penjaga beralih (debounce).
+const PENJAGA_HISTERESIS := 3
+var _penjaga_aktif := false
+var _penjaga_hitung := 0
+var _penjaga_batas := 8.0
 var _ui: PesantrenUI
 var _markers: Dictionary = {}
 var _chest_lid: Node3D
@@ -1706,10 +1714,29 @@ func _jarak_kamera_aman(target: float, _delta: float) -> float:
 	q.collision_mask = 0xFFFFFFFF
 	q.exclude = [_player.get_rid()]
 	var hit := get_viewport().get_world_3d().direct_space_state.intersect_ray(q)
+	# F3 HISTERESIS (Raka, 19 Nov 2026): raycast penjaga hidup/mati
+	# biner saat melewati tepi tembok — state baru harus bertahan
+	# PENJAGA_HISTERESIS frame berturut-turut sebelum penjaga beralih.
+	# Tanpa ini, satu frame sinar bersih di tepi tembok langsung
+	# mematikan penjaga dan kamera melonjak keluar.
+	var tabrak := not hit.is_empty()
+	if tabrak != _penjaga_aktif:
+		_penjaga_hitung += 1
+		if _penjaga_hitung >= PENJAGA_HISTERESIS:
+			_penjaga_aktif = tabrak
+			_penjaga_hitung = 0
+	else:
+		_penjaga_hitung = 0
 	var batas := target
-	if not hit.is_empty():
+	if _penjaga_aktif and not hit.is_empty():
 		var h: Vector3 = hit["position"]
 		batas = clampf((h - rig_pos).dot(arah) - 0.3, 1.2, target)
+		_penjaga_batas = batas
+	elif _penjaga_aktif:
+		# Ray sempat bersih 1-2 frame (tepi tembok) tapi penjaga
+		# masih aktif (histeresis): pakai batas terakhir, jangan
+		# melonjak kembali ke target.
+		batas = _penjaga_batas
 	var kamera_efektif := rig_pos + arah * batas
 	for npc in _npcs:
 		if kamera_efektif.distance_to(npc.global_position + Vector3(0, 1.2, 0)) < 0.9:

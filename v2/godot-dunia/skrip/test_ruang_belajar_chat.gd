@@ -8,8 +8,9 @@ extends Node
 ## penghitung "Pesan X dari 14", tombol tidak pernah terkunci,
 ## AvatarMisi Sanusi peci hitam nasional, manajer (panel bawah +
 ## dim transparan + chip Auto).
-## Headless (user-dir TERISOLASI — jangan pakai save VM):
-##   godot --headless --path . --user-dir /tmp/test-rb-chat/ skrip/test_ruang_belajar_chat.tscn
+## Headless (isolasi HOME — JANGAN pakai argumen posisional +
+## --user-dir: kombinasi itu malah memuat main.tscn, bukan tes ini):
+##   HOME=/tmp/iso-rb-chat godot --headless --path . --scene res://skrip/test_ruang_belajar_chat.tscn
 ## Pola test_ui_misi.gd: _cek + hitung lulus/gagal, EXIT 0 bila
 ## semua lulus. Alur digerakkan sinkron (auto OFF + _selesaikan_
 ## bicara() manual — timer bicara tidak ditunggu).
@@ -147,7 +148,11 @@ func _ready() -> void:
 	_cek("Data: indeks_progres b1/b2 = slot m2 (1)", DataChatModul01.indeks_progres("b1") == 1 and DataChatModul01.indeks_progres("b2") == 1 and DataChatModul01.indeks_progres("penutup") == 13)
 
 	# ---------- B. Alur penuh (Paham + semua benar) ----------
-	var rb := _buka_baru(SantriSave.default_data())
+	# Sinyal disambung SEBELUM tampilkan (tampilkan langsung emit
+	# papan_berubah + kemajuan_disimpan untuk m1).
+	var rb := RuangBelajarUI.new()
+	add_child(rb)
+	rb.set_auto(false)
 	var rb_langkah: Array = []
 	var rb_selesai_ev: Array = []
 	var rb_ditutup_ev: Array = []
@@ -158,6 +163,7 @@ func _ready() -> void:
 	rb.ditutup.connect(func() -> void: rb_ditutup_ev.append(true))
 	rb.papan_berubah.connect(func(judul: String, baris: PackedStringArray) -> void: rb_papan.append([judul, baris]))
 	rb.kemajuan_disimpan.connect(func(pos_id: String, modul: int) -> void: rb_kemajuan.append([pos_id, modul]))
+	rb.tampilkan("Ust. Sanusi", SantriSave.default_data())
 	_cek("B: buka -> node m1, sedang bicara, pilihan kosong", rb.visible and rb.node_saat_ini() == "m1" and rb.sedang_bicara() and _jumlah_pilihan(rb) == 0)
 	_cek("B: papan pertama NAHWU DASAR + kemajuan m1", rb_papan == [["NAHWU DASAR", PackedStringArray(["Modul 01 — Mengenal Kata"])]] and rb_kemajuan == [["m1", 1]])
 	_cek("B: TIDAK ADA 'mengetik' / 'dari 14' di panel", not _ada_teks(rb, "mengetik") and not _ada_teks(rb, "dari 14"))
@@ -300,8 +306,21 @@ func _ready() -> void:
 	mj.ruang_belajar_ditutup.connect(func() -> void: mj_ditutup_ev.append(true))
 	mj.buka_ruang_belajar("Ust. Sanusi", SantriSave.default_data())
 	var tinggi_rb := mj._ruang_belajar.offset_bottom - mj._ruang_belajar.offset_top
+	var vp_rb := mj.get_viewport().get_visible_rect().size
+	var s_rb := mj._skala_layar()
+	var harap_rb := minf(vp_rb.y * 0.66, maxf(560.0, 560.0 / s_rb))
 	_cek("I: manajer buka_ruang_belajar -> panel ruang_belajar", mj.panel_terbuka() == "ruang_belajar")
-	_cek("I: panel menempel BAWAH (anchor_top 1.0) + tinggi 475 di 720p", is_equal_approx(mj._ruang_belajar.anchor_top, 1.0) and is_equal_approx(tinggi_rb, 475.0))
+	_cek("I: panel menempel BAWAH (anchor_top 1.0) + tinggi = min(vp*0.66, 560/s)", is_equal_approx(mj._ruang_belajar.anchor_top, 1.0) and is_equal_approx(tinggi_rb, harap_rb))
+	# Regresi foto 19 Nov: VBox induk harus rata bawah — kotak
+	# dialog menempel dasar layar, bukan melayang di tengah.
+	await get_tree().process_frame
+	var kotak_rb := mj._ruang_belajar._kotak_dialog.get_global_rect()
+	_cek("I: kotak dialog menempel BAWAH (dasar kotak = dasar layar)", absf(kotak_rb.end.y - vp_rb.y) < 4.0)
+	# Regresi foto 19 Nov: chip Auto mengikuti set_auto langsung.
+	mj._ruang_belajar.set_auto(false)
+	_cek("I: set_auto(false) langsung -> chip ikut OFF", mj._rb_auto_chip.text == "Auto: OFF")
+	mj._ruang_belajar.set_auto(true)
+	_cek("I: set_auto(true) langsung -> chip ikut ON", mj._rb_auto_chip.text == "Auto: ON")
 	_cek("I: dim TRANSPARAN (alpha 0) tapi tampil (tahan input dunia)", mj._dim.visible and mj._dim.color.a < 0.01)
 	_cek("I: chip Auto tampil 'Auto: ON' di kiri atas", mj._rb_auto_chip.visible and mj._rb_auto_chip.text == "Auto: ON" and mj._rb_auto_chip.position == Vector2(16, 16))
 	_cek("I: sinyal papan + kemajuan diteruskan manajer", mj_papan == [["NAHWU DASAR", PackedStringArray(["Modul 01 — Mengenal Kata"])]] and mj_kemajuan == [["m1", 1]])

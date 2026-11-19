@@ -47,6 +47,9 @@ signal selesai(poin_total: int)
 signal ditutup
 signal papan_berubah(judul: String, baris: PackedStringArray)
 signal kemajuan_disimpan(pos_id: String, modul: int)
+## Chip Auto milik manajer — emit tiap set_auto berubah supaya
+## teks chip tidak pernah basi (foto memanggil set_auto langsung).
+signal auto_berubah(v: bool)
 
 const BICARA_MS_PER_HURUF := 40
 const JEDA_OTOMATIS_DETIK := 0.8
@@ -86,6 +89,11 @@ var _timer_otomatis: Timer
 func _ready() -> void:
 	add_theme_stylebox_override("panel", StyleBoxEmpty.new())
 	var induk := VBoxContainer.new()
+	# Rata BAWAH: kotak dialog menempel dasar layar, pilihan +
+	# gelembung menumpuk di atasnya. Tanpa ini VBox menumpuk dari
+	# ATAS root 475 px — kotak melayang di tengah layar dan dunia
+	# di bawahnya kosong (cacat foto chat v1, 19 Nov).
+	induk.alignment = BoxContainer.ALIGNMENT_END
 	induk.add_theme_constant_override("separation", 10)
 	add_child(induk)
 	# Gelembung kecil player (kanan, di atas pilihan) — sembunyi
@@ -235,6 +243,7 @@ func tampilkan(pengajar: String, save: Dictionary = {}) -> void:
 ## menunggu tombol Lanjut, lanjut otomatis sekarang.
 func set_auto(v: bool) -> void:
 	_auto = v
+	auto_berubah.emit(v)
 	if _auto and not _sedang_bicara and _lanjut_tampil and not _baca_ulang:
 		_timer_otomatis.start()
 
@@ -445,6 +454,9 @@ func _tampilkan_pilihan() -> void:
 				if _opsi_salah.has(i):
 					continue
 				var b2 := GayaMisi.buat_tombol_outline(String(opsi4[i]))
+				# Kolom grid membagi lebar penuh (tanpa ini tombol
+				# mengecil ke ukuran teks dan menumpuk di kiri).
+				b2.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 				b2.pressed.connect(_on_soal_ditekan.bind(i))
 				grid.add_child(b2)
 			_pilihan_box.add_child(grid)

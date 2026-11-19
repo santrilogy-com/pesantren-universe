@@ -957,25 +957,31 @@ static func build_visual(nama: String, outfit: Dictionary) -> Dictionary:
 	var sarung_trim: MeshInstance3D = null
 	var abaya: MeshInstance3D = null
 	if pakai_abaya:
-		# ABAYA (SUSULAN RONDE 20, Mas 19:42 WIB): tabung meruncing
-		# atas r=0.23 (bahu) -> bawah r=0.36 (hem lebar), tinggi
+		# ABAYA RAMPING (Kirana, 19 Nov 2026 — Mas: "badannya kayak
+		# tabung elpiji"): siluet A-line LEMBUT, bukan silinder
+		# seragam. Atas r=0.19 (bahu, selebar torso kapsul r=0.21
+		# yang sewarna di dalamnya) -> bawah r=0.30 (hem), tinggi
 		# 1.32, pusat y=0.76 — bawah di y=0.10 (mata kaki, sama
 		# seperti sarung ronde 6), atas di y=1.42 (menutupi pinggang
 		# + dada bawah; torso di atasnya sewarna jadi satu gamis).
 		# Polos zamrud gelap #065f46 — BUKAN batik (motif batik itu
-		# yang membuat roknya terbaca "sarung santri").
-		abaya = Palette.cylinder(0.23, 0.36, 1.32, Vector3(0, 0.76, 0), warna_abaya)
+		# yang membuat roknya terbaca "sarung santri"). Lengan
+		# muslimah (pivot ±0.34) kini BERDIRI DI LUAR permukaan
+		# abaya di semua ketinggian (dulu lengan atas tenggelam di
+		# kerucut 0.23->0.36), jadi lengan terbaca sebagai anggota
+		# badan terpisah, bukan bagian tabung.
+		abaya = Palette.cylinder(0.19, 0.30, 1.32, Vector3(0, 0.76, 0), warna_abaya)
 		abaya.name = "Abaya"
 		# KARAKTER PRIMITIF (Kirana, 17 Nov 2026): abaya kain jersey.
 		abaya.material_override = _bahan_kain(warna_abaya)
 		root.add_child(abaya)
 		sarung = abaya
-		hem = Palette.sphere(0.36, Vector3(0, 0.12, 0), warna_abaya)
+		hem = Palette.sphere(0.30, Vector3(0, 0.12, 0), warna_abaya)
 		hem.scale = Vector3(1.0, 0.25, 1.0)
 		hem.name = "AbayaHem"
 		root.add_child(hem)
 		# Lis emas di ujung abaya (palet pesantren, seperti sarung).
-		sarung_trim = Palette.cylinder(0.36, 0.36, 0.04, Vector3(0, 0.14, 0), Palette.EMAS, 0.4)
+		sarung_trim = Palette.cylinder(0.30, 0.30, 0.04, Vector3(0, 0.14, 0), Palette.EMAS, 0.4)
 		sarung_trim.name = "AbayaTrim"
 		root.add_child(sarung_trim)
 	else:
@@ -1061,10 +1067,11 @@ static func build_visual(nama: String, outfit: Dictionary) -> Dictionary:
 	# ikut pivot — namanya kini benar secara anatomi.
 	# KIRANA 16 Nov ~21:45 WIB (Mas: figur Ustadzah "kok aneh" —
 	# badan kerucut tanpa lengan): lengan muslimah KELUAR dari
-	# abaya — pivot ±0.34 (di luar permukaan abaya 0.242 di
-	# y=1.30) + miring keluar 0.12 + lengan sedikit lebih tebal
-	# supaya sleeve abaya terbaca, bukan lidi yang tenggelam di
-	# gamis. Lengan santriwan/Kyai tetap ±0.235 / 0.05.
+	# abaya — pivot ±0.34 (di luar permukaan abaya 0.20 di
+	# y=1.30, ramping 19 Nov 2026) + miring keluar 0.12 + lengan
+	# sedikit lebih tebal supaya sleeve abaya terbaca, bukan lidi
+	# yang tenggelam di gamis. Lengan santriwan/Kyai tetap
+	# ±0.235 / 0.05.
 	var lengan_x := 0.34 if muslimah else 0.235
 	var lengan_miring := 0.12 if muslimah else 0.05
 	var r_lengan_atas := 0.11 if muslimah else 0.10

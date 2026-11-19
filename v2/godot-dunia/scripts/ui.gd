@@ -662,6 +662,7 @@ func _build_login() -> void:
 	_ig_input.add_theme_font_size_override("font_size", 20)
 	_gaya_field(_ig_input)
 	_ig_input.focus_entered.connect(_minta_keyboard)
+	_ig_input.gui_input.connect(_on_field_gui_input.bind(_ig_input))
 	_login_box.add_child(_ig_input)
 	_sandi_input = LineEdit.new()
 	# RONDE PERBAIKAN (Gita, item 12): placeholder lama 50 huruf
@@ -676,6 +677,7 @@ func _build_login() -> void:
 	_sandi_input.add_theme_font_size_override("font_size", 20)
 	_gaya_field(_sandi_input)
 	_sandi_input.focus_entered.connect(_minta_keyboard)
+	_sandi_input.gui_input.connect(_on_field_gui_input.bind(_sandi_input))
 	_login_box.add_child(_sandi_input)
 	# Login server (17 Nov 2026): masuk pakai username IG + kata
 	# sandi opsional. ID + nama diambil dari server, bukan diisi manual.
@@ -725,6 +727,7 @@ func _build_login() -> void:
 	_reg_nama_input.add_theme_font_size_override("font_size", 20)
 	_gaya_field(_reg_nama_input)
 	_reg_nama_input.focus_entered.connect(_minta_keyboard)
+	_reg_nama_input.gui_input.connect(_on_field_gui_input.bind(_reg_nama_input))
 	_register_box.add_child(_reg_nama_input)
 	# REGISTRASI-GENDER (Tara, 17 Nov 2026): akun IG wajib — dipakai
 	# login nanti + harus unik di server (satu akun IG = satu santri).
@@ -735,6 +738,7 @@ func _build_login() -> void:
 	_reg_ig_input.add_theme_font_size_override("font_size", 20)
 	_gaya_field(_reg_ig_input)
 	_reg_ig_input.focus_entered.connect(_minta_keyboard)
+	_reg_ig_input.gui_input.connect(_on_field_gui_input.bind(_reg_ig_input))
 	_register_box.add_child(_reg_ig_input)
 	# Pemilih gender: label + dua tombol besar berdampingan (gampang
 	# ditekan di HP). Yang terpilih beraksen emas + tanda "✓".
@@ -790,6 +794,19 @@ func _build_login() -> void:
 ## berjalan sinkron di dalam gesture ketuk, jadi panggilan ini sah.
 func _minta_keyboard() -> void:
 	DisplayServer.virtual_keyboard_show("")
+
+
+## Ketuk sentuh HARUS memberi fokus ke LineEdit (19 Nov 2026 — laporan Mas
+## 15:58/16:01 WIB: keyboard HP tidak muncul saat kolom login diketuk).
+## Sejak emulate_mouse_from_touch=false, ketuk jari hanya menghasilkan
+## InputEventScreenTouch tanpa event mouse, dan LineEdit Godot 4.7 tidak
+## mengambil fokus dari sentuhan — focus_entered -> _minta_keyboard tidak
+## pernah menyala. Handler ini dipasang di semua LineEdit (login, daftar,
+## chat). JANGAN hidupkan lagi emulate_mouse_from_touch (itu mengembalikan
+## bug double-fire toggle).
+func _on_field_gui_input(ev: InputEvent, field: LineEdit) -> void:
+	if ev is InputEventScreenTouch and (ev as InputEventScreenTouch).pressed:
+		field.grab_focus()
 
 
 ## Hitung ukuran form dari skala stretch layar (fungsi murni, bisa dites).
@@ -1810,6 +1827,7 @@ func _build_chat_panel() -> void:
 	_chat_input.add_theme_font_size_override("font_size", 16)
 	_gaya_field(_chat_input)
 	_chat_input.focus_entered.connect(_minta_keyboard)
+	_chat_input.gui_input.connect(_on_field_gui_input.bind(_chat_input))
 	_chat_input.text_submitted.connect(_on_chat_submit)
 	baris.add_child(_chat_input)
 	var kirim_btn := _make_button("Kirim", EMAS, GELAP)

@@ -110,16 +110,17 @@ static func opsi_soal(nod: Dictionary) -> Array:
 	return []
 
 
-## Indeks jawaban benar sebuah node soal dari DataModul01.
+## Indeks jawaban benar sebuah node soal dari DataModul01
+## (kunci "jawaban" — lihat DataModul01.latihan_soal()).
 static func benar_soal(nod: Dictionary) -> int:
 	if String(nod.get("bank", "")) == "kuis":
 		var bank: Array = DataModul01.kuis_soal()
 		var idx := int(nod.get("soal", 0))
 		if idx >= 0 and idx < bank.size():
-			return int(bank[idx].get("benar", 0))
+			return int(bank[idx].get("jawaban", 0))
 		return 0
 	var lat: Array = DataModul01.latihan_soal()
 	var idx2 := int(nod.get("soal", 0))
 	if idx2 >= 0 and idx2 < lat.size():
-		return int(lat[idx2].get("benar", 0))
+		return int(lat[idx2].get("jawaban", 0))
 	return 0

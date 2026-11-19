@@ -151,6 +151,11 @@ const SPRING_MAKS_LUAR := 12.0
 const DRONE_LABEL_BOOST := 2.5 ## pengali skala maks label nama di Drone.
 
 var _spring_halus := 8.0
+## F1 (Raka, 19 Nov 2026 — perbaikan kamera pinch, disetujui Xam):
+## panjang hit SpringArm yang DIHALUSKAN. SpringArm menaruh kamera di
+## titik tabrak SEKETIKA (hit-length tidak dihaluskan) — itu sumber
+## lompatan kamera S2b/S3b/S5b saat sinar melewati tepi tembok.
+var _hit_halus := 8.0
 var _mode: int = Mode.NORMAL
 var _tinggi_efektif := 1.6
 var _pitch_efektif := -0.35
@@ -294,6 +299,14 @@ func perbarui(delta: float, rig: Node3D, spring: SpringArm3D, cam: Camera3D,
 ## Terapkan panjang spring AMAN hasil _jarak_kamera_aman dengan
 ## penghalusan asimetris. Memendek cepat (anti-tembus), memanjang
 ## pelan (tanpa lonjakan). Mengembalikan panjang yang dipakai.
+## F1 (Raka, 19 Nov 2026): haluskan JUGA panjang hit SpringArm —
+## spring diterapkan = min(_spring_halus, _hit_halus). _hit_halus
+## mengejar get_hit_length() dengan laju asimetris yang sama.
+## Jebakan: get_hit_length() <= spring_length SELALU — bila tidak ada
+## tabrakan, hit == spring_length dan _hit_halus akan macet di nilai
+## itu (tidak pernah memanjang lagi). Jadi bila hit >= spring_length
+## (tidak ada tabrakan), targetnya _spring_halus (panjang yang
+## diinginkan), bukan hit.
 func terapkan_panjang_spring(spring: SpringArm3D, panjang_aman: float, delta: float) -> float:
 	var laju := SPRING_PENDEK if panjang_aman < _spring_halus else SPRING_PANJANG
 	var w := minf(1.0, 1.0 - exp(-laju * delta))
@@ -302,11 +315,24 @@ func terapkan_panjang_spring(spring: SpringArm3D, panjang_aman: float, delta: fl
 	# merangkak asimtotik dan kamera "bernapas" pelan).
 	if absf(_spring_halus - panjang_aman) < 0.01:
 		_spring_halus = panjang_aman
-	spring.spring_length = _spring_halus
-	return _spring_halus
+	var hit := spring.get_hit_length()
+	var target_hit := _spring_halus if hit >= spring.spring_length - 0.01 else hit
+	var laju_hit := SPRING_PENDEK if target_hit < _hit_halus else SPRING_PANJANG
+	var w_hit := minf(1.0, 1.0 - exp(-laju_hit * delta))
+	_hit_halus = lerpf(_hit_halus, target_hit, w_hit)
+	if absf(_hit_halus - target_hit) < 0.01:
+		_hit_halus = target_hit
+	spring.spring_length = minf(_spring_halus, _hit_halus)
+	return spring.spring_length
+
+
+## Panjang hit yang dihaluskan (untuk tes/diagnosis).
+func hit_halus() -> float:
+	return _hit_halus
 
 
 ## Reset keadaan halus (dipakai setelah teleport/snap supaya spring
 ## tidak tertinggal dari adegan sebelumnya).
 func reset_halus() -> void:
 	_spring_halus = 8.0
+	_hit_halus = 8.0

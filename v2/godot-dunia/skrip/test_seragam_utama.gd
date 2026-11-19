@@ -121,6 +121,22 @@ func _ready() -> void:
 	_cek("PENJAGA ada node Abaya", (b_penjaga["root"] as Node).find_child("Abaya", true, false) != null)
 	_cek("PENJAGA tunik false", not bool(b_penjaga.get("tunik", true)))
 
+	# ---------- Abaya RAMPING (Kirana, 19 Nov 2026 — Mas: "tabung elpiji") ----------
+	# A-line lembut: atas r=0.19 (bahu) -> bawah r=0.30 (hem); lengan
+	# muslimah (pivot ±0.34) berdiri di luar permukaan abaya (~0.20 di
+	# y=1.30) sehingga terbaca terpisah, bukan bagian tabung.
+	var _abaya_builds := {"Ustadzah Mariyah": b_ustadzah, "Ustzh. Fatimah": b_fatimah, "Penjaga Pos Jaga": b_penjaga}
+	for _nama_b in _abaya_builds.keys():
+		var _b: Dictionary = _abaya_builds[_nama_b]
+		var _abaya_m := ((_b["root"] as Node).find_child("Abaya", true, false)) as MeshInstance3D
+		var _sil := _abaya_m.mesh as CylinderMesh if _abaya_m != null else null
+		_cek("%s abaya atas r=0.19 (ramping)" % _nama_b, _sil != null and is_equal_approx(_sil.top_radius, 0.19))
+		_cek("%s abaya bawah r=0.30 (hem)" % _nama_b, _sil != null and is_equal_approx(_sil.bottom_radius, 0.30))
+		_cek("%s abaya A-line (atas < bawah)" % _nama_b, _sil != null and _sil.top_radius < _sil.bottom_radius)
+		var _bahu := ((_b["root"] as Node).find_child("BahuKiri", true, false)) as Node3D
+		var _pivot_x := absf((_bahu.get_parent() as Node3D).position.x) if _bahu != null else 0.0
+		_cek("%s lengan di luar abaya (pivot %.2f)" % [_nama_b, _pivot_x], _pivot_x > 0.30)
+
 	# ---------- Kyai / Satpam TETAP parang ----------
 	var b_kyai := SantriPlayer.build_visual("Ust. Aqsal M", MissionData.OUTFIT_KYAI)
 	var img_kyai := _mat_albedo(b_kyai["root"], "Sarung").albedo_texture.get_image()

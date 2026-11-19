@@ -56,16 +56,27 @@ func _ready() -> void:
 	for k in 5:
 		await get_tree().process_frame
 	# Ukur: putra/putri punya Sarung (bukan Abaya); Mariyah Abaya.
-	_ukur("Santri (putra)", putra)
-	_ukur("Santriwati (putri)", putri)
-	_ukur("Ustadzah Mariyah", mariyah)
+	_ukur("Santri (putra)", putra["built"])
+	_ukur("Santriwati (putri)", putri["built"])
+	_ukur("Ustadzah Mariyah", mariyah["built"])
 	# 1-2. Putra: depan + samping (badan penuh).
 	_cam.fov = 50.0
 	await _foto("seragam-utama-putra-depan.png", Vector3(-1.3, 1.1, 3.4), Vector3(-1.3, 1.0, 0))
-	await _foto("seragam-utama-putra-samping.png", Vector3(1.9, 1.1, 0), Vector3(-1.3, 1.0, 0))
+	# Samping: foto SATU karakter saja — tetangga di sumbu-x menutupi
+	# subjek bila kamera di sumbu-x (foto pertama: yang tampak malah
+	# tunik putri / abaya Mariyah). Sembunyikan yang lain dulu.
+	(putri["wadah"] as Node3D).visible = false
+	(mariyah["wadah"] as Node3D).visible = false
+	await _foto("seragam-utama-putra-samping.png", Vector3(-4.5, 1.1, 0), Vector3(-1.3, 1.0, 0))
+	(putri["wadah"] as Node3D).visible = true
+	(mariyah["wadah"] as Node3D).visible = true
 	# 3-4. Putri: depan + samping (badan penuh).
 	await _foto("seragam-utama-putri-depan.png", Vector3(1.3, 1.1, 3.4), Vector3(1.3, 1.0, 0))
+	(putra["wadah"] as Node3D).visible = false
+	(mariyah["wadah"] as Node3D).visible = false
 	await _foto("seragam-utama-putri-samping.png", Vector3(4.5, 1.1, 0), Vector3(1.3, 1.0, 0))
+	(putra["wadah"] as Node3D).visible = true
+	(mariyah["wadah"] as Node3D).visible = true
 	# 5. Banding ketiganya (putri di tengah: tunik vs abaya Mariyah).
 	await _foto("seragam-utama-banding.png", Vector3(1.3, 1.3, 8.0), Vector3(1.3, 1.0, 0))
 	print("FOTO SERAGAM UTAMA SELESAI")
@@ -78,7 +89,7 @@ func _karakter(nama: String, pos: Vector3, outfit: Dictionary) -> Dictionary:
 	wadah.position = pos
 	wadah.add_child(built["root"])
 	add_child(wadah)
-	return built
+	return {"wadah": wadah, "built": built}
 
 
 func _ukur(nama: String, built: Dictionary) -> void:

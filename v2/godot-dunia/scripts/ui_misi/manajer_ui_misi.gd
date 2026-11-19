@@ -88,6 +88,7 @@ func _ready() -> void:
 	_ruang_belajar.ditutup.connect(_on_rb_ditutup)
 	_ruang_belajar.papan_berubah.connect(_on_rb_papan)
 	_ruang_belajar.kemajuan_disimpan.connect(_on_rb_kemajuan)
+	_ruang_belajar.auto_berubah.connect(func(_v: bool) -> void: _sinkron_chip_auto())
 	_tes.tes_selesai.connect(_on_tes_selesai)
 	# Chip Auto (Ruang Belajar chat §7) — anak manajer supaya
 	# selalu di kiri atas layar, di atas dim.
