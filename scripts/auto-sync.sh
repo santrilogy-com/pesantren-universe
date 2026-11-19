@@ -15,7 +15,7 @@ fi
 JUMLAH=$(git diff --cached --name-only | wc -l | tr -d ' ')
 STAMP=$(TZ=Asia/Jakarta date '+%Y-%m-%d %H:%M WIB')
 git commit -q -m "Auto-sync: $STAMP ($JUMLAH file berubah)" || exit 0
-if ! git push -q origin main >>"$LOG" 2>&1; then
+if ! "$HOME/workspace/custom-connectors/custom.github-pat/bin/git-push.sh" main >>"$LOG" 2>&1; then
   echo "[$STAMP] push gagal" >>"$LOG"
 fi
 exit 0
