@@ -69,6 +69,17 @@ func _bersihkan_sekitar(pos: Vector3, kecuali: Array) -> void:
 				guru.set("_pause_timer", 15.0)
 
 
+## Jarak tangan kanan pemain ↔ tangan kanan NPC (posisi dunia node
+## "TanganKanan" — bukti tangan benar-benar bertemu, bukan sekadar
+## pose terulur). 99 bila node tidak ketemu.
+func _jarak_tangan(npc: Node) -> float:
+	var tp: Node3D = _main._player.find_child("TanganKanan", true, false) as Node3D
+	var tn: Node3D = npc.find_child("TanganKanan", true, false) as Node3D
+	if tp == null or tn == null:
+		return 99.0
+	return (tp.global_position as Vector3).distance_to(tn.global_position as Vector3)
+
+
 func _ready() -> void:
 	var packed := load("res://main.tscn") as PackedScene
 	_main = packed.instantiate()
@@ -92,11 +103,34 @@ func _ready() -> void:
 	await _tunggu(0.3)
 	_main._on_aksi("salaman")
 	_cek("f1: pemain pose salaman", String(_main._player.aksi_saat_ini()) == "salaman")
-	_cek("f1: Bilal merespons (hadap/jabat)", String(bilal.get("_salaman")) != "")
-	await _tunggu(1.0)
+	_cek("f1: Bilal merespons (hadap/hampiri/jabat)", String(bilal.get("_salaman")) != "")
+	# Tunggu fase jabat (hadap 0,4 dtk + hampiri s.d. 2,0 dtk) —
+	# jangan asumsi waktu tetap seperti sebelum polish.
+	var tunggu_jabat := 0.0
+	while String(bilal.get("_salaman")) != "jabat" and tunggu_jabat < 4.0:
+		await _tunggu(0.2)
+		tunggu_jabat += 0.2
 	_cek("f1: Bilal fase jabat", String(bilal.get("_salaman")) == "jabat")
 	_cek("f1: Bilal tangan kanan terulur", float(bilal.get("_arm_r").rotation.x) < -1.0)
-	await _tunggu(2.5)
+	_cek("f1: Bilal tangan kanan mengarah ke dalam (ke garis tengah)", float(bilal.get("_arm_r").rotation.z) > 0.2)
+	# Lengan butuh ~0,5 dtk mencapai sudut dalam penuh.
+	await _tunggu(0.6)
+	var d_tangan := _jarak_tangan(bilal)
+	print("SALAMAN-DBG f1 jarak tangan=%.3f" % d_tangan)
+	var tp_dbg: Node3D = _main._player.find_child("TanganKanan", true, false) as Node3D
+	var tn_dbg: Node3D = bilal.find_child("TanganKanan", true, false) as Node3D
+	print("SALAMAN-DBG f1 bilal arm_r=(%.2f, %.2f) pemain arm_r=(%.2f, %.2f) tangan_pemain=%s tangan_bilal=%s badan_pemain=%s badan_bilal=%s" % [
+		float(bilal.get("_arm_r").rotation.x), float(bilal.get("_arm_r").rotation.z),
+		float(_main._player.get("_arm_r").rotation.x), float(_main._player.get("_arm_r").rotation.z),
+		str(tp_dbg.global_position) if tp_dbg != null else "(null)",
+		str(tn_dbg.global_position) if tn_dbg != null else "(null)",
+		str(_main._player.global_position), str(bilal.global_position)])
+	_cek("f1: tangan pemain & Bilal bertemu (< 0,15 m)", d_tangan < 0.15)
+	_cek("f1: jarak badan saat jabat ~1,05 m", absf((bilal.global_position as Vector3).distance_to(_main._player.global_position as Vector3) - 1.05) < 0.2)
+	var tunggu_selesai := 0.0
+	while String(bilal.get("_salaman")) != "" and tunggu_selesai < 4.0:
+		await _tunggu(0.2)
+		tunggu_selesai += 0.2
 	_cek("f1: Bilal selesai salaman", String(bilal.get("_salaman")) == "")
 	_cek("f1: pemain tetap pose salaman (tahan sampai gerak)", String(_main._player.aksi_saat_ini()) == "salaman")
 
@@ -128,6 +162,8 @@ func _ready() -> void:
 		_cek("f3: terima_salaman dari duduk = true", bool(duduk_npc.terima_salaman(_main._player)))
 		await _tunggu(1.2)
 		_cek("f3: NPC berdiri saat jabat (visual naik)", float(duduk_npc.get("_visual").position.y) > -0.2)
+		await _tunggu(0.6)
+		_cek("f3: tangan bertemu saat jabat dari duduk", _jarak_tangan(duduk_npc) < 0.15)
 		await _tunggu(2.5)
 		_cek("f3: NPC selesai salaman", String(duduk_npc.get("_salaman")) == "")
 		_cek("f3: aktivitas duduk dipulihkan", String(duduk_npc.get("_aktivitas")) == "duduk")
@@ -208,7 +244,22 @@ func _ready() -> void:
 			str(bool(_main._salaman_siap())), String(guru.get("_salaman"))])
 		_main._on_aksi("salaman")
 		_cek("f7: %s merespons salaman" % nama_guru, String(guru.get("_salaman")) != "")
-		await _tunggu(3.0)
+		# Tunggu jabat + lengan mengarah, lalu cek tangan bertemu
+		# (Fatimah = muslimah, bahu lebih lebar — sudut dalamnya
+		# dihitung dari lengan_x, jadi harus tetap bertemu).
+		var tunggu_j7 := 0.0
+		while String(guru.get("_salaman")) != "jabat" and tunggu_j7 < 4.0:
+			await _tunggu(0.2)
+			tunggu_j7 += 0.2
+		_cek("f7: %s fase jabat" % nama_guru, String(guru.get("_salaman")) == "jabat")
+		await _tunggu(0.6)
+		var d7 := _jarak_tangan(guru)
+		print("SALAMAN-DBG f7 %s jarak tangan=%.3f" % [nama_guru, d7])
+		_cek("f7: tangan bertemu dengan %s (< 0,15 m)" % nama_guru, d7 < 0.15)
+		var tunggu_s7 := 0.0
+		while String(guru.get("_salaman")) != "" and tunggu_s7 < 5.0:
+			await _tunggu(0.2)
+			tunggu_s7 += 0.2
 		_cek("f7: %s selesai salaman" % nama_guru, String(guru.get("_salaman")) == "")
 	_main._save["jenis_kelamin"] = "putra"
 

@@ -116,7 +116,7 @@ func _ready() -> void:
 	_main._on_aksi("berdiri")
 	await _tunggu_fisika(3)
 	_cek("berdiri △ Aksi dari bersila -> aksi berdiri", String(pemain.aksi_saat_ini()) == "berdiri")
-	_cek("berdiri △ Aksi dari bersila -> kembali ke titik yang sama", Vector2(pemain.global_position.x, pemain.global_position.z).distance_to(Vector2(-2, 3.0)) < 0.3)
+	_cek("berdiri △ Aksi dari bersila -> kembali ke titik bangun kursi (-2,2)", Vector2(pemain.global_position.x, pemain.global_position.z).distance_to(Vector2(-2, 2.0)) < 0.3)
 
 	# ---------- 4) Tes TIDAK terbuka dari luar ----------
 	_set_langkah(6)
@@ -143,7 +143,11 @@ func _ready() -> void:
 
 	# ---------- 6) Tes terbuka setelah duduk di DALAM kantor ----------
 	_main._di_dalam_kantor_putra = true
-	await _teleport_pemain(Vector3(-90, 0, -301.9))
+	# Teleport 0,55 m di depan kursi tes (BUKAN spawn (-90,-301.9):
+	# spawn hanya 0,6 m dari pintu dalam — ✕ di sana benar
+	# menunjukkan KELUAR, bukan DUDUK; pemain asli berjalan dari
+	# spawn ke kursi).
+	await _teleport_pemain(Vector3(-90, 0, -301.2))
 	var kursi_tes: Dictionary = _main._kursi_duduk_terdekat()
 	_cek("di dalam kantor -> kursi tes pemain", String(kursi_tes.get("id", "")) == "tes_kantor_putra_pemain")
 	_main._on_interact()
@@ -173,8 +177,62 @@ func _ready() -> void:
 	var harap_sanusi: Vector3 = LokasiAcak.pos_dari_id("surau")
 	_cek("penguji kembali ke lokasi acak save (surau)", sanusi.global_position.distance_to(harap_sanusi) < 0.5)
 
+	# ---------- 8) Jalur PUTRI (Fatimah + Kantor Ustadzah) ----------
+	await _fase_putri()
+
 	print("WIRING-DUDUK-TES LULUS %d GAGAL %d" % [_lulus, _gagal])
 	if _gagal > 0:
 		get_tree().quit(1)
 	else:
 		get_tree().quit(0)
+
+
+# ---------- 8) Jalur PUTRI (Fatimah + Kantor Ustadzah) ----------
+# Dipanggil terpisah sesudah fase 7 supaya satu run membuktikan
+# kedua cabang _cek_penguji_tes / KURSI_TES.
+func _fase_putri() -> int:
+	var lulus_awal := _lulus
+	var gagal_awal := _gagal
+	var pemain: Node = _main._player
+	var manajer: Node = _main._manajer_misi
+	var fatimah: Node = _main._fatimah
+	_main._save["jenis_kelamin"] = "putri"
+	_set_langkah(6)
+	_main._save["onboarding"]["fatimah_lokasi"] = "musholla_putri"
+	await _tunggu_frame(3)
+	_main._masuk_kantor()
+	await _tunggu_frame(5)
+	_cek("putri: masuk kantor ustadzah _di_dalam_kantor true", _main._di_dalam_kantor)
+	_main._cek_penguji_tes()
+	await _tunggu_frame(5)
+	_cek("putri langkah 6 -> Fatimah duduk_tes", fatimah.sedang_duduk_tes())
+	_cek("putri: Fatimah di kursi penguji (-118.85,-300)", Vector2(fatimah.global_position.x, fatimah.global_position.z).distance_to(Vector2(-118.85, -300)) < 0.3)
+	_cek("putri: Fatimah menghadap barat (yaw -PI/2)", absf(fatimah._visual.rotation.y + PI / 2.0) < 0.2)
+	# 0,85 m di depan kursi pemain (-121.15,-300) — titik pendekatan
+	# wajar (BUKAN 0,25 m: sedekat itu pemain menabrak tabrakan
+	# kursi dan fisika mendorongnya 0,33 m ke barat, masuk zona
+	# pintu — lihat diag_putri_duduk). Pintu dalam (-124,-300)
+	# sudah 2,0 m — di luar radius 1,0 m, jadi ✕ = DUDUK.
+	await _teleport_pemain(Vector3(-122.0, 0, -300))
+	var kursi_p: Dictionary = _main._kursi_duduk_terdekat()
+	_cek("putri: di dalam kantor -> kursi tes ustadzah pemain", String(kursi_p.get("id", "")) == "tes_kantor_ustadzah_pemain")
+	_main._on_interact()
+	await _tunggu_fisika(3)
+	_cek("putri: duduk kursi tes -> aksi duduk_kursi", String(pemain.aksi_saat_ini()) == "duduk_kursi")
+	_cek("putri: duduk kursi tes -> panel tes terbuka OTOMATIS", manajer.panel_terbuka() == "tes")
+	_main._on_interact()
+	await _tunggu_frame(2)
+	_cek("putri: ✕ pertama tutup panel, tetap duduk", not manajer.ada_panel_terbuka() and String(pemain.aksi_saat_ini()) == "duduk_kursi")
+	_main._on_interact()
+	await _tunggu_fisika(3)
+	_cek("putri: ✕ kedua -> berdiri di titik bangun (-121.95,-300)", String(pemain.aksi_saat_ini()) == "berdiri" and Vector2(pemain.global_position.x, pemain.global_position.z).distance_to(Vector2(-121.95, -300)) < 0.3)
+	# Tes selesai (gagal) selagi pemain masih di dalam kantor —
+	# TANPA ini langkah tetap 6 dan penguji tidak pernah berdiri.
+	_cek("putri: gagal_tes 6 -> langkah 5", Onboarding.gagal_tes(_main._save) == 5)
+	_main._di_dalam_kantor = false
+	_main._cek_penguji_tes()
+	await _tunggu_frame(3)
+	_cek("putri: keluar kantor -> Fatimah berdiri", not fatimah.sedang_duduk_tes())
+	var harap_fatimah: Vector3 = LokasiAcak.pos_dari_id_putri("musholla_putri")
+	_cek("putri: Fatimah kembali ke lokasi acak save (musholla_putri)", fatimah.global_position.distance_to(harap_fatimah) < 0.5)
+	return (_lulus - lulus_awal) * 1000 + (_gagal - gagal_awal)

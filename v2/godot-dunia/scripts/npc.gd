@@ -135,8 +135,8 @@ var _hormat_cooldown_npc: float = 0.0
 var _hormat_pasangan: Dictionary = {}
 # SALAMAN PEMAIN (Raka, 20 Nov 2026) — NPC merespons salaman yang
 # dipicu pemain (main.gd _on_aksi "salaman"). _salaman: "" / "hadap" /
-# "jabat". _salaman_aktivitas_tersimpan = simpanan aktivitas pola
-# hormat (kursi DITAHAN, dipulihkan di _akhiri_salaman).
+# "hampiri" / "jabat". _salaman_aktivitas_tersimpan = simpanan
+# aktivitas pola hormat (kursi DITAHAN, dipulihkan di _akhiri_salaman).
 var _salaman: String = ""
 var _salaman_timer: float = 0.0
 var _salaman_pemain: Node3D = null
@@ -1583,14 +1583,23 @@ func _batalkan_hormat() -> void:
 ## ---------- salaman pemain (Raka, 20 Nov 2026) ----------
 ## Salaman yang DIPICU PEMAIN (△ Aksi → Salaman, main.gd _on_aksi) —
 ## beda dari hormat varian B (NPC→guru, otomatis). NPC: hadap pemain
-## (±0,4 dtk, berdiri dulu bila sedang duduk) → jabat tangan 2 dtk
-## (pose = b_salaman hormat, tangan kanan terulur) → kembali ke
-## aktivitas semula (kursi DITAHAN seperti hormat). Cooldown 10 dtk
-## per NPC supaya tidak spam. v1 luar ruangan saja; tolak saat sholat
-## / duduk belajar / hormat / panel misi terbuka (dicek pemanggil).
+## (±0,4 dtk, berdiri dulu bila sedang duduk) → HAMPIRI sampai jarak
+## jabat 1,05 m → jabat tangan 2 dtk (pose = b_salaman hormat, tangan
+## kanan terulur KE DALAM ke garis tengah) → kembali ke aktivitas
+## semula (kursi DITAHAN seperti hormat). Cooldown 10 dtk per NPC
+## supaya tidak spam. v1 luar ruangan saja; tolak saat sholat /
+## duduk belajar / hormat / panel misi terbuka (dicek pemanggil).
+## POLISH 20 Nov 2026 (verdict Mas "Kok tidak jabat tangan?"): dulu
+## NPC diam di tempat (jarak 1,4 m, lengan ~0,45 m) + lengan lurus
+## ke depan — tangan tidak pernah bersentuhan. Kini NPC melangkah
+## mendekat sampai 1,05 m (jangkau tangan ~0,59 m × 2, sedikit
+## tumpang) dan kedua lengan mengarah ke dalam (sudut_salaman_dalam)
+## supaya tangan bertemu di garis tengah (< 0,1 m).
 const SALAMAN_JARAK_MAKS := 3.0
 const SALAMAN_JABAT_DURASI := 2.0
 const SALAMAN_COOLDOWN := 10.0
+const SALAMAN_JABAT_JARAK := 1.05
+const SALAMAN_HAMPIRI_MAKS := 2.0
 
 
 ## Dipanggil main.gd saat pemain menekan Salaman di dekat NPC ini.
@@ -1654,16 +1663,48 @@ func _proses_salaman(delta: float) -> void:
 			_terapkan_pakaian(delta, SantriPlayer.PAKAIAN_DEFAULT)
 			_salaman_timer += delta
 			if _salaman_timer >= 0.4:
+				_salaman = "hampiri"
+				_salaman_timer = 0.0
+		"hampiri":
+			# POLISH 20 Nov 2026 (verdict Mas "Kok tidak jabat
+			# tangan?"): NPC MELANGKAH mendekat sampai jarak jabat
+			# 1,05 m — dulu diam di tempat (1,4 m) sehingga tangan
+			# tidak pernah bersentuhan. Gerak = pola _langkah_ke
+			# (posisi langsung, tanpa fisika — NPC tidak punya
+			# collision, jadi tidak tertahan pemain; animasi jalan
+			# dari terapkan_jalan supaya tidak meluncur).
+			if _salaman_pemain == null or not is_instance_valid(_salaman_pemain):
+				_batalkan_salaman()
+				return
+			var ke_pemain2 := _salaman_pemain.global_position - global_position
+			ke_pemain2.y = 0.0
+			var jarak2 := ke_pemain2.length()
+			# Pemain kabur jauh (gerak membatalkan pose salaman) —
+			# jangan kejar, batalkan.
+			if jarak2 > SALAMAN_JARAK_MAKS:
+				_batalkan_salaman()
+				return
+			if jarak2 > SALAMAN_JABAT_JARAK:
+				var dir2 := ke_pemain2 / jarak2
+				position += dir2 * minf(SPEED * delta, jarak2 - SALAMAN_JABAT_JARAK)
+				position.y = _tinggi_tanah(position)
+				_visual.rotation.y = lerp_angle(_visual.rotation.y, atan2(dir2.x, dir2.z), minf(1.0, delta * 6.0))
+				_walk_time += delta * 8.0
+				AnimasiMixamo.terapkan_jalan(_rig, _walk_time, 1.0)
+				_terapkan_pakaian(delta, SantriPlayer.PAKAIAN_DEFAULT)
+			_salaman_timer += delta
+			if jarak2 <= SALAMAN_JABAT_JARAK + 0.02 or _salaman_timer >= SALAMAN_HAMPIRI_MAKS:
 				_salaman = "jabat"
 				_salaman_timer = 0.0
 		"jabat":
 			# Jabat tangan (nilai = b_salaman hormat): tangan kanan
-			# terulur, badan sedikit condong.
+			# terulur KE DALAM ke garis tengah (sudut_salaman_dalam)
+			# supaya bertemu tangan pemain — bukan lurus ke depan.
 			_visual.rotation.x = lerpf(_visual.rotation.x, 0.08, k)
 			_arm_l.rotation.x = lerpf(_arm_l.rotation.x, 0.0, k)
 			_arm_r.rotation.x = lerpf(_arm_r.rotation.x, -1.45, k)
 			_arm_l.rotation.z = lerpf(_arm_l.rotation.z, 0.05, k)
-			_arm_r.rotation.z = lerpf(_arm_r.rotation.z, -0.05, k)
+			_arm_r.rotation.z = lerpf(_arm_r.rotation.z, SantriPlayer.sudut_salaman_dalam(_arm_r.position.x), k)
 			_elbow_l.rotation.x = lerpf(_elbow_l.rotation.x, 0.0, k)
 			_elbow_r.rotation.x = lerpf(_elbow_r.rotation.x, -0.1, k)
 			_salaman_timer += delta

@@ -133,7 +133,7 @@ func _ready() -> void:
 	_cek("INFO segmen W1 potong anak tangga Musholla <=0,08 m", _lantai_visual(tengah_w1) <= 0.08, "visual=%.2f" % _lantai_visual(tengah_w1))
 	# --- 3) Musholla: Fatimah spawn y=0 vs lantai 0,02 ---
 	# (Raka, 20 Nov 2026: posisi pindah dari tengah cangkang
-	# (134,-24) ke serambi depan (131,-17.5) — di luar serambi
+	# (134,-24) ke depan pagar (131,-16) — di luar serambi
 	# (x 131,75..136,25) jadi lantai visual 0, tetap y=0.)
 	var pos_fatimah: Vector3 = LokasiAcak.pos_dari_id_putri("musholla_putri")
 	_cek("Fatimah Musholla tenggelam maks 0,02 m", _lantai_visual(pos_fatimah) - pos_fatimah.y <= 0.02, "visual=%.2f y=%.2f" % [_lantai_visual(pos_fatimah), pos_fatimah.y])

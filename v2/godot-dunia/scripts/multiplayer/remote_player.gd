@@ -287,7 +287,7 @@ func _terapkan_pose(delta: float) -> void:
 			(_rig["arm_l"] as Node3D).rotation.x = lerpf((_rig["arm_l"] as Node3D).rotation.x, 0.0, k3)
 			(_rig["arm_r"] as Node3D).rotation.x = lerpf((_rig["arm_r"] as Node3D).rotation.x, -1.45, k3)
 			(_rig["arm_l"] as Node3D).rotation.z = lerpf((_rig["arm_l"] as Node3D).rotation.z, 0.05, k3)
-			(_rig["arm_r"] as Node3D).rotation.z = lerpf((_rig["arm_r"] as Node3D).rotation.z, -0.05, k3)
+			(_rig["arm_r"] as Node3D).rotation.z = lerpf((_rig["arm_r"] as Node3D).rotation.z, SantriPlayer.sudut_salaman_dalam((_rig["arm_r"] as Node3D).position.x), k3)
 			(_rig["elbow_l"] as Node3D).rotation.x = lerpf((_rig["elbow_l"] as Node3D).rotation.x, 0.0, k3)
 			(_rig["elbow_r"] as Node3D).rotation.x = lerpf((_rig["elbow_r"] as Node3D).rotation.x, -0.1, k3)
 			(_rig["leg_l"] as Node3D).rotation.x = lerpf((_rig["leg_l"] as Node3D).rotation.x, 0.0, k3)

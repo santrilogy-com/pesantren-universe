@@ -2793,7 +2793,17 @@ func _dekat_pintu_kantor_luar() -> bool:
 
 
 func _dekat_pintu_kantor_dalam() -> bool:
-	return _player.global_position.distance_to(_kantor_interior_door) < 2.5
+	# Radius 1,0 m (BUKAN 2,5 m seperti pintu lain): kursi tes
+	# pemain (-121.15,-300) hanya 2,85 m dari pintu dalam
+	# (-124,-300) — dengan 2,5 m zona DUDUK hanya selebar 0,35 m
+	# sebelum kursi, dan dorongan fisika saat pemain menabrak kursi
+	# (teleport/berjalan 0,25 m dari kursi -> terdorong 0,33 m ke
+	# barat) melempar pemain kembali ke zona KELUAR, jadi ✕ tidak
+	# pernah jadi DUDUK (terukur di diag 20 Nov 2026). Dengan 1,0 m:
+	# zona DUDUK 1,85 m, KELUAR hanya 1,0 m dari pintu. Jalan
+	# menembus pintu (_cek_pintu_kantor) tidak pakai radius ini.
+	# (Cerminan perbaikan yang sama di _dekat_pintu_kantor_putra_dalam.)
+	return _player.global_position.distance_to(_kantor_interior_door) < 1.0
 
 
 ## KANTOR PUTRA (Gilang, 20 Nov 2026 — konsep tes-di-dalam-kantor):
@@ -3439,6 +3449,10 @@ func _cek_penguji_tes() -> void:
 	var penguji: SantriNPC = _fatimah if putri else _sanusi
 	if penguji == null:
 		return
+	# Flag dicerminkan dari NPC tiap frame (bukan hanya ditulis di
+	# sini): bila penguji diberdirikan dari jalur lain, flag tidak
+	# basi dan ia didudukkan lagi selagi langkah 6.
+	_penguji_tes_duduk = penguji.sedang_duduk_tes()
 	var langkah := Onboarding.langkah_saat_ini(_save)
 	if langkah == 6 and not _penguji_tes_duduk:
 		var kursi := SantriNPC._kursi_dari_id("tes_kantor_ustadzah_penguji" if putri else "tes_kantor_putra_penguji")

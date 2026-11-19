@@ -2192,6 +2192,20 @@ func _physics_process(delta: float) -> void:
 	_jalankan_animasi_visual(delta, v.length() > 0.1)
 
 
+## Sudut lengan kanan ke dalam saat salaman (Raka, 20 Nov 2026 —
+## verdict Mas "Kok tidak jabat tangan?"): bahu kanan di |x| =
+## lengan_x, jangkau tangan ~0,59 m (lengan atas 0,30 + bawah 0,29).
+## Dulu rotation.z -0,05 = lengan lurus ke depan — tangan kanan
+## kedua pihak terpaut ~0,5 m secara lateral (kanan masing-masing
+## ada di sisi berlawanan saat berhadapan), jadi tidak pernah
+## bertemu. Sudut ini membawa tangan tepat ke garis tengah badan.
+const SALAMAN_JANGKAU_TANGAN := 0.59
+
+
+static func sudut_salaman_dalam(lengan_x: float) -> float:
+	return asin(clampf(absf(lengan_x) / SALAMAN_JANGKAU_TANGAN, 0.0, 0.9))
+
+
 ## Pose prosedural (RONDE 6): semua target di-lerp halus (bobot
 ## dijepit 1.0) supaya perubahan pose tidak patah.
 func _terapkan_pose(delta: float) -> void:
@@ -2318,12 +2332,15 @@ func _terapkan_pose(delta: float) -> void:
 		"salaman":
 			# Salaman: tangan kanan terulur ke depan (jabat tangan),
 			# badan sedikit condong. Hadap ke NPC diatur main.gd.
+			# Lengan kanan mengarah KE DALAM (sudut_salaman_dalam)
+			# supaya tangan sampai ke garis tengah dan bertemu tangan
+			# lawan — bukan lurus ke depan (verdict Mas 20 Nov 2026).
 			_visual.position.y = lerpf(_visual.position.y, 0.0, k)
 			_visual.rotation.x = lerpf(_visual.rotation.x, 0.08, k)
 			_arm_l.rotation.x = lerpf(_arm_l.rotation.x, 0.0, k)
 			_arm_r.rotation.x = lerpf(_arm_r.rotation.x, -1.45, k)
 			_arm_l.rotation.z = lerpf(_arm_l.rotation.z, 0.05, k)
-			_arm_r.rotation.z = lerpf(_arm_r.rotation.z, -0.05, k)
+			_arm_r.rotation.z = lerpf(_arm_r.rotation.z, sudut_salaman_dalam(_arm_r.position.x), k)
 			_elbow_l.rotation.x = lerpf(_elbow_l.rotation.x, 0.0, k)
 			_elbow_r.rotation.x = lerpf(_elbow_r.rotation.x, -0.1, k)
 			_leg_l.rotation.x = lerpf(_leg_l.rotation.x, 0.0, k)

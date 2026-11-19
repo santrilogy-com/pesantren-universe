@@ -1,7 +1,11 @@
 extends Node
 ## Foto salaman pemain + NPC (Raka, 20 Nov 2026 — verifikasi visual
 ## fitur salaman: pemain jabat tangan Bilal, tangan kanan terulur).
-## Layar 1280x720. Jalankan di Xvfb display SEGAR (pola foto_npc_20.gd):
+## POLISH 20 Nov 2026 (verdict Mas "Kok tidak jabat tangan?"): NPC
+## kini melangkah mendekat ke 1,05 m + lengan mengarah ke dalam —
+## foto CLOSE-UP tangan (bukan cuma profil) + jarak tangan dicetak
+## di log. Layar 1280x720. Jalankan di Xvfb display SEGAR (pola
+## foto_npc_20.gd):
 ##   Xvfb :96 -screen 0 1280x720x24 &
 ##   HOME=/tmp/iso-salaman-foto DISPLAY=:96 godot --path . --resolution 1280x720 --audio-driver Dummy --scene res://skrip/foto_salaman.tscn
 ## Nama file BARU di v2/foto-npc/ — jangan timpa yang lama.
@@ -61,14 +65,30 @@ func _ready() -> void:
 	await _tunggu(0.5)
 	_main._on_aksi("salaman")
 	print("FOTO-SALAMAN pemain=%s bilal=%s" % [String(_main._player.aksi_saat_ini()), String(bilal.get("_salaman"))])
-	await _tunggu(1.5)
-	print("FOTO-SALAMAN saat foto bilal=%s arm_r=%.2f" % [String(bilal.get("_salaman")), float(bilal.get("_arm_r").rotation.x)])
-	# Foto 1: samping (profil berhadapan) — kamera dari timur, bidik
-	# titik tengah pasangan (-4, 1.0, 4.7).
+	# Tunggu fase jabat (hadap 0,4 dtk + hampiri) + lengan mengarah.
+	var tunggu := 0.0
+	while String(bilal.get("_salaman")) != "jabat" and tunggu < 4.0:
+		await _tunggu(0.2)
+		tunggu += 0.2
+	await _tunggu(0.6)
+	var tp: Node3D = _main._player.find_child("TanganKanan", true, false) as Node3D
+	var tn: Node3D = bilal.find_child("TanganKanan", true, false) as Node3D
+	var d_tangan := 99.0
+	var tengah := Vector3(-4, 1.26, 4.87)
+	if tp != null and tn != null:
+		d_tangan = (tp.global_position as Vector3).distance_to(tn.global_position as Vector3)
+		tengah = ((tp.global_position as Vector3) + (tn.global_position as Vector3)) * 0.5
+	print("FOTO-SALAMAN saat foto bilal=%s arm_r=%.2f arm_r_z=%.2f jarak_tangan=%.3f tengah=%s" % [String(bilal.get("_salaman")), float(bilal.get("_arm_r").rotation.x), float(bilal.get("_arm_r").rotation.z), d_tangan, str(tengah)])
+	# Foto 1: CLOSE-UP tangan bertemu — kamera dari timur, bidik
+	# titik tengah kedua tangan (y ~1,26).
+	await _bidik(tengah + Vector3(1.6, 0.25, 0.0), tengah)
+	await _foto("salaman-pemain-bilal-v2.png")
+	# Foto 2: profil berhadapan (banding dengan v1) — kamera dari
+	# timur, bidik titik tengah pasangan.
 	await _bidik(Vector3(0, 1.8, 4.7), Vector3(-4, 1.0, 4.7))
-	await _foto("salaman-pemain-bilal.png")
-	# Foto 2: lebar dari tenggara — konteks plaza Surau.
+	await _foto("salaman-pemain-bilal-profil-v2.png")
+	# Foto 3: lebar dari tenggara — konteks plaza Surau.
 	await _bidik(Vector3(2, 3.0, 10), Vector3(-4, 1.0, 4.7))
-	await _foto("salaman-pemain-bilal-lebar.png")
+	await _foto("salaman-pemain-bilal-lebar-v2.png")
 	print("FOTO-SALAMAN selesai")
 	get_tree().quit(0)

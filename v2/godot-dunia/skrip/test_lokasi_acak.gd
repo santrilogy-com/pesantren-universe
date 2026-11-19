@@ -51,7 +51,20 @@ const TAPAK_PUTRI_TAMBAHAN := {
 	"PosJagaTL": [Vector2(174.5, -21.5), Vector2(177.5, -18.5)],
 }
 
-## Semua tapak (TAPAK npc.gd + tambahan putri) untuk cek titik/segmen.
+## Portal (celah/pintu) untuk kandidat yang berdiri DI DALAM halaman
+## berpagar — segmen lurus ke jangkar luar MEMOTONG pagar, tapi
+## kandidat tetap terjangkau lewat portalnya (2 lompatan):
+##   "taman_putra": pintu geser Taman Putra (0,25.5) — TERBUKA
+##     OTOMATIS saat pemain mendekat <= 4 m (pintu_taman.gd);
+##     peti M3 (0,28) di dalam pagar sudah membuktikan pemain
+##     bisa masuk. Di tes, pintu dibuka paksa dulu (hook
+##     set_tahan_terbuka) supaya raycast mengukur keadaan terbuka.
+## (musholla_putri sempat di dalam halaman (131,-17.5) — terjangkau
+## lewat celah x 133..135, tapi segmennya menyerempet pagar; 20 Nov
+## dipindah ke LUAR pagar (131,-16) supaya segmen lurus bersih.)
+const PORTAL := {
+	"taman_putra": Vector3(0, 0, 25.5),
+}
 func _semua_tapak() -> Dictionary:
 	var out := {}
 	for nama in SantriNPC.TAPAK:
@@ -70,6 +83,14 @@ func _di_luar_tapak(p: Vector3, tapak: Dictionary, margin: float) -> String:
 		if p.x > mn.x - margin and p.x < mx.x + margin and p.z > mn.y - margin and p.z < mx.y + margin:
 			return String(nama)
 	return ""
+
+
+## Segmen bersih PENUH: raycast 3 jalur (_segmen_bersih game) +
+## sampel tapak tiap 1 m (tabel diperluas).
+func _segmen_bersih_ke(a: Vector3, b: Vector3, npc: SantriNPC, tapak: Dictionary) -> bool:
+	if not npc._segmen_bersih(a, b):
+		return false
+	return _segmen_bersih_tapak(a, b, tapak) == ""
 
 
 ## Segmen bersih dari tapak (sampel tiap 1 m, pola _segmen_bersih).
@@ -175,6 +196,14 @@ func _ready() -> void:
 	_main._masuk_pesantren("Tes Lokasi Acak")
 	for i in 5:
 		await get_tree().process_frame
+	# Buka paksa pintu Taman Putra (hook tes pintu_taman.gd) — daun
+	# geser menutup celah saat pemain jauh; raycast harus mengukur
+	# keadaan TERBUKA (pemain mendekat <= 4 m membukanya otomatis).
+	var pintu_taman := _main.find_child("PintuTaman", true, false)
+	if pintu_taman != null and pintu_taman.has_method("set_tahan_terbuka"):
+		pintu_taman.set_tahan_terbuka(true)
+	for i in 2:
+		await get_tree().physics_frame
 	var sanusi: SantriNPC = _main._sanusi
 	# Jangkar yang diketahui terbuka: waypoint NPC putra (7 titik
 	# tervalidasi test_npc_tembus) + titik terbuka putri (spawn,
@@ -186,23 +215,42 @@ func _ready() -> void:
 		Vector3(140, 0, 16), Vector3(122, 0, 32),
 		Vector3(128, 0, -12), Vector3(142, 0, 0),
 	]
+	# Segmen bersih = langsung ke jangkar, ATAU via portal (2 lompatan:
+	# kandidat -> portal -> jangkar) untuk kandidat di dalam halaman
+	# berpagar (lihat PORTAL di atas).
 	for k in LokasiAcak.KANDIDAT:
 		var p: Vector3 = k["pos"]
 		var bersih_ke := ""
 		for j in jangkar_putra:
 			var jj: Vector3 = j
-			if sanusi._segmen_bersih(p, jj) and _segmen_bersih_tapak(p, jj, tapak) == "":
+			if _segmen_bersih_ke(p, jj, sanusi, tapak):
 				bersih_ke = "(%.1f,%.1f)" % [jj.x, jj.z]
 				break
+		if bersih_ke == "" and PORTAL.has(String(k["id"])):
+			var portal: Vector3 = PORTAL[String(k["id"])]
+			if _segmen_bersih_ke(p, portal, sanusi, tapak):
+				for j in jangkar_putra:
+					var jj: Vector3 = j
+					if _segmen_bersih_ke(portal, jj, sanusi, tapak):
+						bersih_ke = "via portal (%.1f,%.1f)->(%.1f,%.1f)" % [portal.x, portal.z, jj.x, jj.z]
+						break
 		_cek("Putra %s segmen bersih ke jangkar" % String(k["id"]), bersih_ke != "", ("via " + bersih_ke) if bersih_ke != "" else str(p))
 	for k in LokasiAcak.KANDIDAT_PUTRI:
 		var p: Vector3 = k["pos"]
 		var bersih_ke := ""
 		for j in jangkar_putri:
 			var jj: Vector3 = j
-			if sanusi._segmen_bersih(p, jj) and _segmen_bersih_tapak(p, jj, tapak) == "":
+			if _segmen_bersih_ke(p, jj, sanusi, tapak):
 				bersih_ke = "(%.1f,%.1f)" % [jj.x, jj.z]
 				break
+		if bersih_ke == "" and PORTAL.has(String(k["id"])):
+			var portal: Vector3 = PORTAL[String(k["id"])]
+			if _segmen_bersih_ke(p, portal, sanusi, tapak):
+				for j in jangkar_putri:
+					var jj: Vector3 = j
+					if _segmen_bersih_ke(portal, jj, sanusi, tapak):
+						bersih_ke = "via portal (%.1f,%.1f)->(%.1f,%.1f)" % [portal.x, portal.z, jj.x, jj.z]
+						break
 		_cek("Putri %s segmen bersih ke jangkar" % String(k["id"]), bersih_ke != "", ("via " + bersih_ke) if bersih_ke != "" else str(p))
 
 	print("LOKASI-ACAK SELESAI lulus=%d gagal=%d" % [_lulus, _gagal])

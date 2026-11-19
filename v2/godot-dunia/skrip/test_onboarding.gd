@@ -141,9 +141,10 @@ func _ready() -> void:
 	_cek("Semua kandidat punya posisi (bukan ZERO)", semua_ada_pos)
 	_cek("cari() id tak dikenal = {}", LokasiAcak.cari("tidak_ada").is_empty())
 	_cek("pos_dari_id tak dikenal = ZERO", LokasiAcak.pos_dari_id("tidak_ada") == Vector3.ZERO)
-	_cek("pos_dari_id surau = (0, 0.5, -14) [lantai visual Surau]", LokasiAcak.pos_dari_id("surau").distance_to(Vector3(0, 0.5, -14)) < 0.01)
+	_cek("pos_dari_id surau = (3.5, 0, -2) [serambi timur Surau, 20 Nov 2026]", LokasiAcak.pos_dari_id("surau").distance_to(Vector3(3.5, 0, -2)) < 0.01)
 	_cek("pos_dari_id kantin = (0,40)", LokasiAcak.pos_dari_id("kantin").distance_to(Vector3(0, 0, 40)) < 0.01)
-	_cek("pos_dari_id masjid_besar = (64,-24)", LokasiAcak.pos_dari_id("masjid_besar").distance_to(Vector3(64, 0, -24)) < 0.01)
+	_cek("pos_dari_id masjid_besar = ZERO [dihapus 20 Nov 2026]", LokasiAcak.pos_dari_id("masjid_besar") == Vector3.ZERO)
+	_cek("pos_dari_id taman_putra = (0,27)", LokasiAcak.pos_dari_id("taman_putra").distance_to(Vector3(0, 0, 27)) < 0.01)
 
 	# ---------- LokasiAcak: acak benar-benar berubah ----------
 	var acak_dari_kandidat := true

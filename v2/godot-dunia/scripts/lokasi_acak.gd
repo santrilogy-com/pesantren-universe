@@ -25,7 +25,7 @@ class_name LokasiAcak
 ##   - "masjid_besar" (64,-24) DIHAPUS -> diganti "taman_putra"
 ##     (0,0,27): (64,-24) di zona LARANGAN putra (x>14, z<16,
 ##     balik tembok x=14, gerbang tertutup).
-##   - "musholla_putri" (134,-24) -> serambi (131,-17.5): tengah
+##   - "musholla_putri" (134,-24) -> depan pagar (131,-16): tengah
 ##     cangkang Musholla — dari pintu selatan masih 5 m.
 ##   - "asrama_putri" (152,9) -> exit barat (144.5,9): tengah
 ##     cangkang Asrama Putri — dari pintu barat masih 6 m.
@@ -139,17 +139,20 @@ const KANDIDAT_PUTRI: Array[Dictionary] = [
 	{
 		"id": "musholla_putri",
 		"nama": "Musholla Ar-Raudhah",
-		# SERAMBI DEPAN Musholla (131,-17.5), BUKAN pusat (134,-24)
+		# DEPAN PAGAR Musholla (131,-16), BUKAN pusat (134,-24)
 		# lagi (Raka, 20 Nov 2026): (134,-24) = TENGAH cangkang
 		# Musholla (tapak x 128..140, z -29..-19) — pemain di pintu
 		# selatan (134,-19) masih 5 m, di luar jangkauan 3,5 m.
-		# Posisi baru 1,5 m di depan dinding selatan, 3 m di barat
-		# pintu (pintu (134,-19); Mariyah di (134,-17)) — tanah
-		# datar y=0, di luar serambi (x 131,75..136,25) jadi tidak
-		# tenggelam. Fatimah tetap "di Musholla" untuk teka-teki.
-		"pos": Vector3(131, 0, -17.5),
+		# Posisi baru 1 m di SELATAN pagar halaman (pagar z=-17,
+		# celah x 133..135 depan pintu; Mariyah di (134,-17)) —
+		# tanah datar y=0, di luar serambi (x 131,75..136,25) jadi
+		# tidak tenggelam. Sempat dicoba (131,-17.5) DI DALAM
+		# halaman — terjangkau lewat celah, TAPI segmen lurusnya
+		# menyerempet pagar (offset raycast 0,3 m); di luar pagar
+		# lebih kokoh. Fatimah tetap "di Musholla" untuk teka-teki.
+		"pos": Vector3(131, 0, -16),
 		"status": "live",
-		"sumber": "Serambi depan Musholla Ar-Raudhah — pintu selatan (134,-19), kampus_putri.gd",
+		"sumber": "Depan pagar Musholla Ar-Raudhah — pagar z=-17, celah x 133..135, kampus_putri.gd",
 	},
 	{
 		"id": "kelas_putri",
