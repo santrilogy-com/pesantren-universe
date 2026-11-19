@@ -14,6 +14,16 @@ var _main: Node
 var _tag := "web"
 
 
+func _cari_label_pola(node: Node) -> Label:
+	if node is Label and String((node as Label).text).begins_with("Pola misi"):
+		return node as Label
+	for anak in node.get_children():
+		var ketemu := _cari_label_pola(anak)
+		if ketemu != null:
+			return ketemu
+	return null
+
+
 func _foto(nama: String) -> void:
 	for i in 15:
 		await get_tree().process_frame
@@ -57,11 +67,9 @@ func _ready() -> void:
 	await _tunggu(10)
 	var panel: PanelMisiUI = _main._manajer_misi._panel_misi
 	# Cari label "Pola misi" di _konten, gulir supaya tepat terlihat.
-	var label_pola: Label = null
-	for anak in panel._konten.get_children():
-		if anak is Label and String((anak as Label).text).begins_with("Pola misi"):
-			label_pola = anak as Label
-			break
+	# V2 (19 Nov 2026): baris pola kini HBox segmen (› emas) — cari
+	# rekursif, bukan hanya anak langsung _konten.
+	var label_pola: Label = _cari_label_pola(panel._konten)
 	if label_pola == null:
 		print("FOTO-CEK pola: LABEL TIDAK KETEMU")
 	else:

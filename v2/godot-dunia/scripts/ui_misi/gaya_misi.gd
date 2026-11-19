@@ -18,6 +18,17 @@ const ZAMRUD := Color("#065f46")
 const ZAMRUD_GELAP := Color("#043b2c")
 const ZAMRUD_PANEL := Color("#0d3b2e")
 const ZAMRUD_KARTU := Color("#032d22")
+## Panel Misi v2 (Tara, 19 Nov 2026 — konsep ACC Mas 19:06 WIB):
+## gradien panel mockup #145c49 -> #0d4032 -> #082e24 (2-stop
+## cukup — titik tengah lerp-nya #0e4738, nyaris sama); kartu
+## = putih 7%->2% di atas #0a2f26; baris aktif mockup persis.
+const ZAMRUD_PANEL_ATAS := Color("#145c49")
+const ZAMRUD_PANEL_BAWAH := Color("#082e24")
+const ZAMRUD_KARTU_ATAS := Color("#1b3e35")
+const ZAMRUD_KARTU_BAWAH := Color("#0f332a")
+const ZAMRUD_AKTIF_ATAS := Color("#155c47")
+const ZAMRUD_AKTIF_BAWAH := Color("#0e4436")
+const EMAS_CERAH := Color("#f2c14e")
 const EMAS := Color("#c9a227")
 const EMAS_TERANG := Color("#e8c45a")
 const KREM := Color("#f2ead6")
@@ -82,6 +93,172 @@ static func _kotak_gradien(tekstur: Texture2D, radius: int) -> StyleBoxTexture:
 	s.texture_margin_bottom = float(radius)
 	s.draw_center = true
 	return s
+
+
+## ---------- PANEL MISI v2 (Tara, 19 Nov 2026 — konsep ACC Mas) ----------
+## Cache tekstur bakar: satu panel me-render ~15 kartu — tanpa
+## cache, bakar 96x96 per kartu (~40 ms) = ~0,6 detik tiap panel
+## dibuka. Tekstur di sini hanya bergantung pada parameter tetap,
+## jadi dibakar sekali lalu dipakai ulang semua kartu.
+static var _cache_tekstur := {}
+
+
+static func _tekstur_gradien_cache(kunci: String, warna_atas: Color, warna_bawah: Color, radius: int, rim: Color, rim_lebar: int, pita: Color = Color(0, 0, 0, 0), pita_tinggi: int = 0) -> ImageTexture:
+	if _cache_tekstur.has(kunci):
+		return _cache_tekstur[kunci]
+	var t := buat_tekstur_gradien(warna_atas, warna_bawah, radius, rim, rim_lebar, pita, pita_tinggi, Color(0, 0, 0, 0), 0, Vector2i(96, 96))
+	_cache_tekstur[kunci] = t
+	return t
+
+
+## Panel gradien 9-slice (bukan TextureRect latar seperti dialog).
+## Alasan — TERUKUR probe 19 Nov 2026: bakar gradien ukuran panel
+## sebenarnya (654x664) butuh ~2 DETIK di GDScript; TextureRect
+## 1:1 akan membekukan game tiap panel dibuka atau layar diputar.
+## Gradien panel murni vertikal, jadi 9-slice 96x96 hasilnya
+## identik secara visual: sudut + rim 1:1, tengah direntang halus.
+## CATATAN: StyleBoxTexture TIDAK mendukung bayangan (properti
+## shadow_* ditolak Godot 4.7) — bayangan panel datang dari
+## gaya_panel_bayangan() (StyleBoxFlat transparan) di panel luar.
+static func gaya_panel_gradien_tekstur() -> StyleBoxTexture:
+	var rim := EMAS_TERANG
+	rim.a = 0.85
+	var tek := _tekstur_gradien_cache("panel_misi_v2", ZAMRUD_PANEL_ATAS, ZAMRUD_PANEL_BAWAH, 26, rim, 2)
+	var s := _kotak_gradien(tek, 26)
+	s.content_margin_left = 3.0
+	s.content_margin_right = 3.0
+	s.content_margin_top = 3.0
+	s.content_margin_bottom = 3.0
+	return s
+
+
+## Bayangan panel v2: StyleBoxFlat transparan tanpa rim — hanya
+## bayangan jatuh yang digambar; rim + gradien datang dari panel
+## dalam (gaya_panel_gradien_tekstur). Dipakai sebagai stylebox
+## panel luar (lihat panel_misi_ui.gd _ready).
+static func gaya_panel_bayangan() -> StyleBoxFlat:
+	var s := StyleBoxFlat.new()
+	s.bg_color = Color(0, 0, 0, 0)
+	s.set_corner_radius_all(26)
+	s.shadow_color = Color(0.0, 0.0, 0.0, 115.0 / 255.0)
+	s.shadow_size = 16
+	s.shadow_offset = Vector2(0, 8)
+	s.content_margin_left = 0.0
+	s.content_margin_right = 0.0
+	s.content_margin_top = 0.0
+	s.content_margin_bottom = 0.0
+	return s
+
+
+## Kartu baris/konten v2: gradien zamrud kartu + rim krem tipis +
+## kilau 1 px di tepi atas + bayangan lembut. Padding lewat
+## content margin — PELAJARAN 19 Nov: theme constant margin_*
+## PanelContainer TIDAK BERLAKU (hanya MarginContainer yang
+## punya), jadi padding lama 14/8 di panel_misi_ui.gd tidak pernah
+## diterapkan dan isi menempel di tepi kartu.
+static func gaya_kartu_gradien(pad_atas := 8.0, pad_bawah := 8.0) -> StyleBoxTexture:
+	var rim := KREM
+	rim.a = 0.16
+	var tek := _tekstur_gradien_cache("kartu_misi_v2", ZAMRUD_KARTU_ATAS, ZAMRUD_KARTU_BAWAH, 16, rim, 1, Color(1, 1, 1, 0.06), 1)
+	var s := _kotak_gradien(tek, 16)
+	# (StyleBoxTexture tidak mendukung bayangan — kedalaman kartu
+	# datang dari gradien + rim + jarak antar-kartu.)
+	s.content_margin_left = 16.0
+	s.content_margin_right = 16.0
+	s.content_margin_top = pad_atas
+	s.content_margin_bottom = pad_bawah
+	return s
+
+
+## Baris aktif v2: gradien zamrud aktif + rim emas 2 + bayangan
+## bernuansa emas (cahaya lembut di sekeliling baris).
+static func gaya_kartu_aktif_gradien() -> StyleBoxTexture:
+	var rim := EMAS_TERANG
+	rim.a = 0.9
+	var tek := _tekstur_gradien_cache("kartu_aktif_v2", ZAMRUD_AKTIF_ATAS, ZAMRUD_AKTIF_BAWAH, 16, rim, 2)
+	var s := _kotak_gradien(tek, 16)
+	s.content_margin_left = 16.0
+	s.content_margin_right = 16.0
+	s.content_margin_top = 8.0
+	s.content_margin_bottom = 8.0
+	return s
+
+
+## Chip AKTIF isi penuh v2: pill gradien emas cerah -> emas.
+## JANGAN ubah buat_chip() — dipakai tempat lain. Padding lewat
+## content margin (theme constant tidak berlaku — itu sebabnya
+## chip AKTIF lama terpotong: lebar minimum dihitung 42 px,
+## padahal label butuh 38 + padding 28).
+## AKAR POTONG BAWAH (probe 19 Nov 2026, TERBUKTI): radius 9-slice
+## 24 px pada chip setinggi 25 px — margin atas+bawah 48 > 25,
+## sudut bawah tumpang-tindih dan terpotong jadi setengah kubah
+## (chip 50 px yang sama me-render pill penuh). Radius MAKSIMUM
+## yang aman = setengah tinggi chip (12,5) -> dipakai 12.
+static func gaya_chip_isi() -> StyleBoxTexture:
+	var tek := _tekstur_gradien_cache("chip_isi_v2_r12", EMAS_CERAH, EMAS, 12, Color(0, 0, 0, 0), 0)
+	var s := _kotak_gradien(tek, 12)
+	s.content_margin_left = 11.0
+	s.content_margin_right = 11.0
+	s.content_margin_top = 2.0
+	s.content_margin_bottom = 3.0
+	return s
+
+
+static func buat_chip_isi(teks: String) -> PanelContainer:
+	var p := PanelContainer.new()
+	p.add_theme_stylebox_override("panel", gaya_chip_isi())
+	# Mockup: huruf 12 tebal + padding 11 px kiri-kanan. Padding
+	# vertikal hanya 2/3 px — label 12 px tebal tingginya 20 px,
+	# jadi chip total 25 px, pas di dalam baris 42 px (isi 26 px).
+	# Padding 4/5 px membuat chip 29 px dan baris aktif lebih
+	# tinggi dari baris terkunci.
+	var l := buat_label_tebal(teks, 12, ZAMRUD_GELAP)
+	l.add_theme_constant_override("font_spacing", 1)
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	p.add_child(l)
+	return p
+
+
+## Tombol Tutup footer v2: wadah bening putih 7% + outline krem
+## 30% + radius 12 + bayangan kecil. PELAJARAN 19 Nov: tombol
+## Tutup lama flat tanpa stylebox — lebar minimum Button hanya
+## 8 px (isi HBox anak TIDAK dihitung Button), isi meluber 62 px
+## menimpa chip Chat (artefak "✕ □ Tutup" di foto). Stylebox ini
+## + custom_minimum_size di pemanggil memberi lebar yang benar.
+static func gaya_tombol_tutup() -> StyleBoxFlat:
+	var s := StyleBoxFlat.new()
+	s.bg_color = Color(1, 1, 1, 0.07)
+	var garis := KREM
+	garis.a = 0.30
+	s.border_color = garis
+	s.set_border_width_all(1)
+	s.set_corner_radius_all(12)
+	s.shadow_color = Color(0.0, 0.0, 0.0, 0.25)
+	s.shadow_size = 4
+	s.shadow_offset = Vector2(0, 2)
+	s.content_margin_left = 15.0
+	s.content_margin_right = 15.0
+	s.content_margin_top = 7.0
+	s.content_margin_bottom = 7.0
+	return s
+
+
+static func gaya_tombol_tutup_hover() -> StyleBoxFlat:
+	var s := gaya_tombol_tutup()
+	s.bg_color = Color(1, 1, 1, 0.10)
+	return s
+
+
+static func gaya_tombol_tutup_pressed() -> StyleBoxFlat:
+	var s := gaya_tombol_tutup()
+	s.bg_color = Color(1, 1, 1, 0.04)
+	return s
+
+
+## Isi bilah progres v2: gradien emas cerah -> emas.
+static func gaya_isi_bilah_gradien() -> StyleBoxTexture:
+	var tek := _tekstur_gradien_cache("isi_bilah_v2", EMAS_CERAH, EMAS, 8, Color(0, 0, 0, 0), 0)
+	return _kotak_gradien(tek, 8)
 
 
 ## Panel dialog v2: StyleBoxFlat TRANSPARAN (gradien datang dari
@@ -532,9 +709,7 @@ static func buat_bilah_progres() -> ProgressBar:
 	trek.border_color = garis
 	trek.set_border_width_all(1)
 	trek.set_corner_radius_all(8)
-	var isi := StyleBoxFlat.new()
-	isi.bg_color = EMAS
-	isi.set_corner_radius_all(8)
+	var isi := gaya_isi_bilah_gradien()
 	bar.add_theme_stylebox_override("background", trek)
 	bar.add_theme_stylebox_override("fill", isi)
 	return bar

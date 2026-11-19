@@ -43,7 +43,6 @@ func _ready() -> void:
 		get_tree().quit(1)
 		return
 	print("PROFIL-RENDER: kamera pos=%s far=%.1f fov=%.1f" % [str(cam.global_position), cam.far, cam.fov])
-	var frustum := cam.get_frustum()
 	var t_mesh := 0
 	var t_tris := 0
 	var t_surf := 0
@@ -66,16 +65,30 @@ func _ready() -> void:
 				t_verts += r[0]
 				t_tris += r[1]
 				t_surf += r[2]
+				# Ter-render = visible + (pusat ATAU salah satu sudut AABB
+				# di dalam frustum). get_frustum() + Plane.distance_to
+				# SALAH tanda di percobaan pertama (TER-RENDER=1) —
+				# is_position_in_frustum() yang dipakai di sini.
 				if mi.is_visible_in_tree():
 					var ga: AABB = mi.get_aabb()
-					var c: Vector3 = mi.to_global(ga.get_center())
-					var rad: float = ga.size.length() * 0.5
-					var di_luar := false
-					for p in frustum:
-						if (p as Plane).distance_to(c) < -rad:
-							di_luar = true
+					var sudut := [
+						ga.position,
+						ga.position + Vector3(ga.size.x, 0, 0),
+						ga.position + Vector3(0, ga.size.y, 0),
+						ga.position + Vector3(0, 0, ga.size.z),
+						ga.position + Vector3(ga.size.x, ga.size.y, 0),
+						ga.position + Vector3(ga.size.x, 0, ga.size.z),
+						ga.position + Vector3(0, ga.size.y, ga.size.z),
+						ga.position + ga.size,
+					]
+					var terlihat := false
+					for s in sudut:
+						if cam.is_position_in_frustum(mi.to_global(s)):
+							terlihat = true
 							break
-					if not di_luar:
+					if not terlihat and cam.is_position_in_frustum(mi.to_global(ga.get_center())):
+						terlihat = true
+					if terlihat:
 						v_mesh += 1
 						v_verts += r[0]
 						v_tris += r[1]
