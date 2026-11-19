@@ -102,10 +102,36 @@ const BUBBLE_MAKS := 100
 ## gundukan (0,566), dan sumbu panjangnya diputar mengikuti arah
 ## paha (yaw ±0.50) — bukan bola menempel, melainkan kain yang
 ## menutupi paha + lutut yang mengarah ke depan-samping.
-const LUTUT_SKALA := Vector3(1.0, 0.65, 1.25)
-const PAKAIAN_DEFAULT := {"sarung_scale": Vector3.ONE, "sarung_y": 0.50, "hem_scale": Vector3(1.0, 0.25, 1.0), "hem_y": 0.12, "trim_y": 0.14, "torso_scale": Vector3.ONE, "peci_z": 1.0, "lutut_scale": Vector3.ZERO}
-const PAKAIAN_DUDUK := {"sarung_scale": Vector3(1.95, 0.32, 1.95), "sarung_y": 0.66, "hem_scale": Vector3(1.95, 0.20, 1.95), "hem_y": 0.49, "trim_y": 0.49, "torso_scale": Vector3.ONE, "peci_z": 1.0, "lutut_scale": LUTUT_SKALA}
-const PAKAIAN_TIDUR := {"sarung_scale": Vector3(1.15, 1.0, 0.55), "sarung_y": 0.50, "hem_scale": Vector3(1.15, 0.25, 0.5), "hem_y": 0.12, "trim_y": 0.14, "torso_scale": Vector3(1.0, 1.0, 0.6), "peci_z": 0.7, "lutut_scale": Vector3.ZERO}
+## DRAPE BERSILA v3 (Kirana, 20 Nov 2026 — koreksi Mas 06:05 WIB "Yg
+## jelas duduk bersila" atas tonjolan lutut v2): gundukan + dua benjol
+## TETAP terbaca aneh — siluet kerucut mulus, lutut cuma lobus di
+## sudut bawah. Yang baru: DRAPE ArrayMesh (loft) yang mengikuti
+## paha menyilang — pinggang sempit (r 0,22), tonjolan di ARAH LUTUT
+## (±48° dari depan, r 0,39 di tinggi lutut), cekungan di tengah
+## depan (r 0,27), bawah menutup di atas kaki bersila. Sarung
+## silinder lama jadi INTI kecil tersembunyi di dalam drape
+## ((0.85,0.30,0.85) / sarung_y 0,70 — muat di dalam drape di semua
+## tinggi), hem + trim dikecilkan sampai tak terlihat. Tonjolan
+## lutut v2 DIPENSIUNKAN (LUTUT_SKALA tetap ada sebagai konstanta
+## warisan, tapi semua PAKAIAN_* kini lutut_scale = 0 — drape yang
+## membentuk lututnya). Kunci baru di SEMUA dict: "drape_scale"
+## (penuh saat bersila, 0 di pose lain), "sarung_rot_x"/"sarung_z"/
+## "hem_z"/"trim_scale" (untuk duduk kursi, lihat bawah).
+## DUDUK KURSI v2 (Kirana, 20 Nov 2026 — verdict Mas 06:04 + 06:06
+## WIB "Duduk di tamannya kok aneh" / "Yg sarung aneh" / "sama yg
+## duduk kursi juga aneh"): tabung sarung VERTIKAL (1.10,0.42,1.10)
+## menggantung seperti tirai di depan bangku — ujung bawah garis
+## lurus, betis menjuntai terpisah. Yang baru: tabung DIROTASI
+## mengikuti paha (sarung_rot_x 1,69 — sumbu tabung sejajar paha
+## horizontal, ujung sempit di lutut + ujung lebar di pinggang),
+## dipipihkan vertikal ((1.15,0.55,0.55) — tebal 0,32, bukan
+## 0,64) + digeser ke depan (sarung_z 0,13, pusat di atas paha).
+## Betis keluar dari BAWAH ujung tabung, seperti sarung asli.
+## Hem + trim dikecilkan (tersembunyi di dalam tabung).
+const LUTUT_SKALA := Vector3(1.0, 0.65, 1.25) # LEGACY v2 — digantikan drape (semua dict kini 0).
+const PAKAIAN_DEFAULT := {"sarung_scale": Vector3.ONE, "sarung_y": 0.50, "sarung_z": 0.0, "sarung_rot_x": 0.0, "hem_scale": Vector3(1.0, 0.25, 1.0), "hem_y": 0.12, "hem_z": 0.0, "trim_y": 0.14, "trim_scale": Vector3.ONE, "torso_scale": Vector3.ONE, "peci_z": 1.0, "lutut_scale": Vector3.ZERO, "drape_scale": Vector3.ZERO}
+const PAKAIAN_DUDUK := {"sarung_scale": Vector3(0.80, 0.28, 0.80), "sarung_y": 0.70, "sarung_z": 0.0, "sarung_rot_x": 0.0, "hem_scale": Vector3(0.30, 0.20, 0.30), "hem_y": 0.75, "hem_z": 0.0, "trim_y": 0.34, "trim_scale": Vector3(0.05, 0.05, 0.05), "torso_scale": Vector3.ONE, "peci_z": 1.0, "lutut_scale": Vector3.ZERO, "drape_scale": Vector3.ONE}
+const PAKAIAN_TIDUR := {"sarung_scale": Vector3(1.15, 1.0, 0.55), "sarung_y": 0.50, "sarung_z": 0.0, "sarung_rot_x": 0.0, "hem_scale": Vector3(1.15, 0.25, 0.5), "hem_y": 0.12, "hem_z": 0.0, "trim_y": 0.14, "trim_scale": Vector3.ONE, "torso_scale": Vector3(1.0, 1.0, 0.6), "peci_z": 0.7, "lutut_scale": Vector3.ZERO, "drape_scale": Vector3.ZERO}
 ## DUDUK KURSI (Kirana, 20 Nov 2026 — bug 3 Mas): sarung DIPENDEKKAN
 ## supaya menutupi paha horizontal + lutut, betis polos menggantung
 ## di bawah hem: sarung (1.10, 0.42, 1.10) / sarung_y 0,72 — tepi
@@ -113,8 +139,8 @@ const PAKAIAN_TIDUR := {"sarung_scale": Vector3(1.15, 1.0, 0.55), "sarung_y": 0.
 ## 0,382 (tepat di bawah lutut 0,414); hem (1.10, 0.25, 1.10) /
 ## hem_y 0,56 menutup rim. Paha (warna sarung) menjorok ~4 cm ke
 ## depan tabung — terbaca sebagai kain yang meregang di atas paha.
-const PAKAIAN_KURSI := {"sarung_scale": Vector3(1.10, 0.42, 1.10), "sarung_y": 0.72, "hem_scale": Vector3(1.10, 0.25, 1.10), "hem_y": 0.56, "trim_y": 0.56, "torso_scale": Vector3.ONE, "peci_z": 1.0, "lutut_scale": Vector3.ZERO}
-const PAKAIAN_ABAYA_KURSI := {"sarung_scale": Vector3(1.05, 0.55, 1.05), "sarung_y": 0.85, "hem_scale": Vector3(1.05, 0.25, 1.05), "hem_y": 0.50, "trim_y": 0.50, "torso_scale": Vector3.ONE, "peci_z": 1.0, "lutut_scale": Vector3.ZERO}
+const PAKAIAN_KURSI := {"sarung_scale": Vector3(1.15, 0.55, 0.55), "sarung_y": 0.60, "sarung_z": 0.13, "sarung_rot_x": 1.69, "hem_scale": Vector3(0.30, 0.25, 0.30), "hem_y": 0.60, "hem_z": 0.15, "trim_y": 0.56, "trim_scale": Vector3(0.05, 0.05, 0.05), "torso_scale": Vector3.ONE, "peci_z": 1.0, "lutut_scale": Vector3.ZERO, "drape_scale": Vector3.ZERO}
+const PAKAIAN_ABAYA_KURSI := {"sarung_scale": Vector3(1.05, 0.35, 0.55), "sarung_y": 0.60, "sarung_z": 0.13, "sarung_rot_x": 1.69, "hem_scale": Vector3(0.30, 0.25, 0.30), "hem_y": 0.60, "hem_z": 0.15, "trim_y": 0.50, "trim_scale": Vector3(0.05, 0.05, 0.05), "torso_scale": Vector3.ONE, "peci_z": 1.0, "lutut_scale": Vector3.ZERO, "drape_scale": Vector3.ZERO}
 # SUSULAN RONDE 20 (Mas 19:42 WIB: kostum Ustadzah "malah kek ustadz"
 # — koko + sarung batik + penutup kepala seperti songkok): ABAYA +
 # JILBAB. Abaya = SATU gamis panjang longgar (bahu -> mata kaki),
@@ -127,8 +153,8 @@ const PAKAIAN_ABAYA_KURSI := {"sarung_scale": Vector3(1.05, 0.55, 1.05), "sarung
 # gamis duduk ikut diratakan + dilebarkan: (1.85, 0.55, 1.85) /
 # sarung_y 0,82 — gundukan dunia 0,037..0,763, bawah Ø1,07; hem
 # (1.85, 0.20, 1.85) / hem_y 0,50 (titik terendah dunia 0,022).
-const PAKAIAN_ABAYA_DEFAULT := {"sarung_scale": Vector3.ONE, "sarung_y": 0.76, "hem_scale": Vector3(1.0, 0.25, 1.0), "hem_y": 0.12, "trim_y": 0.14, "torso_scale": Vector3.ONE, "peci_z": 1.0, "lutut_scale": Vector3.ZERO}
-const PAKAIAN_ABAYA_DUDUK := {"sarung_scale": Vector3(1.85, 0.55, 1.85), "sarung_y": 0.82, "hem_scale": Vector3(1.85, 0.20, 1.85), "hem_y": 0.50, "trim_y": 0.50, "torso_scale": Vector3.ONE, "peci_z": 1.0, "lutut_scale": LUTUT_SKALA}
+const PAKAIAN_ABAYA_DEFAULT := {"sarung_scale": Vector3.ONE, "sarung_y": 0.76, "sarung_z": 0.0, "sarung_rot_x": 0.0, "hem_scale": Vector3(1.0, 0.25, 1.0), "hem_y": 0.12, "hem_z": 0.0, "trim_y": 0.14, "trim_scale": Vector3.ONE, "torso_scale": Vector3.ONE, "peci_z": 1.0, "lutut_scale": Vector3.ZERO, "drape_scale": Vector3.ZERO}
+const PAKAIAN_ABAYA_DUDUK := {"sarung_scale": Vector3(0.75, 0.50, 0.75), "sarung_y": 0.82, "sarung_z": 0.0, "sarung_rot_x": 0.0, "hem_scale": Vector3(0.30, 0.20, 0.30), "hem_y": 0.75, "hem_z": 0.0, "trim_y": 0.34, "trim_scale": Vector3(0.05, 0.05, 0.05), "torso_scale": Vector3.ONE, "peci_z": 1.0, "lutut_scale": Vector3.ZERO, "drape_scale": Vector3.ONE}
 
 ## Arah gerak di ruang pesantren (sudah relatif kamera), panjang 0..1.
 var move_dir: Vector3 = Vector3.ZERO
@@ -200,6 +226,7 @@ var _sarung_hem: MeshInstance3D
 var _sarung_trim: MeshInstance3D
 var _lutut_l: MeshInstance3D
 var _lutut_r: MeshInstance3D
+var _drape: MeshInstance3D
 var _torso: MeshInstance3D
 var _peci: MeshInstance3D
 ## Nama pemain (label di atas kepala) — disimpan supaya
@@ -346,6 +373,7 @@ func _pasang_visual(built: Dictionary) -> void:
 	_sarung_trim = built["sarung_trim"]
 	_lutut_l = built["lutut_l"]
 	_lutut_r = built["lutut_r"]
+	_drape = built["drape"]
 	_torso = built["torso"]
 	_peci = built["peci"]
 	# ANIMASI-MIXAMO: rig untuk modul animasi (dibangun ulang tiap
@@ -901,6 +929,86 @@ static func peci_model_untuk(nama: String) -> String:
 	return "nasional" if abs(nama.hash()) % 2 == 0 else "bulat"
 
 
+## DRAPE BERSILA v3 — tonjolan Gaussian di arah lutut (helper loft).
+static func _gauss_bump(d: float, sigma: float) -> float:
+	var w := wrapf(d, -PI, PI)
+	return exp(-(w * w) / (sigma * sigma))
+
+
+## DRAPE BERSILA v3 — bangun mesh loft sarung bersila (ArrayMesh).
+## Cincin [y_dasar, R0, tonjolan, geser_z, naik_depan]: pinggang
+## sempit (r 0,22) -> lutut melebar ke arah lutut (±0,83 rad dari
+## depan, r 0,42 di tinggi lutut, menutupi lutut 0,294 + kapsul
+## 0,085) -> bawah menutup di atas kaki bersila (kaki bersilang di
+## tengah, x ±0,05). "naik_depan" = tepi bawah NAIK di tengah depan
+## saja (faktor cos — 0 di samping/belakang) supaya dari depan
+## terbaca DUA LUTUT + cekungan di tengahnya, bukan garis lurus:
+## tepi bawah di lutut menyentuh lantai, di tengah naik 0,25.
+## Cincin bawah ikut naik bertahap (0,06/0,12/0,25) supaya tidak
+## ada lipatan terbalik. UV: u = sudut/2π (motif garis/batik
+## melingkar seperti tabung), v = tinggi cincin.
+static func _bangun_drape_bersila(bahan: Material) -> MeshInstance3D:
+	var cincin: Array = [
+		[0.90, 0.22, 0.00, 0.00, 0.00],
+		[0.74, 0.235, 0.03, 0.01, 0.00],
+		[0.60, 0.25, 0.08, 0.03, 0.00],
+		[0.52, 0.24, 0.16, 0.05, 0.06],
+		[0.44, 0.24, 0.18, 0.05, 0.12],
+		[0.30, 0.25, 0.10, 0.05, 0.25],
+	]
+	var seg := 40
+	var arah_lutut := 0.83
+	var sigma := 0.30
+	var verts := PackedVector3Array()
+	var normals := PackedVector3Array()
+	var uvs := PackedVector2Array()
+	var idx := PackedInt32Array()
+	for ri in cincin.size():
+		var y_dasar: float = cincin[ri][0]
+		var r0: float = cincin[ri][1]
+		var amp: float = cincin[ri][2]
+		var cz: float = cincin[ri][3]
+		var naik: float = cincin[ri][4]
+		for si in seg + 1:
+			var th := TAU * float(si) / float(seg)
+			var tonjol := _gauss_bump(th - arah_lutut, sigma) + _gauss_bump(th + arah_lutut, sigma)
+			var r := r0 + amp * tonjol
+			var y := y_dasar + naik * (1.0 - clampf(tonjol, 0.0, 1.0)) * maxf(0.0, cos(th))
+			verts.append(Vector3(r * sin(th), y, cz + r * cos(th)))
+			normals.append(Vector3(sin(th), 0.0, cos(th)).normalized())
+			uvs.append(Vector2(float(si) / float(seg), float(ri) / float(cincin.size() - 1)))
+	var langkah := seg + 1
+	for ri in cincin.size() - 1:
+		for si in seg:
+			var a := ri * langkah + si
+			var b := a + 1
+			var c := (ri + 1) * langkah + si
+			var d := c + 1
+			idx.append_array([a, b, c, b, d, c])
+	var pusat_idx := verts.size()
+	verts.append(Vector3(0, 0.28, 0.05))
+	normals.append(Vector3(0, -1, 0))
+	uvs.append(Vector2(0.5, 1.0))
+	var cincin_akhir := (cincin.size() - 1) * langkah
+	for si in seg:
+		idx.append_array([pusat_idx, cincin_akhir + si + 1, cincin_akhir + si])
+	var arr := []
+	arr.resize(Mesh.ARRAY_MAX)
+	arr[Mesh.ARRAY_VERTEX] = verts
+	arr[Mesh.ARRAY_NORMAL] = normals
+	arr[Mesh.ARRAY_TEX_UV] = uvs
+	arr[Mesh.ARRAY_INDEX] = idx
+	var mesh := ArrayMesh.new()
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
+	var mi := MeshInstance3D.new()
+	mi.mesh = mesh
+	mi.material_override = bahan
+	mi.name = "SarungDrape"
+	mi.scale = Vector3.ZERO
+	mi.visible = false
+	return mi
+
+
 static func build_visual(nama: String, outfit: Dictionary) -> Dictionary:
 	var koko: Color = Color(String(outfit.get("koko", "#faf7f0")))
 	var songkok: Color = Color(String(outfit.get("songkok", "#faf7f0")))
@@ -1087,6 +1195,19 @@ static func build_visual(nama: String, outfit: Dictionary) -> Dictionary:
 			lutut_l = lutut
 		else:
 			lutut_r = lutut
+
+	# DRAPE BERSILA v3 (Kirana, 20 Nov 2026 — koreksi Mas "Yg jelas
+	# duduk bersila"): loft ArrayMesh yang mengikuti paha menyilang —
+	# MENGGANTIKAN gundukan + tonjolan lutut v2 (keduanya dipensiunkan:
+	# tonjolan lutut_scale = 0 di semua PAKAIAN_*, sarung silinder
+	# jadi inti kecil di dalam drape). Cincin loft (y lokal, R0,
+	# tonjolan, geser z): pinggang sempit -> lutut melebar ke arah
+	# lutut (±48° dari depan) -> bawah menutup di atas kaki bersila.
+	# UV: u = sudut/2π (motif garis/batik melingkar seperti tabung),
+	# v = tinggi cincin. Skala di-lerp lewat kunci "drape_scale":
+	# penuh saat duduk/menulis (bersila), 0 di pose lain.
+	var drape := _bangun_drape_bersila(bahan_lutut)
+	root.add_child(drape)
 
 # Perbaikan 15 Nov ~17:20 WIB (penguji ronde 3: badan masih kotak —
 # kemeja putih persegi panjang, lengan silinder tipis). Torso kini
@@ -1597,6 +1718,7 @@ static func build_visual(nama: String, outfit: Dictionary) -> Dictionary:
 		"sarung_trim": sarung_trim,
 		"lutut_l": lutut_l,
 		"lutut_r": lutut_r,
+		"drape": drape,
 		"torso": torso,
 		"peci": peci,
 		"kacamata": kacamata,
@@ -1755,6 +1877,10 @@ func terapkan_outfit(outfit: Dictionary) -> void:
 		var nl := _visual.find_child(nama_lutut, true, false)
 		if nl is MeshInstance3D:
 			(nl as MeshInstance3D).material_override = _bahan_kain(warna_abaya) if pakai_abaya_warna else _bahan_sarung(outfit)
+	# DRAPE BERSILA v3: bahan ikut sarung/abaya saat ganti outfit.
+	var drape_node := _visual.find_child("SarungDrape", true, false)
+	if drape_node is MeshInstance3D:
+		(drape_node as MeshInstance3D).material_override = _bahan_kain(warna_abaya) if pakai_abaya_warna else _bahan_sarung(outfit)
 	var hem := _visual.find_child("SarungHem", true, false)
 	if hem is MeshInstance3D:
 		(hem as MeshInstance3D).material_override = Palette.mat(_hem_sarung_warna(outfit), 0.0, 0.45)
@@ -2463,17 +2589,24 @@ func _lerp_pakaian(delta: float, target: Dictionary) -> void:
 	if _sarung != null:
 		_sarung.scale = _sarung.scale.lerp(target["sarung_scale"], k)
 		_sarung.position.y = lerpf(_sarung.position.y, target["sarung_y"], k)
+		_sarung.position.z = lerpf(_sarung.position.z, target["sarung_z"], k)
+		_sarung.rotation.x = lerpf(_sarung.rotation.x, target["sarung_rot_x"], k)
 	if _sarung_hem != null:
 		_sarung_hem.scale = _sarung_hem.scale.lerp(target["hem_scale"], k)
 		_sarung_hem.position.y = lerpf(_sarung_hem.position.y, target["hem_y"], k)
+		_sarung_hem.position.z = lerpf(_sarung_hem.position.z, target["hem_z"], k)
 	if _sarung_trim != null:
 		_sarung_trim.position.y = lerpf(_sarung_trim.position.y, target["trim_y"], k)
+		_sarung_trim.scale = _sarung_trim.scale.lerp(target["trim_scale"], k)
 	if _lutut_l != null:
 		_lutut_l.scale = _lutut_l.scale.lerp(target["lutut_scale"], k)
 		_lutut_l.visible = _lutut_l.scale.length_squared() > 0.0025
 	if _lutut_r != null:
 		_lutut_r.scale = _lutut_r.scale.lerp(target["lutut_scale"], k)
 		_lutut_r.visible = _lutut_r.scale.length_squared() > 0.0025
+	if _drape != null:
+		_drape.scale = _drape.scale.lerp(target["drape_scale"], k)
+		_drape.visible = _drape.scale.length_squared() > 0.0025
 	if _torso != null:
 		_torso.scale = _torso.scale.lerp(target["torso_scale"], k)
 	if _peci != null:

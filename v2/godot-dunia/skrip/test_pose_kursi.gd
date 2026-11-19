@@ -11,6 +11,11 @@ extends Node
 ## bersila masih mekar sarungnya"): gundukan v2 masih kerucut mulus
 ## dari depan — tonjolan lutut (mesh baru, bukan retune skala):
 ## dua bola pipih di posisi lutut, muncul HANYA saat bersila.
+## DRAPE v3 (Kirana, 20 Nov 2026 — koreksi Mas 06:05 WIB "Yg jelas
+## duduk bersila" + 06:06 "sama yg duduk kursi juga aneh"): tonjolan
+## lutut v2 DIPENSIUNKAN — drape ArrayMesh (loft) mengikuti paha
+## menyilang, sarung silinder jadi inti kecil di dalamnya; duduk
+## kursi: tabung sarung DIROTASI mengikuti paha (rot_x 1,69).
 ## Jalankan headless (HOME terisolasi — jangan pakai save VM):
 ##   HOME=/tmp/iso-pose-kursi godot --headless --path . --scene res://skrip/test_pose_kursi.tscn
 ## NPC diuji langsung (set_process(false) — mesin otonom tidak boleh
@@ -59,20 +64,27 @@ func _tunggu_fisika(jumlah: int) -> void:
 
 func _ready() -> void:
 	# ---------- Konstanta pakaian baru ----------
-	_cek("PAKAIAN_DUDUK v2 = gundukan rendah lebar (1.95,0.32,1.95)",
-		SantriPlayer.PAKAIAN_DUDUK["sarung_scale"].is_equal_approx(Vector3(1.95, 0.32, 1.95)))
-	_cek("PAKAIAN_KURSI = sarung pendek (1.10,0.42,1.10)",
-		SantriPlayer.PAKAIAN_KURSI["sarung_scale"].is_equal_approx(Vector3(1.10, 0.42, 1.10)))
-	_cek("PAKAIAN_ABAYA_KURSI = gamis pendek (1.05,0.55,1.05)",
-		SantriPlayer.PAKAIAN_ABAYA_KURSI["sarung_scale"].is_equal_approx(Vector3(1.05, 0.55, 1.05)))
-	_cek("PAKAIAN_ABAYA_DUDUK v2 = (1.85,0.55,1.85)",
-		SantriPlayer.PAKAIAN_ABAYA_DUDUK["sarung_scale"].is_equal_approx(Vector3(1.85, 0.55, 1.85)))
-	_cek("LUTUT_SKALA v2 = (1.0,0.65,1.25)",
-		SantriPlayer.LUTUT_SKALA.is_equal_approx(Vector3(1.0, 0.65, 1.25)))
-	_cek("PAKAIAN_DUDUK lutut_scale = LUTUT_SKALA",
-		SantriPlayer.PAKAIAN_DUDUK["lutut_scale"].is_equal_approx(SantriPlayer.LUTUT_SKALA))
-	_cek("PAKAIAN_ABAYA_DUDUK lutut_scale = LUTUT_SKALA",
-		SantriPlayer.PAKAIAN_ABAYA_DUDUK["lutut_scale"].is_equal_approx(SantriPlayer.LUTUT_SKALA))
+	_cek("PAKAIAN_DUDUK v3 = inti kecil (0.80,0.28,0.80) + drape",
+		SantriPlayer.PAKAIAN_DUDUK["sarung_scale"].is_equal_approx(Vector3(0.80, 0.28, 0.80))
+		and SantriPlayer.PAKAIAN_DUDUK["drape_scale"].is_equal_approx(Vector3.ONE))
+	_cek("PAKAIAN_KURSI v2 = sarung miring (1.15,0.55,0.55) rot 1.69 z 0.13",
+		SantriPlayer.PAKAIAN_KURSI["sarung_scale"].is_equal_approx(Vector3(1.15, 0.55, 0.55))
+		and is_equal_approx(SantriPlayer.PAKAIAN_KURSI["sarung_rot_x"], 1.69)
+		and is_equal_approx(SantriPlayer.PAKAIAN_KURSI["sarung_z"], 0.13))
+	_cek("PAKAIAN_ABAYA_KURSI v2 = gamis miring (1.05,0.35,0.55)",
+		SantriPlayer.PAKAIAN_ABAYA_KURSI["sarung_scale"].is_equal_approx(Vector3(1.05, 0.35, 0.55))
+		and is_equal_approx(SantriPlayer.PAKAIAN_ABAYA_KURSI["sarung_rot_x"], 1.69))
+	_cek("PAKAIAN_ABAYA_DUDUK v3 = inti (0.75,0.50,0.75) + drape",
+		SantriPlayer.PAKAIAN_ABAYA_DUDUK["sarung_scale"].is_equal_approx(Vector3(0.75, 0.50, 0.75))
+		and SantriPlayer.PAKAIAN_ABAYA_DUDUK["drape_scale"].is_equal_approx(Vector3.ONE))
+	_cek("PAKAIAN_DUDUK/ABAYA_DUDUK lutut_scale = 0 (tonjolan pensiun, drape ganti)",
+		SantriPlayer.PAKAIAN_DUDUK["lutut_scale"].is_equal_approx(Vector3.ZERO)
+		and SantriPlayer.PAKAIAN_ABAYA_DUDUK["lutut_scale"].is_equal_approx(Vector3.ZERO))
+	_cek("PAKAIAN_DEFAULT/KURSI/TIDUR drape_scale = 0",
+		SantriPlayer.PAKAIAN_DEFAULT["drape_scale"].is_equal_approx(Vector3.ZERO)
+		and SantriPlayer.PAKAIAN_KURSI["drape_scale"].is_equal_approx(Vector3.ZERO)
+		and SantriPlayer.PAKAIAN_ABAYA_KURSI["drape_scale"].is_equal_approx(Vector3.ZERO)
+		and SantriPlayer.PAKAIAN_TIDUR["drape_scale"].is_equal_approx(Vector3.ZERO))
 	_cek("PAKAIAN_DEFAULT/KURSI/TIDUR lutut_scale = 0",
 		SantriPlayer.PAKAIAN_DEFAULT["lutut_scale"].is_equal_approx(Vector3.ZERO)
 		and SantriPlayer.PAKAIAN_KURSI["lutut_scale"].is_equal_approx(Vector3.ZERO)
@@ -90,22 +102,21 @@ func _ready() -> void:
 	_cek("Registry NPC punya bersila", not bersila.is_empty())
 	_cek("Registry NPC punya kasur", not kasur.is_empty())
 
-	# ---------- BUG 2: bersila v2 (NPC) ----------
+	# ---------- BUG 2: bersila v3 (NPC) — drape, bukan gundukan ----------
 	var npc := _npc_baru("Hasan", Vector3.ZERO, MissionData.OUTFIT_DEFAULT, false)
 	npc._terapkan_duduk_baca(1.0, true, 0.0)
 	_cek("BUG2 bersila: visual y = -0.42", is_equal_approx(npc._visual.position.y, -0.42))
-	_cek("BUG2 bersila: sarung = PAKAIAN_DUDUK v2", npc._sarung.scale.is_equal_approx(Vector3(1.95, 0.32, 1.95)))
+	_cek("BUG2 bersila: sarung inti kecil (0.80,0.28,0.80)", npc._sarung.scale.is_equal_approx(Vector3(0.80, 0.28, 0.80)))
 	_cek("BUG2 bersila: lutut MELEBAR (leg y kiri -0.50)", is_equal_approx(npc._leg_l.rotation.y, -0.50))
 	_cek("BUG2 bersila: lutut MELEBAR (leg y kanan +0.50)", is_equal_approx(npc._leg_r.rotation.y, 0.50))
 	_cek("BUG2 bersila: paha -0.85, lutut +2.30",
 		is_equal_approx(npc._leg_l.rotation.x, -0.85) and is_equal_approx(npc._knee_l.rotation.x, 2.30))
-	_cek("LUTUT bersila: tonjolan kiri tampil + skala penuh",
-		npc._lutut_l.visible and npc._lutut_l.scale.is_equal_approx(SantriPlayer.LUTUT_SKALA))
-	_cek("LUTUT bersila: tonjolan kanan tampil + skala penuh",
-		npc._lutut_r.visible and npc._lutut_r.scale.is_equal_approx(SantriPlayer.LUTUT_SKALA))
-	_cek("LUTUT bersila: tonjolan di depan-bawah (z>0.2, y~0.55) + yaw ikut paha",
-		npc._lutut_l.position.z > 0.2 and absf(npc._lutut_l.position.y - 0.55) < 0.05
-		and is_equal_approx(npc._lutut_l.rotation.y, -0.50) and is_equal_approx(npc._lutut_r.rotation.y, 0.50))
+	_cek("DRAPE bersila: drape tampil + skala penuh",
+		npc._drape.visible and npc._drape.scale.is_equal_approx(Vector3.ONE))
+	_cek("DRAPE bersila: tonjolan pensiun (sembunyi)",
+		not npc._lutut_l.visible and not npc._lutut_r.visible)
+	_cek("DRAPE bersila: sarung tegak (rot_x 0, z 0)",
+		is_equal_approx(npc._sarung.rotation.x, 0.0) and is_equal_approx(npc._sarung.position.z, 0.0))
 
 	# ---------- BUG 3: duduk di KURSI = kaki menjuntai (NPC) ----------
 	npc.position = Vector3(bangku["pos"].x, 0.0, bangku["pos"].z)
@@ -120,7 +131,10 @@ func _ready() -> void:
 	_cek("BUG3 kursi: paha horizontal (-1.45)", is_equal_approx(npc._leg_l.rotation.x, -1.45))
 	_cek("BUG3 kursi: betis vertikal (lutut +1.45)", is_equal_approx(npc._knee_l.rotation.x, 1.45))
 	_cek("BUG3 kursi: BUKAN bersila (lutut bukan 2.30)", not is_equal_approx(npc._knee_l.rotation.x, 2.30))
-	_cek("BUG3 kursi: sarung = PAKAIAN_KURSI", npc._sarung.scale.is_equal_approx(Vector3(1.10, 0.42, 1.10)))
+	_cek("BUG3 kursi: sarung = PAKAIAN_KURSI v2 (1.15,0.55,0.55)", npc._sarung.scale.is_equal_approx(Vector3(1.15, 0.55, 0.55)))
+	_cek("BUG3 kursi: sarung miring ikut paha (rot_x 1.69, z 0.13)",
+		is_equal_approx(npc._sarung.rotation.x, 1.69) and is_equal_approx(npc._sarung.position.z, 0.13))
+	_cek("DRAPE kursi: drape SEMBUNYI (bukan bersila)", not npc._drape.visible)
 	_cek("LUTUT kursi: tonjolan SEMBUNYI (bukan bersila)",
 		not npc._lutut_l.visible and not npc._lutut_r.visible)
 
@@ -139,6 +153,7 @@ func _ready() -> void:
 	npc._terapkan_duduk_baca(1.0, true, 0.0)
 	npc._animate_idle(1.0)
 	_cek("BUG1 idle: sarung kembali DEFAULT", npc._sarung.scale.is_equal_approx(Vector3.ONE))
+	_cek("DRAPE idle: drape sembunyi", not npc._drape.visible)
 	_cek("LUTUT idle: tonjolan sembunyi", not npc._lutut_l.visible and not npc._lutut_r.visible)
 	# (b) _akhiri_aktivitas langsung snap DEFAULT (tanpa tunggu idle).
 	npc._aktivitas = "duduk"
@@ -148,12 +163,14 @@ func _ready() -> void:
 	npc._terapkan_duduk_baca(1.0, true, 0.0)
 	npc._akhiri_aktivitas()
 	_cek("BUG1 akhiri: sarung snap DEFAULT", npc._sarung.scale.is_equal_approx(Vector3.ONE))
+	_cek("DRAPE akhiri: drape sembunyi", not npc._drape.visible)
 	_cek("LUTUT akhiri: tonjolan sembunyi", not npc._lutut_l.visible and not npc._lutut_r.visible)
 	_cek("BUG1 akhiri bersila: berdiri di tempat", npc.position.is_equal_approx(Vector3(bersila["pos"].x, 0.0, bersila["pos"].z)))
 	# (c) duduk_belajar -> berdiri_belajar (adegan belajar).
 	npc._terapkan_duduk_baca(1.0, true, 0.0)
 	npc.berdiri_belajar()
 	_cek("BUG1 belajar: sarung kembali DEFAULT", npc._sarung.scale.is_equal_approx(Vector3.ONE))
+	_cek("DRAPE belajar: drape sembunyi", not npc._drape.visible)
 	_cek("LUTUT belajar: tonjolan sembunyi", not npc._lutut_l.visible and not npc._lutut_r.visible)
 
 	# ---------- Kasur: bersila di atas kasur, bangun menjauh ----------
@@ -166,30 +183,32 @@ func _ready() -> void:
 		npc._proses_aktivitas(1.0)
 	_cek("KASUR: visual y = +0.09 (pinggul 0.71)", is_equal_approx(npc._visual.position.y, 0.09))
 	_cek("KASUR: kaki bersila (lutut 2.30)", is_equal_approx(npc._knee_l.rotation.x, 2.30))
-	_cek("LUTUT kasur: tonjolan tampil (bersila di kasur)",
-		npc._lutut_l.visible and npc._lutut_l.scale.is_equal_approx(SantriPlayer.LUTUT_SKALA))
+	_cek("DRAPE kasur: drape tampil (bersila di kasur)",
+		npc._drape.visible and npc._drape.scale.is_equal_approx(Vector3.ONE))
 	var kasur_pos: Vector3 = kasur["pos"]
 	npc._akhiri_aktivitas()
 	_cek("KASUR: bangun menjauh dari kasur (>1 m)",
 		Vector2(npc.position.x, npc.position.z).distance_to(Vector2(kasur_pos.x, kasur_pos.z)) > 1.0)
 	_cek("KASUR: sarung DEFAULT setelah bangun", npc._sarung.scale.is_equal_approx(Vector3.ONE))
+	_cek("DRAPE kasur bangun: drape sembunyi", not npc._drape.visible)
 	_cek("LUTUT kasur bangun: tonjolan sembunyi", not npc._lutut_l.visible)
 
 	# ---------- Abaya: PAKAIAN_KURSI dipetakan ke ABAYA_KURSI ----------
 	var ustadzah := _npc_baru("Ustadzah Mariyah", Vector3(134, 0, -17), MissionData.OUTFIT_USTADZAH, true)
 	ustadzah._terapkan_pakaian(1.0, SantriPlayer.PAKAIAN_KURSI)
-	_cek("ABAYA kursi: skala = ABAYA_KURSI (1.05,0.55,1.05)",
-		ustadzah._sarung.scale.is_equal_approx(Vector3(1.05, 0.55, 1.05)))
+	_cek("ABAYA kursi: skala = ABAYA_KURSI v2 (1.05,0.35,0.55)",
+		ustadzah._sarung.scale.is_equal_approx(Vector3(1.05, 0.35, 0.55)))
+	_cek("ABAYA kursi: gamis miring (rot_x 1.69)", is_equal_approx(ustadzah._sarung.rotation.x, 1.69))
 	_cek("LUTUT abaya kursi: tonjolan SEMBUNYI",
 		not ustadzah._lutut_l.visible and not ustadzah._lutut_r.visible)
-	# ---------- Abaya bersila: tonjolan lutut di gamis ----------
+	# ---------- Abaya bersila: drape di gamis ----------
 	ustadzah._terapkan_duduk_baca(1.0, true, 0.0)
-	_cek("LUTUT abaya bersila: tonjolan tampil + skala penuh",
-		ustadzah._lutut_l.visible and ustadzah._lutut_l.scale.is_equal_approx(SantriPlayer.LUTUT_SKALA))
-	_cek("LUTUT abaya bersila: tonjolan kanan tampil",
-		ustadzah._lutut_r.visible and ustadzah._lutut_r.scale.is_equal_approx(SantriPlayer.LUTUT_SKALA))
-	_cek("LUTUT abaya bersila: sarung = ABAYA_DUDUK",
-		ustadzah._sarung.scale.is_equal_approx(Vector3(1.85, 0.55, 1.85)))
+	_cek("DRAPE abaya bersila: drape tampil + skala penuh",
+		ustadzah._drape.visible and ustadzah._drape.scale.is_equal_approx(Vector3.ONE))
+	_cek("LUTUT abaya bersila: tonjolan pensiun (sembunyi)",
+		not ustadzah._lutut_l.visible and not ustadzah._lutut_r.visible)
+	_cek("DRAPE abaya bersila: sarung inti = ABAYA_DUDUK v3 (0.75,0.50,0.75)",
+		ustadzah._sarung.scale.is_equal_approx(Vector3(0.75, 0.50, 0.75)))
 
 	# ---------- "ke_kursi": node tiba di TANAH, bukan di tinggi kursi ----------
 	var npc2 := _npc_baru("Budi", Vector3(-3.4, 0, 24.0), MissionData.OUTFIT_DEFAULT, false)
@@ -229,8 +248,10 @@ func _ready() -> void:
 	_cek("PEMAIN kursi: visual y = -0.17 (+-0.05)", absf(pemain._visual.position.y - (-0.17)) < 0.05)
 	_cek("PEMAIN kursi: paha -1.45 (+-0.1)", absf(pemain._leg_l.rotation.x - (-1.45)) < 0.1)
 	_cek("PEMAIN kursi: lutut +1.45 (+-0.1)", absf(pemain._knee_l.rotation.x - 1.45) < 0.1)
-	_cek("PEMAIN kursi: sarung = PAKAIAN_KURSI (+-0.05)",
-		absf(pemain._sarung.scale.x - 1.10) < 0.05 and absf(pemain._sarung.scale.y - 0.42) < 0.05)
+	_cek("PEMAIN kursi: sarung = PAKAIAN_KURSI v2 (+-0.05)",
+		absf(pemain._sarung.scale.x - 1.15) < 0.05 and absf(pemain._sarung.scale.y - 0.55) < 0.05)
+	_cek("PEMAIN kursi: sarung miring (rot_x 1.69 +-0.1)", absf(pemain._sarung.rotation.x - 1.69) < 0.1)
+	_cek("PEMAIN kursi: drape sembunyi", not pemain._drape.visible)
 	_cek("PEMAIN kursi: tonjolan sembunyi", not pemain._lutut_l.visible and not pemain._lutut_r.visible)
 	_cek("PEMAIN kursi: collision dimatikan", bentuk.disabled)
 	_cek("PEMAIN kursi: fisika beku (velocity 0)", pemain.velocity.is_equal_approx(Vector3.ZERO))
@@ -252,8 +273,9 @@ func _ready() -> void:
 	_cek("PEMAIN bersila: aksi = duduk", pemain.aksi_saat_ini() == "duduk")
 	_cek("PEMAIN bersila: visual y = -0.42 (+-0.05)", absf(pemain._visual.position.y - (-0.42)) < 0.05)
 	_cek("PEMAIN bersila: lutut +2.30 (+-0.1)", absf(pemain._knee_l.rotation.x - 2.30) < 0.1)
-	_cek("PEMAIN bersila: tonjolan tampil (+-0.05)",
-		pemain._lutut_l.visible and absf(pemain._lutut_l.scale.x - 1.0) < 0.05 and absf(pemain._lutut_l.scale.y - 0.65) < 0.05 and absf(pemain._lutut_l.scale.z - 1.25) < 0.05)
+	_cek("PEMAIN bersila: drape tampil (+-0.05)",
+		pemain._drape.visible and absf(pemain._drape.scale.x - 1.0) < 0.05 and absf(pemain._drape.scale.y - 1.0) < 0.05 and absf(pemain._drape.scale.z - 1.0) < 0.05)
+	_cek("PEMAIN bersila: tonjolan pensiun (sembunyi)", not pemain._lutut_l.visible)
 	pemain.berdiri_dari_kursi()
 	_cek("PEMAIN bersila bangun: berdiri di tempat",
 		pemain.global_position.is_equal_approx(Vector3(2, 0, 2)))

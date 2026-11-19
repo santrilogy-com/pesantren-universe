@@ -98,6 +98,7 @@ var _sarung_hem: MeshInstance3D
 var _sarung_trim: MeshInstance3D
 var _lutut_l: MeshInstance3D
 var _lutut_r: MeshInstance3D
+var _drape: MeshInstance3D
 var _torso: MeshInstance3D
 # RONDE 20 — ikut sholat berjamaah? Satpam TIDAK (tetap di pos).
 var _ikut_sholat: bool = true
@@ -217,6 +218,7 @@ func setup(nama_santri: String, pos: Vector3, wps: Array[Vector3], outfit: Dicti
 	_sarung_trim = built["sarung_trim"]
 	_lutut_l = built["lutut_l"]
 	_lutut_r = built["lutut_r"]
+	_drape = built["drape"]
 	_torso = built["torso"]
 	# ANIMASI-MIXAMO: rig untuk modul animasi.
 	_rig = AnimasiMixamo.rig_dari_built(built)
@@ -965,17 +967,24 @@ func _terapkan_pakaian(delta: float, target: Dictionary) -> void:
 	if _sarung != null:
 		_sarung.scale = _sarung.scale.lerp(target["sarung_scale"], k)
 		_sarung.position.y = lerpf(_sarung.position.y, target["sarung_y"], k)
+		_sarung.position.z = lerpf(_sarung.position.z, target["sarung_z"], k)
+		_sarung.rotation.x = lerpf(_sarung.rotation.x, target["sarung_rot_x"], k)
 	if _sarung_hem != null:
 		_sarung_hem.scale = _sarung_hem.scale.lerp(target["hem_scale"], k)
 		_sarung_hem.position.y = lerpf(_sarung_hem.position.y, target["hem_y"], k)
+		_sarung_hem.position.z = lerpf(_sarung_hem.position.z, target["hem_z"], k)
 	if _sarung_trim != null:
 		_sarung_trim.position.y = lerpf(_sarung_trim.position.y, target["trim_y"], k)
+		_sarung_trim.scale = _sarung_trim.scale.lerp(target["trim_scale"], k)
 	if _lutut_l != null:
 		_lutut_l.scale = _lutut_l.scale.lerp(target["lutut_scale"], k)
 		_lutut_l.visible = _lutut_l.scale.length_squared() > 0.0025
 	if _lutut_r != null:
 		_lutut_r.scale = _lutut_r.scale.lerp(target["lutut_scale"], k)
 		_lutut_r.visible = _lutut_r.scale.length_squared() > 0.0025
+	if _drape != null:
+		_drape.scale = _drape.scale.lerp(target["drape_scale"], k)
+		_drape.visible = _drape.scale.length_squared() > 0.0025
 	if _torso != null:
 		_torso.scale = _torso.scale.lerp(target["torso_scale"], k)
 
