@@ -93,9 +93,16 @@ const BUBBLE_MAKS := 100
 ## alasnya terbaca seperti orang bersila beneran, bukan kerucut.
 ## TONJOLAN LUTUT BERSILA (Kirana, 20 Nov 2026 — verdict Mas: "Ketika
 ## duduk bersila masih mekar sarungnya"): skala dasar dua tonjolan
-## lutut (bola pipih r=0.17) — penuh saat bersila (DUDUK), 0 di
+## lutut (bola pipih r=0.20) — penuh saat bersila (DUDUK), 0 di
 ## pose lain (lihat _lerp_pakaian).
-const LUTUT_SKALA := Vector3(1.15, 0.62, 1.0)
+## REVISI v2 (foto lutut v1: tonjolan TERLALU KECIL — dari depan
+## masih kerucut, cuma dua lobus kecil di sudut bawah): tonjolan
+## dibesarkan (r 0.17 -> 0.20), didorong ke luar-depan (±0,33,
+## 0,55, 0,30) supaya tepi luarnya 10 cm LEBIH LEBAR dari rim
+## gundukan (0,566), dan sumbu panjangnya diputar mengikuti arah
+## paha (yaw ±0.50) — bukan bola menempel, melainkan kain yang
+## menutupi paha + lutut yang mengarah ke depan-samping.
+const LUTUT_SKALA := Vector3(1.0, 0.65, 1.25)
 const PAKAIAN_DEFAULT := {"sarung_scale": Vector3.ONE, "sarung_y": 0.50, "hem_scale": Vector3(1.0, 0.25, 1.0), "hem_y": 0.12, "trim_y": 0.14, "torso_scale": Vector3.ONE, "peci_z": 1.0, "lutut_scale": Vector3.ZERO}
 const PAKAIAN_DUDUK := {"sarung_scale": Vector3(1.95, 0.32, 1.95), "sarung_y": 0.66, "hem_scale": Vector3(1.95, 0.20, 1.95), "hem_y": 0.49, "trim_y": 0.49, "torso_scale": Vector3.ONE, "peci_z": 1.0, "lutut_scale": LUTUT_SKALA}
 const PAKAIAN_TIDUR := {"sarung_scale": Vector3(1.15, 1.0, 0.55), "sarung_y": 0.50, "hem_scale": Vector3(1.15, 0.25, 0.5), "hem_y": 0.12, "trim_y": 0.14, "torso_scale": Vector3(1.0, 1.0, 0.6), "peci_z": 0.7, "lutut_scale": Vector3.ZERO}
@@ -1053,23 +1060,26 @@ static func build_visual(nama: String, outfit: Dictionary) -> Dictionary:
 	# "Ketika duduk bersila masih mekar sarungnya"): gundukan v2
 	# (1.95,0.32,1.95) jauh membaik dari samping, tapi dari DEPAN
 	# sarung tetap kerucut mulus — lutut tidak menonjol. Dua tonjolan
-	# (bola pipih r=0.17, bahan SAMA seperti sarung/abaya supaya
-	# motif + warna nyatu) di posisi lutut saat bersila. Lutut
-	# terukur di (±0,22, 0,42, 0,20) saat paha -0.85 + yaw ±0.50;
-	# tonjolan didorong sedikit ke luar-depan (±0,28, 0,52, 0,28)
-	# supaya menembus permukaan gundukan/hem di depan-bawah, bukan
-	# tertutup di dalamnya. Bawah tonjolan menyentuh lantai
-	# (0,52 - 0,17*0,62 - 0,42 ≈ 0), atasnya menyatu ke kerucut —
-	# seperti kain menutupi lutut. Skala di-lerp lewat kunci
-	# "lutut_scale" di PAKAIAN_*: penuh saat duduk/menulis
-	# (bersila), 0 di pose lain — duduk_kursi TIDAK tersentuh.
+	# (bola pipih, bahan SAMA seperti sarung/abaya supaya motif +
+	# warna nyatu) di posisi lutut saat bersila. Lutut terukur di
+	# (±0,22, 0,42, 0,20) saat paha -0.85 + yaw ±0.50; tonjolan
+	# didorong ke luar-depan (±0,33, 0,55, 0,30) supaya tepi
+	# luarnya 10 cm LEBIH LEBAR dari rim gundukan (0,566) — lutut
+	# jadi titik TERLEBAR alas, seperti orang bersila beneran.
+	# Sumbu panjang (z) diputar yaw ±0.50 mengikuti arah paha.
+	# Bawah tonjolan menyentuh lantai (0,55 - 0,20*0,65 - 0,42
+	# ≈ 0), atasnya menyatu ke kerucut — seperti kain menutupi
+	# lutut. Skala di-lerp lewat kunci "lutut_scale" di PAKAIAN_*:
+	# penuh saat duduk/menulis (bersila), 0 di pose lain —
+	# duduk_kursi TIDAK tersentuh.
 	var lutut_l: MeshInstance3D = null
 	var lutut_r: MeshInstance3D = null
 	var bahan_lutut: Material = _bahan_kain(warna_abaya) if pakai_abaya else _bahan_sarung(outfit)
 	for sisi in [-1.0, 1.0]:
-		var lutut := Palette.sphere(0.17, Vector3(0.28 * sisi, 0.52, 0.28), sarung_color)
+		var lutut := Palette.sphere(0.20, Vector3(0.33 * sisi, 0.55, 0.30), sarung_color)
 		lutut.scale = Vector3.ZERO
 		lutut.visible = false
+		lutut.rotation.y = 0.50 * sisi
 		lutut.material_override = bahan_lutut
 		lutut.name = "TonjolanLututKiri" if sisi < 0.0 else "TonjolanLututKanan"
 		root.add_child(lutut)

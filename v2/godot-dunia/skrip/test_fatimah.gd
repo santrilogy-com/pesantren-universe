@@ -46,10 +46,10 @@ func _ready() -> void:
 			semua_ada_pos = false
 	_cek("Semua kandidat putri di area putri (x > 14)", semua_putri)
 	_cek("Semua kandidat putri punya posisi (bukan ZERO)", semua_ada_pos)
-	_cek("pos_dari_id_putri musholla_putri = (134,-24)", LokasiAcak.pos_dari_id_putri("musholla_putri").distance_to(Vector3(134, 0, -24)) < 0.01)
-	_cek("pos_dari_id_putri kantor_ustadzah = (148,-33)", LokasiAcak.pos_dari_id_putri("kantor_ustadzah").distance_to(Vector3(148, 0, -33)) < 0.01)
+	_cek("pos_dari_id_putri musholla_putri = (131,-16)", LokasiAcak.pos_dari_id_putri("musholla_putri").distance_to(Vector3(131, 0, -16)) < 0.01)
+	_cek("pos_dari_id_putri kantor_ustadzah = (142.5,-33)", LokasiAcak.pos_dari_id_putri("kantor_ustadzah").distance_to(Vector3(142.5, 0, -33)) < 0.01)
 	_cek("pos_dari_id_putri kelas_putri = (130,0)", LokasiAcak.pos_dari_id_putri("kelas_putri").distance_to(Vector3(130, 0, 0)) < 0.01)
-	_cek("pos_dari_id_putri asrama_putri = (152,9)", LokasiAcak.pos_dari_id_putri("asrama_putri").distance_to(Vector3(152, 0, 9)) < 0.01)
+	_cek("pos_dari_id_putri asrama_putri = (144.5,9)", LokasiAcak.pos_dari_id_putri("asrama_putri").distance_to(Vector3(144.5, 0, 9)) < 0.01)
 	_cek("pos_dari_id_putri taman_putri = (122,32)", LokasiAcak.pos_dari_id_putri("taman_putri").distance_to(Vector3(122, 0, 32)) < 0.01)
 	_cek("pos_dari_id_putri halaman_putri = (128,-12)", LokasiAcak.pos_dari_id_putri("halaman_putri").distance_to(Vector3(128, 0, -12)) < 0.01)
 	_cek("cari_putri() id tak dikenal = {}", LokasiAcak.cari_putri("tidak_ada").is_empty())
@@ -140,7 +140,7 @@ func _ready() -> void:
 	_cek("Langkah 5 putri deskripsi menyebut Modul 01", String(m5["deskripsi"]).contains("Modul 01"))
 	Onboarding.maju(sm) # 6
 	var m6p := Onboarding.misi_aktif(sm, "putri")
-	_cek("Langkah 6 putri target tetap Kantor Ustadzah (148,-33)", (m6p["target_pos"] as Vector3).distance_to(Vector3(148, 0, -33)) < 0.01)
+	_cek("Langkah 6 putri target = pintu Kantor Ustadzah (144,-33)", (m6p["target_pos"] as Vector3).distance_to(Vector3(144, 0, -33)) < 0.01)
 	_cek("Langkah 6 putri deskripsi = Kantor Ustadzah (bukan Kantor saja)", String(m6p["deskripsi"]).contains("Kantor Ustadzah"))
 	# Langkah 7 putri: set manual (misi_aktif saja, tanpa alur penuh).
 	var s7 := _save_putri()

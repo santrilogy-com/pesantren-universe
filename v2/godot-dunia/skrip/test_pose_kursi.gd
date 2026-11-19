@@ -67,8 +67,8 @@ func _ready() -> void:
 		SantriPlayer.PAKAIAN_ABAYA_KURSI["sarung_scale"].is_equal_approx(Vector3(1.05, 0.55, 1.05)))
 	_cek("PAKAIAN_ABAYA_DUDUK v2 = (1.85,0.55,1.85)",
 		SantriPlayer.PAKAIAN_ABAYA_DUDUK["sarung_scale"].is_equal_approx(Vector3(1.85, 0.55, 1.85)))
-	_cek("LUTUT_SKALA = (1.15,0.62,1.0)",
-		SantriPlayer.LUTUT_SKALA.is_equal_approx(Vector3(1.15, 0.62, 1.0)))
+	_cek("LUTUT_SKALA v2 = (1.0,0.65,1.25)",
+		SantriPlayer.LUTUT_SKALA.is_equal_approx(Vector3(1.0, 0.65, 1.25)))
 	_cek("PAKAIAN_DUDUK lutut_scale = LUTUT_SKALA",
 		SantriPlayer.PAKAIAN_DUDUK["lutut_scale"].is_equal_approx(SantriPlayer.LUTUT_SKALA))
 	_cek("PAKAIAN_ABAYA_DUDUK lutut_scale = LUTUT_SKALA",
@@ -103,8 +103,9 @@ func _ready() -> void:
 		npc._lutut_l.visible and npc._lutut_l.scale.is_equal_approx(SantriPlayer.LUTUT_SKALA))
 	_cek("LUTUT bersila: tonjolan kanan tampil + skala penuh",
 		npc._lutut_r.visible and npc._lutut_r.scale.is_equal_approx(SantriPlayer.LUTUT_SKALA))
-	_cek("LUTUT bersila: tonjolan di depan-bawah (z>0.2, y~0.52)",
-		npc._lutut_l.position.z > 0.2 and absf(npc._lutut_l.position.y - 0.52) < 0.05)
+	_cek("LUTUT bersila: tonjolan di depan-bawah (z>0.2, y~0.55) + yaw ikut paha",
+		npc._lutut_l.position.z > 0.2 and absf(npc._lutut_l.position.y - 0.55) < 0.05
+		and is_equal_approx(npc._lutut_l.rotation.y, -0.50) and is_equal_approx(npc._lutut_r.rotation.y, 0.50))
 
 	# ---------- BUG 3: duduk di KURSI = kaki menjuntai (NPC) ----------
 	npc.position = Vector3(bangku["pos"].x, 0.0, bangku["pos"].z)
@@ -252,7 +253,7 @@ func _ready() -> void:
 	_cek("PEMAIN bersila: visual y = -0.42 (+-0.05)", absf(pemain._visual.position.y - (-0.42)) < 0.05)
 	_cek("PEMAIN bersila: lutut +2.30 (+-0.1)", absf(pemain._knee_l.rotation.x - 2.30) < 0.1)
 	_cek("PEMAIN bersila: tonjolan tampil (+-0.05)",
-		pemain._lutut_l.visible and absf(pemain._lutut_l.scale.x - 1.15) < 0.05 and absf(pemain._lutut_l.scale.y - 0.62) < 0.05)
+		pemain._lutut_l.visible and absf(pemain._lutut_l.scale.x - 1.0) < 0.05 and absf(pemain._lutut_l.scale.y - 0.65) < 0.05 and absf(pemain._lutut_l.scale.z - 1.25) < 0.05)
 	pemain.berdiri_dari_kursi()
 	_cek("PEMAIN bersila bangun: berdiri di tempat",
 		pemain.global_position.is_equal_approx(Vector3(2, 0, 2)))

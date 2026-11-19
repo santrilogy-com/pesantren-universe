@@ -64,6 +64,17 @@ func _ready() -> void:
 	add_child(_main)
 	await _tunggu_frame(3)
 	_main._save["ig_username"] = ""
+	# HERMETIK (Gilang, 20 Nov 2026): HOME tes dipakai ulang antar
+	# run (/tmp/iso-wiring-duduk-tes) dan save santri.json di sana
+	# PERSISTEN — run fase putri + skrip foto menulis jenis_kelamin
+	# "putri" + langkah 6 ke file itu, sehingga run berikutnya
+	# membuka fase 1 sebagai PUTRI (helper kursi putra kosong,
+	# penguji yang didudukkan Fatimah bukan Sanusi) dan gagal
+	# merata 31/50 padahal kode tidak berubah. Karena itu save
+	# di-reset eksplisit di sini SEBELUM save_data + _masuk_pesantren.
+	_main._save["jenis_kelamin"] = "putra"
+	_main._save["nama"] = "Tes Wiring Duduk"
+	_main._save["onboarding"] = {"langkah": 1, "modul": 1, "sanusi_lokasi": "", "fatimah_lokasi": "", "tes_lulus": 0, "selesai": false}
 	SantriSave.save_data(_main._save)
 	_main._masuk_pesantren("Tes Wiring Duduk")
 	await _tunggu_frame(5)

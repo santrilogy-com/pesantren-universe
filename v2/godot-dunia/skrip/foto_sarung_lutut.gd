@@ -1,5 +1,5 @@
 extends Node
-## Foto VERIFIKASI tonjolan lutut bersila (Kirana, 20 Nov 2026 —
+## Foto VERIFIKASI tonjolan lutut bersila v2 (Kirana, 20 Nov 2026 —
 ## verdict Mas 01:28 WIB "Ketika duduk bersila masih mekar sarungnya"
 ## atas foto pose-bersila-depan-sesudah): gundukan v2 masih kerucut
 ## mulus dari depan — dua tonjolan lutut (mesh baru) harus terbaca
@@ -125,8 +125,8 @@ func _ready() -> void:
 	_npc._terapkan_duduk_baca(1.0)
 	await _tunggu_frame(90)
 	_angka_lutut("NPC-BERSILA-LUTUT", _npc, _npc._visual, _npc._sarung, _npc._lutut_l, _npc._lutut_r)
-	await _foto("pose-bersila-depan-lutut.png", Vector3(0, 0, 0), Vector3(0.0, 1.0, 3.2))
-	await _foto("pose-bersila-samping-lutut.png", Vector3(0, 0, 0), Vector3(3.2, 1.0, 0.0))
+	await _foto("pose-bersila-depan-lutut-v2.png", Vector3(0, 0, 0), Vector3(0.0, 1.0, 3.2))
+	await _foto("pose-bersila-samping-lutut-v2.png", Vector3(0, 0, 0), Vector3(3.2, 1.0, 0.0))
 	# ---------- NPC putra: duduk di kursi (REGRESI — tonjolan HARUS sembunyi) ----------
 	var bangku_pos := Vector3(-3.4, 0.45, 25.45)
 	_bangku(Vector3(-3.4, 0, 25.45), 0.0)
@@ -140,7 +140,7 @@ func _ready() -> void:
 		_npc._proses_aktivitas(1.0)
 	await _tunggu_frame(90)
 	_angka_lutut("NPC-KURSI-LUTUT", _npc, _npc._visual, _npc._sarung, _npc._lutut_l, _npc._lutut_r)
-	await _foto("pose-kursi-depan-lutut.png", bangku_pos, Vector3(0.0, 1.0, 3.2))
+	await _foto("pose-kursi-depan-lutut-v2.png", bangku_pos, Vector3(0.0, 1.0, 3.2))
 	_npc.visible = false
 	# ---------- PEMAIN: bersila ----------
 	_pemain = SantriPlayer.new()
@@ -157,7 +157,7 @@ func _ready() -> void:
 	_pemain.set_aksi("duduk")
 	await _tunggu_frame(90)
 	_angka_lutut("PEMAIN-BERSILA-LUTUT", _pemain, _pemain._visual, _pemain._sarung, _pemain._lutut_l, _pemain._lutut_r)
-	await _foto("pose-pemain-bersila-depan-lutut.png", Vector3(6, 0, 0), Vector3(0.0, 1.0, 3.2))
+	await _foto("pose-pemain-bersila-depan-lutut-v2.png", Vector3(6, 0, 0), Vector3(0.0, 1.0, 3.2))
 	_pemain.visible = false
 	# ---------- FATIMAH (abaya): bersila ----------
 	var fatimah := SantriNPC.new()
@@ -168,7 +168,7 @@ func _ready() -> void:
 	fatimah._terapkan_duduk_baca(1.0, true, 0.0)
 	await _tunggu_frame(90)
 	_angka_lutut("FATIMAH-BERSILA-LUTUT", fatimah, fatimah._visual, fatimah._sarung, fatimah._lutut_l, fatimah._lutut_r)
-	await _foto("pose-fatimah-bersila-depan-lutut.png", Vector3(12, 0, 0), Vector3(0.0, 1.0, 3.2))
-	await _foto("pose-fatimah-bersila-samping-lutut.png", Vector3(12, 0, 0), Vector3(3.2, 1.0, 0.0))
+	await _foto("pose-fatimah-bersila-depan-lutut-v2.png", Vector3(12, 0, 0), Vector3(0.0, 1.0, 3.2))
+	await _foto("pose-fatimah-bersila-samping-lutut-v2.png", Vector3(12, 0, 0), Vector3(3.2, 1.0, 0.0))
 	print("FOTO LUTUT SELESAI")
 	get_tree().quit(0)

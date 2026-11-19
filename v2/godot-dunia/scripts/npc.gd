@@ -1592,13 +1592,16 @@ func _batalkan_hormat() -> void:
 ## POLISH 20 Nov 2026 (verdict Mas "Kok tidak jabat tangan?"): dulu
 ## NPC diam di tempat (jarak 1,4 m, lengan ~0,45 m) + lengan lurus
 ## ke depan — tangan tidak pernah bersentuhan. Kini NPC melangkah
-## mendekat sampai 1,05 m (jangkau tangan ~0,59 m × 2, sedikit
-## tumpang) dan kedua lengan mengarah ke dalam (sudut_salaman_dalam)
-## supaya tangan bertemu di garis tengah (< 0,1 m).
+## mendekat sampai 1,20 m dan kedua lengan mengarah ke dalam
+## (sudut_salaman_dalam) supaya tangan bertemu di garis tengah
+## (< 0,1 m). Jarak 1,20 m (bukan 1,05): jangkau tangan nyata
+## ~0,64 m × 2 — 0,59 lengan + ~0,10 condong badan 0,08 rad —
+## sehingga di 1,20 m telapak tangan bertumpuk (jabat), sedangkan
+## di 1,05 m tangan justru saling melewati 0,23 m (terukur run4).
 const SALAMAN_JARAK_MAKS := 3.0
 const SALAMAN_JABAT_DURASI := 2.0
 const SALAMAN_COOLDOWN := 10.0
-const SALAMAN_JABAT_JARAK := 1.05
+const SALAMAN_JABAT_JARAK := 1.20
 const SALAMAN_HAMPIRI_MAKS := 2.0
 
 

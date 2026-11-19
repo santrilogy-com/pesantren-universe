@@ -4314,7 +4314,12 @@ func _on_aksi(nama: String) -> void:
 			var arah_npc := target_npc.global_position - _player.global_position
 			arah_npc.y = 0.0
 			if arah_npc.length() > 0.05:
-				_player.set_facing(atan2(-arah_npc.x, -arah_npc.z))
+				# POLISH 20 Nov 2026 (verdict Mas "Kok tidak jabat
+				# tangan?"): dulu dinegasi — atan2(-arah) = hadap
+				# MENJAUHI target, lengan terulur ke belakang dan
+				# tangan tidak pernah bertemu. Konvensi hadap =
+				# atan2(arah.x, arah.z) (gerak + NPC sama).
+				_player.set_facing(atan2(arah_npc.x, arah_npc.z))
 			if _salaman_siap() and target_npc.terima_salaman(_player):
 				_salaman_cooldown_sampai = Time.get_ticks_msec() / 1000.0 + SALAMAN_COOLDOWN_PEMAIN
 				salaman_target_ok = true
@@ -4323,7 +4328,7 @@ func _on_aksi(nama: String) -> void:
 			var arah_pm := target_pemain.global_position - _player.global_position
 			arah_pm.y = 0.0
 			if arah_pm.length() > 0.05:
-				_player.set_facing(atan2(-arah_pm.x, -arah_pm.z))
+				_player.set_facing(atan2(arah_pm.x, arah_pm.z))
 			if _salaman_siap():
 				# SALAMAN MP TANPA RPC: pose salaman (pose_id 5) direplikasi
 				# synchronizer Fase 1 ke peer — pose itu sendiri ajakannya;
@@ -4337,7 +4342,7 @@ func _on_aksi(nama: String) -> void:
 				var arah := dekat.global_position - _player.global_position
 				arah.y = 0.0
 				if arah.length() > 0.05:
-					_player.set_facing(atan2(-arah.x, -arah.z))
+					_player.set_facing(atan2(arah.x, arah.z))
 	# Tidur: di kamar cangkruk, dekat tempat tidur — snap pemain ke
 	# tempat tidur dulu, lalu pose berbaring.
 	# KASUR (Wulan): boleh juga tidur di Surau/Musholla — di titik
@@ -4536,7 +4541,7 @@ func _salaman_cek_undangan_peer() -> void:
 		var arah := peer.global_position - _player.global_position
 		arah.y = 0.0
 		if arah.length() > 0.05:
-			_player.set_facing(atan2(-arah.x, -arah.z))
+			_player.set_facing(atan2(arah.x, arah.z))
 		_salaman_cooldown_sampai = Time.get_ticks_msec() / 1000.0 + SALAMAN_COOLDOWN_PEMAIN
 		_player.set_aksi("salaman")
 		_ui.toast("%s mengajak salaman." % _mp_nama_avatar(peer))

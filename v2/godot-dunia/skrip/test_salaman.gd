@@ -111,10 +111,14 @@ func _ready() -> void:
 		await _tunggu(0.2)
 		tunggu_jabat += 0.2
 	_cek("f1: Bilal fase jabat", String(bilal.get("_salaman")) == "jabat")
+	# Lengan + hadap butuh ~0,5 dtk mencapai target penuh — cek
+	# sesudah jeda, bukan tepat saat fase berbalik.
+	await _tunggu(0.6)
 	_cek("f1: Bilal tangan kanan terulur", float(bilal.get("_arm_r").rotation.x) < -1.0)
 	_cek("f1: Bilal tangan kanan mengarah ke dalam (ke garis tengah)", float(bilal.get("_arm_r").rotation.z) > 0.2)
-	# Lengan butuh ~0,5 dtk mencapai sudut dalam penuh.
-	await _tunggu(0.6)
+	# Hadap pemain ke Bilal (utara, yaw PI) — dulu dinegasi di
+	# main.gd sehingga pemain menghadap menjauhi NPC.
+	_cek("f1: pemain menghadap Bilal", absf(wrapf(_main._player.get_facing_yaw() - PI, -PI, PI)) < 0.2)
 	var d_tangan := _jarak_tangan(bilal)
 	print("SALAMAN-DBG f1 jarak tangan=%.3f" % d_tangan)
 	var tp_dbg: Node3D = _main._player.find_child("TanganKanan", true, false) as Node3D
@@ -126,7 +130,7 @@ func _ready() -> void:
 		str(tn_dbg.global_position) if tn_dbg != null else "(null)",
 		str(_main._player.global_position), str(bilal.global_position)])
 	_cek("f1: tangan pemain & Bilal bertemu (< 0,15 m)", d_tangan < 0.15)
-	_cek("f1: jarak badan saat jabat ~1,05 m", absf((bilal.global_position as Vector3).distance_to(_main._player.global_position as Vector3) - 1.05) < 0.2)
+	_cek("f1: jarak badan saat jabat ~1,20 m", absf((bilal.global_position as Vector3).distance_to(_main._player.global_position as Vector3) - 1.20) < 0.2)
 	var tunggu_selesai := 0.0
 	while String(bilal.get("_salaman")) != "" and tunggu_selesai < 4.0:
 		await _tunggu(0.2)
