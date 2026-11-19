@@ -150,6 +150,10 @@ static func label3d(text: String, pos: Vector3, font_size: int, color: Color, bi
 	# 144 Label3D di-render dari jarak berapa pun; label gedung yang
 	# jauh tidak terbaca juga. Nama karakter di Drone (~<33 m) aman.
 	l.visibility_range_end = 40.0
+	# KUALITAS ADAPTIF (Rangga, 19 Nov 2026): grup ini dipakai
+	# KualitasAdaptif untuk mengubah jarak cull per tingkat
+	# (Ringan 25 / Sedang 40 / Tinggi 60 m).
+	l.add_to_group("label_kualitas")
 	# RONDE 6: font game (Baloo 2 Bold) untuk SEMUA Label3D — bukan
 	# lagi font default yang terasa seperti Arial.
 	l.font = FONT_GAME

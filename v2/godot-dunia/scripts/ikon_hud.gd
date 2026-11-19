@@ -204,6 +204,12 @@ func _gambar() -> void:
 		"x":
 			_garis_tipis(Vector2(-11, -11), Vector2(11, 11), tebal_tipis + 1.0)
 			_garis_tipis(Vector2(11, -11), Vector2(-11, 11), tebal_tipis + 1.0)
+		"kualitas":
+			# KUALITAS ADAPTIF (Rangga, 19 Nov 2026): tiga batang
+			# menanjak (sinyal kualitas) — dipakai tombol strip atas.
+			draw_rect(Rect2(_p(-15, 5), Vector2(7, 8) * _s()), _c)
+			draw_rect(Rect2(_p(-4, -1), Vector2(7, 14) * _s()), _c)
+			draw_rect(Rect2(_p(7, -7), Vector2(7, 20) * _s()), _c)
 		_:
 			_kotak(-12, -12, 24, 24)
 

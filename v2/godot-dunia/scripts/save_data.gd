@@ -83,6 +83,15 @@ static func default_data() -> Dictionary:
 		# langkah 4 (Onboarding.maju) + reset(). WAJIB ada di
 		# default_data (alasan sama seperti rb_selesai di atas).
 		"tanya_guru": [],
+		# KUALITAS ADAPTIF (Rangga, 19 Nov 2026 — perintah Mas 13:11 WIB:
+		# "kualitas game tergantung device user"): mode kualitas
+		# ("otomatis"/"ringan"/"sedang"/"tinggi", default "otomatis") dan
+		# tingkat yang sedang diterapkan ("ringan"/"sedang"/"tinggi";
+		# "" = belum pernah ditentukan -> KualitasAdaptif mendeteksi
+		# perangkat saat setup). WAJIB ada di default_data (alasan sama
+		# seperti rb_selesai di atas).
+		"kualitas_mode": "otomatis",
+		"kualitas_tingkat": "",
 	}
 
 

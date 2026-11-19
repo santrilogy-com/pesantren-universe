@@ -144,6 +144,12 @@ var _lampu_jalan: Array = []
 var _lampu_cahaya: Array = []
 var _cahaya_jendela: Array = []
 var _kaca_jendela: Array = []
+## KUALITAS ADAPTIF (Rangga, 19 Nov 2026): pengali energi grup
+## LampuCahaya (72 lampu kamar asrama + cangkruk/gedung/kelas/surau/
+## musholla) per tingkat kualitas (Ringan 0.6 / Sedang-Tinggi 1.0).
+## Hanya MENGALIKAN — faktor siang/malam lerpf(0.0, 2.0, lampu_f)
+## tetap. CahayaJendela (KEBALIKAN) sengaja TIDAK dikali.
+static var pengali_lampu: float = 1.0
 var _jam_terakhir: float = -1.0
 var _fase_terakhir: String = ""
 var _sun_dir_terakhir: Vector3 = Vector3(0, 1, 0)
@@ -578,7 +584,8 @@ func _terapkan(jam: float) -> void:
 			# (12 kamar x 3 lantai x 2 asrama) + cangkruk/gedung/
 			# kelas/surau/musholla. Dulu siang tetap 1,0x dasar.
 			# (CahayaJendela di bawah sengaja KEBALIKAN — biarkan.)
-			omni.light_energy = dasar * lerpf(0.0, 2.0, lampu_f)
+			# KUALITAS ADAPTIF: dikali pengali_lampu (Ringan 0.6).
+			omni.light_energy = dasar * lerpf(0.0, 2.0, lampu_f) * pengali_lampu
 	for jendela_cahaya in _cahaya_jendela:
 		var omni_j := jendela_cahaya as OmniLight3D
 		if omni_j != null:

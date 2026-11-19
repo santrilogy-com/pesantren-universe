@@ -31,6 +31,9 @@ signal outfit_dipilih(jenis: String, warna_hex: String)
 signal ikut_sholat_pressed
 # RONDE 17: audio suasana — tombol "Suara"/"Senyap" di HUD (mute).
 signal suara_toggled
+# KUALITAS ADAPTIF (Rangga, 19 Nov 2026 — perintah Mas 13:11 WIB):
+# pilihan kualitas di Pengaturan — "otomatis"/"ringan"/"sedang"/"tinggi".
+signal kualitas_dipilih(mode: String)
 # MODE KAMERA v3 (Cakra, 18 Nov 13:13): tombol "Kamera: ..." di HUD.
 signal kamera_mode_pressed
 # MULTIPLAYER FASE 1 (Dimas, 18 Nov 2026 — perbaikan "Belum bisa main
@@ -145,6 +148,11 @@ var _kamera_ikon_btn: Button
 var _layar_penuh_btn: Button
 var _layar_penuh_diminta := false
 var _sinkron_layar_penuh_timer := 0.0
+# KUALITAS ADAPTIF (Rangga, 19 Nov 2026): tombol strip atas ke-6 +
+# panel pilihan kualitas (Otomatis/Ringan/Sedang/Tinggi).
+var _kualitas_btn: Button
+var _kualitas_panel: PanelContainer
+var _kualitas_tombol: Dictionary = {}
 var _poin_label: Label
 var _misi_label: Label
 # MULTIPLAYER FASE 1 (Wira, 18 Nov 2026 — langkah 10 prep §1.6, MINIMAL,
@@ -1225,8 +1233,9 @@ func _build_hud() -> void:
 	# transparan) supaya logika lama yang membaca .text tidak berubah.
 	var bar_ikon := HBoxContainer.new()
 	bar_ikon.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	# 5 ikon x 64 + 4x6 separasi = 344, +12 dari tepi kanan.
-	bar_ikon.position = Vector2(-356, 12)
+	# 6 ikon x 64 + 5x6 separasi = 414, +12 dari tepi kanan.
+	# (Dulu 5 ikon = 344/-356 — ikon ke-6 Kualitas, Rangga 19 Nov 2026.)
+	bar_ikon.position = Vector2(-426, 12)
 	bar_ikon.add_theme_constant_override("separation", 6)
 	_hud.add_child(bar_ikon)
 	# RONDE 4: tombol Kartu Santri — membuka dashboard (toggle).
@@ -1262,6 +1271,13 @@ func _build_hud() -> void:
 	_layar_penuh_btn = _buat_tombol_ikon("expand", HIJAU_TERANG)
 	_layar_penuh_btn.pressed.connect(_on_layar_penuh_pressed)
 	bar_ikon.add_child(_layar_penuh_btn)
+	# KUALITAS ADAPTIF (Rangga, 19 Nov 2026): tombol ke-6 — membuka
+	# panel pilihan kualitas (Otomatis/Ringan/Sedang/Tinggi).
+	_kualitas_btn = _buat_tombol_ikon("kualitas", HIJAU_TERANG)
+	_kualitas_btn.text = "Kualitas"
+	_kualitas_btn.clip_text = true
+	_kualitas_btn.pressed.connect(func() -> void: _toggle_panel_kualitas())
+	bar_ikon.add_child(_kualitas_btn)
 	# RONDE 5: MINIMAP GTA di kiri atas, di bawah label poin/misi —
 	# selalu terlihat saat main (petunjuk arah). Kiri bawah sudah
 	# dipakai joystick; atas-kiri aman di portrait maupun landscape.
@@ -1357,6 +1373,8 @@ func _build_hud() -> void:
 	_tombol_gamepad["lingkaran"] = _reset_btn
 	# Pop-up "PETUNJUK TOMBOL" pemain baru (lihat _build_petunjuk_popup).
 	_build_petunjuk_popup()
+	# KUALITAS ADAPTIF (Rangga, 19 Nov 2026): panel pilihan kualitas.
+	_build_panel_kualitas()
 	# Panel chat ala Mobile Legends (RONDE 5, Mas: "elegan kaya di mobile
 	# legend"): compact, semi-transparan gelap, sudut membulat — riwayat
 	# singkat + input ringkas di dalam panel. Panel BUKAN di bawah layar
@@ -1385,6 +1403,74 @@ func _build_hud() -> void:
 # 92% viewport) — TIDAK menutupi klaster tombol maupun analog
 # (panel berakhir jauh di atas klaster). Dim hitam menutupi layar di
 # belakang panel (klik ke game tertahan selama pop-up terbuka).
+## KUALITAS ADAPTIF (Rangga, 19 Nov 2026 — perintah Mas 13:11 WIB):
+## panel pilihan kualitas di strip atas (tombol ke-6, ikon 3 batang).
+## Minimal: 4 pilihan (Otomatis/Ringan/Sedang/Tinggi) + tombol tutup.
+## Pilihan aktif ditandai "✓" di depan teks (lihat set_kualitas_mode).
+## Panel ini HANYA memilih mode — logika deteksi/probe/pantau tinggal
+## di KualitasAdaptif; main menghubungkan sinyal kualitas_dipilih.
+func _build_panel_kualitas() -> void:
+	_kualitas_panel = PanelContainer.new()
+	var gaya := StyleBoxFlat.new()
+	gaya.bg_color = Color("#fdf8ec")
+	gaya.bg_color.a = 225.0 / 255.0
+	gaya.set_corner_radius_all(26)
+	gaya.shadow_color = Color(0, 0, 0, 70.0 / 255.0)
+	gaya.shadow_size = 16
+	gaya.shadow_offset = Vector2(0, 8)
+	_kualitas_panel.add_theme_stylebox_override("panel", gaya)
+	_kualitas_panel.visible = false
+	_hud.add_child(_kualitas_panel)
+	_pusatkan_panel(_kualitas_panel, 420.0, 400.0)
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 24)
+	margin.add_theme_constant_override("margin_right", 24)
+	margin.add_theme_constant_override("margin_top", 20)
+	margin.add_theme_constant_override("margin_bottom", 16)
+	_kualitas_panel.add_child(margin)
+	var tumpuk := VBoxContainer.new()
+	tumpuk.add_theme_constant_override("separation", 10)
+	margin.add_child(tumpuk)
+	var judul := _make_label("Kualitas", 26, Color("#043b2c"))
+	tumpuk.add_child(judul)
+	var sub := _make_label("Game menyesuaikan dengan perangkatmu.", 15, Color("#555555"))
+	tumpuk.add_child(sub)
+	var pilihan := [
+		["otomatis", "Otomatis (disarankan)"],
+		["ringan", "Ringan — HP kentang"],
+		["sedang", "Sedang"],
+		["tinggi", "Tinggi — HP kuat"],
+	]
+	for p in pilihan:
+		var mode := String(p[0])
+		var b := _make_button(String(p[1]), HIJAU_TERANG)
+		b.pressed.connect(func() -> void: kualitas_dipilih.emit(mode))
+		tumpuk.add_child(b)
+		_kualitas_tombol[mode] = b
+	var tutup := _make_button("Tutup", Color("#888888"))
+	tutup.pressed.connect(func() -> void: _kualitas_panel.visible = false)
+	tumpuk.add_child(tutup)
+
+
+func _toggle_panel_kualitas() -> void:
+	if _kualitas_panel == null:
+		return
+	_kualitas_panel.visible = not _kualitas_panel.visible
+
+
+## Dipanggil main setelah menerapkan mode — menandai pilihan aktif.
+func set_kualitas_mode(mode: String) -> void:
+	for m in _kualitas_tombol.keys():
+		var b := _kualitas_tombol[m] as Button
+		if b == null:
+			continue
+		var teks := String(b.text).trim_prefix("✓ ")
+		if String(m) == mode:
+			b.text = "✓ " + teks
+		else:
+			b.text = teks
+
+
 func _build_petunjuk_popup() -> void:
 	_petunjuk_dim = ColorRect.new()
 	# VARIAN B rev1: dim 80/255 (dulu 65) + panel alpha 225/255
@@ -1406,12 +1492,22 @@ func _build_petunjuk_popup() -> void:
 	_petunjuk_panel.add_theme_stylebox_override("panel", gaya)
 	_petunjuk_panel.visible = false
 	_hud.add_child(_petunjuk_panel)
+	# Ukuran awal 440 tetap (placeholder) — tinggi final mengikuti isi
+	# di _pusatkan_petunjuk_panel(), yang HANYA dipanggil saat tampil /
+	# resize (saat itu layout sudah jalan). JANGAN panggil helper di
+	# sini: get_minimum_size() saat _ready masih mengembalikan 1621
+	# (belum stabil), panel jadi 1621 kanvas (foto 19 Nov 2026).
 	_pusatkan_panel(_petunjuk_panel, 480.0, 440.0)
 	_petunjuk_panel.resized.connect(func() -> void: _petunjuk_panel.pivot_offset = _petunjuk_panel.size * 0.5)
 	# Latar gradien putih hangat + pita emas di atas (anak pertama —
 	# PanelContainer menaruh semua anak di rect yang sama).
+	# v2-perbaikan (Sinta, 19 Nov 2026): tekstur dibakar 480x460 (bukan
+	# 96x96) + radius 20. Radius 26/96 lama = 27% lebar panel, jauh
+	# lebih bulat dari StyleBoxFlat (26 px kanvas) — pita emas robek
+	# diagonal di sudut + tangga di sudut bawah saat direntang 8,9x.
+	# Pita 38 = 8/96 tinggi lama, dipertahankan proporsinya.
 	var latar := TextureRect.new()
-	latar.texture = GayaMisi.buat_tekstur_gradien(Color("#fdf8ec"), KREM, 26, Color(0, 0, 0, 0), 0, EMAS, 8)
+	latar.texture = GayaMisi.buat_tekstur_gradien(Color("#fdf8ec"), KREM, 20, Color(0, 0, 0, 0), 0, EMAS, 38, Color(0, 0, 0, 0), 0, Vector2i(480, 460))
 	latar.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	latar.stretch_mode = TextureRect.STRETCH_SCALE
 	latar.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -1537,6 +1633,30 @@ func _build_petunjuk_popup() -> void:
 	tumpuk.add_child(_petunjuk_mengerti_btn)
 
 
+## Pop-up petunjuk: tinggi mengikuti isi (v2-perbaikan Sinta, 19 Nov
+## 2026). Panel 440 tetap menyisakan ~40% ruang kosong di layar
+## skala kecil (foto: isi 266 px dari panel 440 px) dan meluber
+## ~20 px di HP (skala 1,5: panel 440 kanvas < isi ~460 kanvas).
+## Lebar tetap 480; tinggi = tinggi minimum isi (kanvas) di semua skala.
+func _pusatkan_petunjuk_panel() -> void:
+	if _petunjuk_panel == null:
+		return
+	var isi := _petunjuk_panel.get_minimum_size().y
+	var target := maxf(isi * _skala_layar(), 200.0)
+	_pusatkan_panel(_petunjuk_panel, 480.0, target)
+
+
+## Versi tertunda dari _pusatkan_petunjuk_panel (dipakai saat tampil):
+## pengukuran isi hanya stabil setelah panel melewati satu layout pass
+## dalam keadaan terlihat — label autowrap diukur pada lebar ~0
+## sebelumnya sehingga isi terbaca 1621 (bukan ~451). Tunggu 2 frame
+## agar layout jalan; 2 frame pertama animasi masuk masih modulate~0.
+func _pusatkan_petunjuk_panel_tertunda() -> void:
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_pusatkan_petunjuk_panel()
+
+
 ## Tampilkan pop-up sekali saja (dipanggil main.gd dari
 ## _masuk_pesantren): sudah_ditutup dibaca dari save — kalau sudah
 ## pernah ditutup, pop-up tidak muncul lagi.
@@ -1545,6 +1665,11 @@ func coba_tampilkan_petunjuk_awal(sudah_ditutup: bool) -> void:
 		return
 	if _petunjuk_dim == null or _petunjuk_panel == null:
 		return
+	# Tinggi panel mengikuti isi — via _tertunda (2 frame, setelah
+	# layout): ukur langsung di sini masih 1621 (label autowrap pada
+	# lebar ~0); setelah layout, isi stabil ~451 kanvas. Frame pertama
+	# animasi masuk masih modulate.a~0 (tidak terlihat).
+	call_deferred("_pusatkan_petunjuk_panel_tertunda")
 	_petunjuk_dim.visible = true
 	_petunjuk_panel.visible = true
 	_animasi_petunjuk_masuk()
@@ -2243,8 +2368,9 @@ func _layout_semua_panel() -> void:
 	_layout_baca_panel()
 	_pusatkan_panel(_dashboard_panel)
 	_pusatkan_panel(_outfit_panel)
-	# ROMBAKAN HUD v3: pop-up petunjuk ikut dipusatkan saat resize.
-	_pusatkan_panel(_petunjuk_panel, 480.0, 440.0)
+	# ROMBAKAN HUD v3: pop-up petunjuk ikut dipusatkan saat resize
+	# (tinggi mengikuti isi — lihat _pusatkan_petunjuk_panel).
+	_pusatkan_petunjuk_panel()
 	_terapkan_skala_panel(_mission_panel)
 	_terapkan_skala_panel(_peta_panel)
 	_terapkan_skala_panel(_smartboard_panel)

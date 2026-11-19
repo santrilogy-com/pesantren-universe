@@ -36,6 +36,9 @@ var _player_capsule: CapsuleShape3D
 var _rig: Node3D
 var _spring: SpringArm3D
 var _cam: Camera3D
+# KUALITAS ADAPTIF (Rangga, 19 Nov 2026 — perintah Mas 13:11 WIB):
+# manager kualitas (mode otomatis/manual + probe FPS + pantau).
+var _kualitas: KualitasAdaptif = null
 var _cam_yaw: float = 0.0
 var _cam_pitch: float = -0.35
 # KAMERA (Cakra, 17 Nov 2026; v2 18 Nov 00:16: goyang + framing
@@ -456,10 +459,12 @@ static func _matikan_bayangan_interior(induk: Node) -> void:
 
 
 func _ready() -> void:
-	# PERBAIKAN PERFORMA 19 Nov 2026 (Rangga — laporan Mas "game berat
-	# di beberapa HP"): kunci 60 fps — layar 120 Hz tanpa cap = 2x
-	# kerja GPU. Lihat juga scaling_3d 0,75 di project.godot.
-	Engine.max_fps = 60
+	# PERBAIKAN PERFORMA 19 Nov 2026 (Rangga): kunci 60 fps DULU di
+	# sini (layar 120 Hz tanpa cap = 2x kerja GPU) — kini dipindah
+	# ke KualitasAdaptif (setup di bawah, setelah kamera dibuat):
+	# max_fps per tingkat (Ringan 30 / Sedang 60 / Tinggi tanpa cap).
+	# Lihat juga scaling_3d 0,75 di project.godot (INERT di
+	# Compatibility — penahan fill-rate yang jalan hanya max_fps).
 	_save = SantriSave.load_data()
 	# GELOMBANG 2 FASE A: gelar awal dari save (A5) — disimpan di
 	# _gelar_saat_ini untuk label/Kartu Santri NANTI; JANGAN
@@ -689,6 +694,15 @@ func _ready() -> void:
 	cam.far = 450.0
 	_spring.add_child(cam)
 	_cam = cam
+	# KUALITAS ADAPTIF (Rangga, 19 Nov 2026 — perintah Mas 13:11 WIB):
+	# kualitas game tergantung perangkat user. Manager ini yang
+	# memiliki Engine.max_fps, far, bayangan matahari, pengali lampu
+	# omni, cull Label3D, dan MSAA — menerapkan tingkat awal dari
+	# save/deteksi perangkat di sini (probe FPS dimulai di
+	# _masuk_pesantren, bukan di layar login).
+	_kualitas = KualitasAdaptif.new()
+	add_child(_kualitas)
+	_kualitas.setup(self, cam, _save)
 	_kamera = KameraPesantren.new()
 	# NPC santri.
 	_spawn_npcs()
@@ -750,6 +764,9 @@ func _ready() -> void:
 	_audio.set_mute(bool(_save.get("suara_mati", false)))
 	_ui.set_suara_mati(bool(_save.get("suara_mati", false)))
 	_ui.suara_toggled.connect(_on_suara_toggled)
+	# KUALITAS ADAPTIF: pilihan kualitas dari panel Pengaturan.
+	_ui.kualitas_dipilih.connect(_on_kualitas_dipilih)
+	_ui.set_kualitas_mode(_kualitas.mode_saat_ini())
 	# SFX LANGKAH (Sinta, 17 Nov 2026 — acuan reel @jipraks): tiap
 	# kaki pemain menyentuh tanah (signal SantriPlayer.langkah) ->
 	# AudioPesantren.mainkan_langkah(); permukaan dipilih di
@@ -1285,6 +1302,11 @@ func _masuk_pesantren(pesan: String) -> void:
 	# jilbab, santriwan tetap koko. Dipanggil di awal sini (sebelum
 	# teleport) karena _ready membangun santriwan dulu.
 	_terapkan_gender_pemain()
+	# KUALITAS ADAPTIF: mulai probe FPS ~3 detik SETELAH masuk dunia
+	# (fps layar login tidak mewakili dunia). Hanya jalan di mode
+	# Otomatis; probe hanya bisa menurunkan tingkat, tidak menaikkan.
+	if _kualitas != null:
+		_kualitas.mulai_probe()
 	# Spawn sesuai gender: santriwati di kampus putri (130,14),
 	# santriwan di depan Surau (-4,14). Jangkar dorong-balik
 	# _cek_batas ikut diperbarui di sini — _ready jalan SEBELUM
@@ -3665,6 +3687,14 @@ func _on_suara_toggled() -> void:
 	_audio.set_mute(mati)
 	_ui.set_suara_mati(mati)
 	SantriSave.save_data(_save)
+
+
+## KUALITAS ADAPTIF: pemain memilih mode dari panel Pengaturan.
+func _on_kualitas_dipilih(mode: String) -> void:
+	if _kualitas == null:
+		return
+	_kualitas.atur_mode(mode)
+	_ui.set_kualitas_mode(_kualitas.mode_saat_ini())
 
 
 ## Mulai sesi: toast + banner untuk pemain, NPC jalan ke Surau.

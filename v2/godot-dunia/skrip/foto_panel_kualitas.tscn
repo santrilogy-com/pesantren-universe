@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://skrip/foto_panel_kualitas.gd" id="1_fotokual"]
+
+[node name="FotoPanelKualitas" type="Node"]
+script = ExtResource("1_fotokual")

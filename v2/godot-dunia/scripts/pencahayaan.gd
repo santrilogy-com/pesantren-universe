@@ -27,6 +27,12 @@ const WARNA_TIANG := Color("#1a1a1a")
 ## Lampu yang dimodulasi modul ini: [{node, dasar}].
 var _lampu: Array = []
 
+## KUALITAS ADAPTIF (Rangga, 19 Nov 2026): pengali energi lampu omni
+## per tingkat kualitas (Ringan 0.6 / Sedang-Tinggi 1.0). Hanya
+## MENGALIKAN — faktor siang/malam lerpf(0.0, 2.0, f) di _process
+## tetap jalan, tidak diganti.
+static var pengali_energi: float = 1.0
+
 
 ## Pasang modul di world root. main = Main, pintu_surau = main._outdoor_door.
 static func pasang(main: Node, pintu_surau: Vector3) -> PencahayaanV2:
@@ -112,7 +118,9 @@ func _process(_delta: float) -> void:
 			# PERBAIKAN PERFORMA 19 Nov 2026 (Rangga): lampu MATI di
 			# siang hari (dulu energi = dasar x 1,0..2,0 — 82 lampu
 			# omni nyala 24 jam, siang tetap 0,8-1,3). Malam tetap 2x.
-			omni.light_energy = float(d["dasar"]) * lerpf(0.0, 2.0, f)
+			# KUALITAS ADAPTIF: dikali pengali_energi (Ringan 0.6) —
+			# faktor siang/malam di atas TIDAK diganti.
+			omni.light_energy = float(d["dasar"]) * lerpf(0.0, 2.0, f) * pengali_energi
 
 
 ## Jumlah lampu baru modul ini (untuk tes).
