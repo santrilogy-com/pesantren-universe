@@ -1,0 +1,14 @@
+# Pesantren Universe API — HTTPS otomatis (Lets Encrypt) untuk hostname sslip.io.
+# Hostname ini memetakan ke IP publik VPS tanpa perlu beli domain.
+43-173-39-166.sslip.io {
+	# Realtime multiplayer (Fase 0): wss:// -> server dedicated Godot di 127.0.0.1:8791.
+	# Sertifikat Lets Encrypt yang sama dipakai untuk /ws/ (hostname sama).
+	# Caddy reverse_proxy menangani Upgrade WebSocket secara otomatis.
+	handle /ws/* {
+		reverse_proxy 127.0.0.1:8791
+	}
+
+	handle {
+		reverse_proxy 127.0.0.1:8790
+	}
+}

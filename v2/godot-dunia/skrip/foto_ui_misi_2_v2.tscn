@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://skrip/foto_ui_misi_2_v2.gd" id="1_f2v2"]
+
+[node name="FotoUiMisi2V2" type="Node"]
+script = ExtResource("1_f2v2")

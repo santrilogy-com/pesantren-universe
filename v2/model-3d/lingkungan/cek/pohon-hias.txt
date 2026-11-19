@@ -1,0 +1,4 @@
+CEK TEMBUS: /home/hatch/workspace/pesantren-verse/v2/model-3d/lingkungan/pohon/pohon-hias.blend — 3 objek mesh
+  TEMBUS: Batang <-> Tajuk : 36 pasang segitiga
+  TEMBUS: Tajuk <-> DaunMuda : 39 pasang segitiga
+TOTAL PASANGAN TEMBUS: 2

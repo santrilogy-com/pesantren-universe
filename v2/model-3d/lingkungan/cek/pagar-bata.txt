@@ -1,0 +1,15 @@
+CEK TEMBUS: /home/hatch/workspace/pesantren-verse/v2/model-3d/lingkungan/pagar/pagar-bata.blend — 9 objek mesh
+  TEMBUS: Dinding_Bata <-> Plinth : 18 pasang segitiga
+  TEMBUS: Dinding_Bata <-> Pilar : 17 pasang segitiga
+  TEMBUS: Dinding_Bata <-> Pilar.001 : 24 pasang segitiga
+  TEMBUS: Dinding_Bata <-> Pilar.002 : 17 pasang segitiga
+  TEMBUS: Plinth <-> Pilar : 15 pasang segitiga
+  TEMBUS: Plinth <-> Pilar.001 : 20 pasang segitiga
+  TEMBUS: Plinth <-> Pilar.002 : 15 pasang segitiga
+  TEMBUS: Lis_Emas <-> Pilar : 8 pasang segitiga
+  TEMBUS: Lis_Emas <-> Pilar.001 : 16 pasang segitiga
+  TEMBUS: Lis_Emas <-> Pilar.002 : 8 pasang segitiga
+  TEMBUS: Pilar <-> Tutup_Pilar : 6 pasang segitiga
+  TEMBUS: Pilar.001 <-> Tutup_Pilar.001 : 6 pasang segitiga
+  TEMBUS: Pilar.002 <-> Tutup_Pilar.002 : 6 pasang segitiga
+TOTAL PASANGAN TEMBUS: 13

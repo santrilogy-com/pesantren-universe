@@ -1,0 +1,19 @@
+[Unit]
+Description=Pesantren Universe Realtime (server dedicated Godot, multiplayer)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/home/ubuntu/pesantren-verse-server/realtime
+EnvironmentFile=/home/ubuntu/pesantren-verse-server/.env
+ExecStart=/usr/bin/stdbuf -oL -eL /home/ubuntu/pesantren-verse-server/realtime/pesantren-verse-server -- --mp-host
+Restart=on-failure
+RestartSec=3
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

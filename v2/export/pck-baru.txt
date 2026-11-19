@@ -1,0 +1,39 @@
+pck: 7967296 B, entri: 653
+ctex: 1 file, 1496 B
+ktx2: 23 file, 2902158 B
+10 file terbesar:
+     1284668  .godot/imported/adzan.ogg-d493d141e5476483e0157211ed37ae25.oggvorbisstr
+      753474  .godot/imported/surau-v2.glb-f74cb3e4d55d3be7383ea729802a65c8.scn
+      344537  .godot/imported/Baloo2-Variable.ttf-48728aea2a86747cabb2df32b3a6a249.fontdata
+      230227  .godot/imported/Amiri-Regular.ttf-4bb6d537b9ec5719ea1369e461cab510.fontdata
+      216446  .godot/imported/Amiri-Bold.ttf-e89315140f798275ba95bc20d14dcc2e.fontdata
+      195542  models/taman_leafy_grass_1k.ktx2
+      186579  .godot/imported/angin.ogg-6e83d966efd11ca4df9bfbe54eaba59d.oggvorbisstr
+      184335  models/pohon-rindang_bark_brown_01_1k.ktx2
+      184335  models/pohon-hias_bark_brown_01_1k.ktx2
+      180235  models/pagar-bata_brick_wall_001_1k.ktx2
+tekstur di pck:
+      195542  models/taman_leafy_grass_1k.ktx2
+      184335  models/pohon-hias_bark_brown_01_1k.ktx2
+      184335  models/pohon-rindang_bark_brown_01_1k.ktx2
+      180235  models/pagar-bata_brick_wall_001_1k.ktx2
+      172484  models/sawah_brown_mud_03_1k.ktx2
+      167335  models/taman_cobblestone_01_1k.ktx2
+      162094  models/lantai_stone_floor_1k.ktx2
+      154533  models/sawah_farm_soil_1k.ktx2
+      154533  models/taman_farm_soil_1k.ktx2
+      153629  data/atlas/masterplan-v2.ktx2
+      150251  models/dinding_white_plaster_02_1k.ktx2
+      148832  models/gubuk-santri_brown_planks_04_1k.ktx2
+      148832  models/pagar-bambu_brown_planks_04_1k.ktx2
+      148832  models/taman_brown_planks_04_1k.ktx2
+      135793  models/pondasi_stone_block_wall_1k.ktx2
+      135747  data/atlas/konsep-v2.ktx2
+      130658  models/cotton_jersey_diff_1k.ktx2
+       47916  data/atlas/atlas-kampus-putri.ktx2
+       46566  data/atlas/atlas-kawasan-bersama.ktx2
+       37680  data/atlas/atlas-area-putra.ktx2
+       33374  data/atlas/atlas-zona-penyangga.ktx2
+       21826  models/surau-v2_kisi.ktx2
+        6796  models/surau-v2_plakat.ktx2
+        1496  .godot/imported/icon.svg-218a8f2b3041327d8a5756f3a245f83b.ctex

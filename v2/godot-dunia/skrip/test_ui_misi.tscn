@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://skrip/test_ui_misi.gd" id="1_ui_misi"]
+
+[node name="TestUiMisi" type="Node"]
+script = ExtResource("1_ui_misi")

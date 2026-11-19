@@ -1,0 +1,86 @@
+[
+  {
+    "id": "puisi-chairil-anwar-pilihan",
+    "judul": "Puisi Pilihan Chairil Anwar",
+    "judul_latin": "Puisi Pilihan Chairil Anwar",
+    "bahasa": "id",
+    "jenis": "teks",
+    "dicek_ustadz": true,
+    "atribusi": "Chairil Anwar (1922–1949). Teks dari Wikisource bahasa Indonesia.",
+    "lisensi": "Domain publik di Indonesia (UU No. 28 Tahun 2014 — pengarang wafat 28 April 1949, lebih dari 70 tahun lalu). Sumber: https://id.wikisource.org/wiki/Chairil_Anwar dan https://id.wikisource.org/wiki/Indeks:Kerikil_Tadjam_Dan_Jang_Terampas_Dan_Jang_Putus_-_Chairil_Anwar.pdf (kumpulan 1949). Teks tiap sajak dicek silang dengan halaman uji-baca Wikisource dan Badan Bahasa Kemendikdasmen.",
+    "bab": [
+      {
+        "nomor": 1,
+        "judul": "Tentang Penyair",
+        "teks": "Chairil Anwar (Medan, 26 Juli 1922 — Jakarta, 28 April 1949), dijuluki Si Binatang Jalang dari sajaknya \"Aku\". Ia pelopor Angkatan '45 dan bapak puisi modern Indonesia. Ia menulis sekitar 70 sajak asli pada 1942–1949.\n\nLima sajak pilihan di buku ini diambil dari kumpulan \"Kerikil Tajam dan Yang Terampas dan Yang Putus\" (1949) dan \"Deru Campur Debu\" (1949). Ejaan mengikuti teks sumber di Wikisource bahasa Indonesia; edisi modern kadang menulis \"pedih perih\" (di sini \"pedih peri\") dan \"tidak peduli\" (di sini \"tidak perduli\").\n\nYang TIDAK dimasukkan: \"Karawang-Bekasi\" — di daftar Wikisource karya itu ditandai sebagai saduran puitis dari sajak asing, jadi tidak kami sajikan sebagai karya asli di sini."
+      },
+      {
+        "nomor": 2,
+        "judul": "Aku (Maret 1943)",
+        "teks": "Kalau sampai waktuku\n'Ku mau tak seorang 'kan merayu\nTidak juga kau\nTak perlu sedu sedan itu\nAku ini binatang jalang\nDari kumpulannya terbuang\nBiar peluru menembus kulitku\nAku tetap meradang menerjang\nLuka dan bisa kubawa berlari\nBerlari\nHingga hilang pedih peri\nDan aku akan lebih tidak perduli\nAku mau hidup seribu tahun lagi"
+      },
+      {
+        "nomor": 3,
+        "judul": "Diponegoro (Februari 1943)",
+        "teks": "Di masa pembangunan ini\ntuan hidup kembali\nDan bara kagum menjadi api\nDi depan sekali tuan menanti\nTak gentar. Lawan banyaknya seratus kali.\nPedang di kanan, keris di kiri\nBerselempang semangat yang tak bisa mati.\nMAJU\nIni barisan tak bergenderang-berpalu\nKepercayaan tanda menyerbu.\nSekali berarti, Sudah itu mati.\nMAJU\nBagimu Negeri, Menyediakan api.\nPunah di atas menghamba\nBinasa di atas ditinda\nSungguhpun dalam ajal baru tercapai\nJika hidup harus merasai.\nMaju.\nSerbu.\nSerang.\nTerjang."
+      },
+      {
+        "nomor": 4,
+        "judul": "Doa (13 November 1943)",
+        "teks": "kepada pemeluk teguh\nTuhanku\nDalam termangu\nAku masih menyebut namaMu\nBiar susah sungguh\nmengingat Kau penuh seluruh\ncayaMu panas suci\ntinggal kerdip lilin di kelam sunyi\nTuhanku\naku hilang bentuk\nremuk\nTuhanku\naku mengembara di negeri asing\nTuhanku\ndi pintuMu aku mengetuk\naku tidak bisa berpaling"
+      },
+      {
+        "nomor": 5,
+        "judul": "Hampa (Maret 1943)",
+        "teks": "kepada sri\nSepi di luar. Sepi menekan mendesak.\nLurus kaku pohonan. Tak bergerak\nSampai ke puncak. Sepi memagut,\nTak satu kuasa melepas-renggut\nSegala menanti.\nMenanti. Menanti.\nSepi.\nTambah ini menanti jadi mencekik\nMemberat-mencekung punda\nSampai binasa segala. Belum apa-apa\nUdara bertuba. Setan bertempik\nIni sepi terus ada. Dan menanti."
+      },
+      {
+        "nomor": 6,
+        "judul": "Senja di Pelabuhan Kecil (1946)",
+        "teks": "buat Sri Ayati\nIni kali tidak ada yang mencari cinta\ndi antara gudang, rumah tua, pada cerita\ntiang serta temali. Kapal, perahu tiada berlaut\nmenghembus diri dalam mempercaya mau berpaut\nGerimis mempercepat kelam. Ada juga kelepak elang\nmenyinggung muram, desir hari lari berenang\nmenemu bujuk pangkal akanan. Tidak bergerak\ndan kini tanah dan air tidur hilang ombak.\nTiada lagi. Aku sendiri. Berjalan\nmenyisir semenanjung, masih pengap harap\nsekali tiba di ujung dan sekalian selamat jalan\ndari pantai keempat, sedu penghabisan bisa terdekap."
+      }
+    ]
+  },
+  {
+    "id": "atlas-pesantren-verse",
+    "judul": "Atlas Pesantren Universe — Peta dan Masterplan v2",
+    "judul_latin": "Atlas Pesantren Universe — Peta dan Masterplan v2",
+    "bahasa": "id",
+    "jenis": "gambar",
+    "dicek_ustadz": true,
+    "atribusi": "Karya orisinal Tim Pesantren Universe (konsep tata letak v2, 17-18 Nov 2026). Detail koordinat: KONSEP-TATA-LETAK.md.",
+    "lisensi": "Karya orisinal tim Pesantren Universe — lisensi internal, bebas dipakai di game.",
+    "halaman": [
+      {
+        "nomor": 1,
+        "gambar": "res://data/atlas/masterplan-v2.ktx2",
+        "keterangan": "Masterplan v2 — keseluruhan pesantren, 17-18 Nov 2026 (DI-ACC Mas 18 Nov 11:57 WIB). Satu dunia, dua area (putra di barat, putri di timur) dipisah tembok x=14 dengan gerbang. Masjid Besar baru di tengah (Zona Penyangga, ±2.000 jamaah). Area putri diperluas 18 Nov 2026: tembok baru x 115..216, z −70..+40 (11.110 m²)."
+      },
+      {
+        "nomor": 2,
+        "gambar": "res://data/atlas/atlas-area-putra.ktx2",
+        "keterangan": "Area Putra — Surau (0,−14), lurus 16×20 m, depan z=−4 belakang z=−24; Kelas Putra 5 lantai (lift + eskalator); Asrama Putra 3 lantai (±96 santri); Cangkruk Putra; Kantor Pengasuh; Wudhu; Taman Surau; spawn putra di depan Perpustakaan & Taman."
+      },
+      {
+        "nomor": 3,
+        "gambar": "res://data/atlas/atlas-zona-penyangga.ktx2",
+        "keterangan": "Zona Penyangga — Masjid Besar di tengah, pusat pesantren (±2.000 jamaah, pintu terpisah putra/putri). Kebun dan taman mengelilingi masjid. Jarak Surau → Musholla Ar-Raudhah ±134 m. Tembok x=14 di barat zona ini."
+      },
+      {
+        "nomor": 4,
+        "gambar": "res://data/atlas/atlas-kampus-putri.ktx2",
+        "keterangan": "Kampus Putri — tembok baru x 115..216, z −70..+40 (11.110 m², 18 Nov 2026). Musholla Ar-Raudhah (134,−24); Masjid Putri (rencana, 166,−40); Kelas Putri (130,10) dan Asrama Putri (152,9) saat ini 1 lantai — tapak cadangan Kelas 5 lantai dan Asrama 3 lantai (20×12, garis putus-putus, ditunda); bekas Cangkruk Putri kini halaman/taman; Madrasah; Studio; Kantor Ustadzah (148,−33); Pos Jaga TL (176,−20); Lapangan Putri (198,12) kini di dalam tembok — tapak saja, dibangun nanti; Asrama ke-2 cadangan di halaman selatan; spawn putri (140,16)."
+      },
+      {
+        "nomor": 5,
+        "gambar": "res://data/atlas/atlas-kawasan-bersama.ktx2",
+        "keterangan": "Kawasan Bersama — Perpustakaan & Taman, Koperasi/Toko Santri, Kantin, Dapur Umum, Klinik, Aula, Balai Tamu, Gerbang Utama; Lapangan Putra; Sawah, Kebun, dan Kolam di timur. Area ini terbuka untuk putra dan putri."
+      },
+      {
+        "nomor": 6,
+        "gambar": "res://data/atlas/konsep-v2.ktx2",
+        "keterangan": "Sketsa awal v2 (Konsep Tata Letak v2) — dasar dari masterplan di atas. Bedanya dengan masterplan: Masjid Besar masih rencana di utara Surau, Kelas dan Asrama masih 1 lantai, dan Sawah/Kebun sama. Disimpan sebagai arsip perbandingan."
+      }
+    ]
+  }
+]

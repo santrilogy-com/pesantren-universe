@@ -1,0 +1,21 @@
+; Engine configuration file.
+; Trial kompres tekstur — BUKAN game, hanya proyek uji.
+
+config_version=5
+
+[application]
+
+config/name="Uji Kompres Tekstur"
+config/description="Trial Basis/KTX2: bandingkan JPG asli (lossless) vs Basis Universal."
+run/main_scene="res://adu.tscn"
+
+[display]
+
+window/size/viewport_width=1280
+window/size/viewport_height=1280
+window/size/resizable=false
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"

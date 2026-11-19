@@ -1,0 +1,53 @@
+; Engine configuration file.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
+
+config_version=5
+
+[application]
+
+config/name="Pesantren Universe v2"
+config/description="Pesantren virtual — daftar, masuk pesantren, belajar lewat misi."
+run/main_scene="res://main.tscn"
+config/features=PackedStringArray("4.7", "GL Compatibility")
+config/icon="res://icon.svg"
+
+[display]
+
+window/size/viewport_width=1280
+window/size/viewport_height=720
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+
+[gui]
+
+theme/default_font_multichannel_signed_distance_field=true
+theme/default_font="res://fonts/Baloo2-SemiBold.tres"
+
+[input_devices]
+
+pointing/emulate_touch_from_mouse=true
+# Tara 19 Nov 2026 (Opsi A, keputusan Xam): MATIKAN emulasi mouse dari
+# sentuhan. Tiap sentuhan jari di web export menghasilkan
+# InputEventScreenTouch + InputEventMouseButton; BaseButton memproses
+# keduanya -> `pressed` 2x -> tombol TOGGLE (△/□/strip) buka lalu
+# tutup lagi dalam satu ketukan dan tampak "mati" di HP Mas (T1
+# 19 Nov 08:18; bukti test_diag_toggle). Semua kontrol sudah menangani
+# InputEventScreenTouch langsung (ui.gd/main.gd/virtual_joystick.gd),
+# dan klik mouse desktop tetap jalan via emulate_touch_from_mouse=true.
+# Pin lama 18 Nov "sentuhan HARUS menghasilkan event mouse" DIBATALKAN.
+pointing/emulate_mouse_from_touch=false
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+
+[autoload]
+
+MpBootstrap="*res://scripts/multiplayer/mp_bootstrap.gd"
+NetworkManager="*res://scripts/multiplayer/network_manager.gd"

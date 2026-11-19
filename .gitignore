@@ -1,0 +1,51 @@
+# --- Build & export artifacts (never commit builds; Cloudflare Pages serves them) ---
+v2/export/web-pages/
+v2/export/web-pages-ktx2/
+v2/export/gate-deploy-*/
+v2/export/gate-bundle-*/
+v2/export/gate-pck-chunk-*/
+v2/export/gate-hijab-*/
+v2/export/server/
+godot-dunia/export/
+v2-export-copy/
+*.pck
+*.wasm
+*.js.mem
+part-*.bin
+
+# --- Godot import cache ---
+.godot/
+
+# --- Logs ---
+*.log
+*.out
+
+# --- Temp & backups ---
+*.tmp
+*.bak
+*.blend1
+
+# --- Dependencies / tool caches ---
+node_modules
+
+# --- Large media / archives / abandoned work (out of scope for this repo) ---
+video-hari-ke-1/
+media/
+blender-santri/
+godot-dunia-backup-4.3/
+v2/foto-*/
+foto-ronde*/
+threejs-santri/
+ronde-*/
+
+# --- Secrets: NEVER commit. X-PV-Token lives only in VPS .env ---
+.env
+*.env
+server/test-v1.3.0-token.sh
+server/test-v1.4.0.sh
+server/test-v1.5.2.sh
+
+# --- OS / editor ---
+.DS_Store
+Thumbs.db
+*.swp

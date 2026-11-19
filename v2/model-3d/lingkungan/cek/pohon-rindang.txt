@@ -1,0 +1,11 @@
+CEK TEMBUS: /home/hatch/workspace/pesantren-verse/v2/model-3d/lingkungan/pohon/pohon-rindang.blend — 6 objek mesh
+  TEMBUS: Batang <-> Tajuk_Utama : 39 pasang segitiga
+  TEMBUS: Batang <-> Tajuk_Kiri : 20 pasang segitiga
+  TEMBUS: Batang <-> Tajuk_Kanan : 17 pasang segitiga
+  TEMBUS: Tajuk_Utama <-> Tajuk_Kiri : 80 pasang segitiga
+  TEMBUS: Tajuk_Utama <-> Tajuk_Kanan : 84 pasang segitiga
+  TEMBUS: Tajuk_Utama <-> DaunMuda_A : 51 pasang segitiga
+  TEMBUS: Tajuk_Utama <-> DaunMuda_B : 37 pasang segitiga
+  TEMBUS: Tajuk_Kiri <-> DaunMuda_A : 43 pasang segitiga
+  TEMBUS: Tajuk_Kanan <-> DaunMuda_B : 58 pasang segitiga
+TOTAL PASANGAN TEMBUS: 9

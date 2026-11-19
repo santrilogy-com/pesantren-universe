@@ -1,0 +1,37 @@
+CEK TEMBUS: /home/hatch/workspace/pesantren-verse/v2/model-3d/lingkungan/sawah/sawah.blend — 15 objek mesh
+  TEMBUS: Lumpur <-> Pematang_Utara : 3 pasang segitiga
+  TEMBUS: Lumpur <-> Pematang_Selatan : 4 pasang segitiga
+  TEMBUS: Lumpur <-> Pematang_Tengah : 6 pasang segitiga
+  TEMBUS: Lumpur <-> Pematang_Barat : 5 pasang segitiga
+  TEMBUS: Lumpur <-> Pematang_Timur : 7 pasang segitiga
+  TEMBUS: Lumpur <-> Pematang_Tengah_V : 10 pasang segitiga
+  TEMBUS: Lumpur <-> Saluran_Bed : 15 pasang segitiga
+  TEMBUS: Pematang_Utara <-> Pematang_Barat : 13 pasang segitiga
+  TEMBUS: Pematang_Utara <-> Pematang_Timur : 15 pasang segitiga
+  TEMBUS: Pematang_Utara <-> Pematang_Tengah_V : 17 pasang segitiga
+  TEMBUS: Pematang_Utara <-> Saluran_Bed : 15 pasang segitiga
+  TEMBUS: Pematang_Utara <-> Air_Petak.001 : 8 pasang segitiga
+  TEMBUS: Pematang_Utara <-> Air_Petak.003 : 10 pasang segitiga
+  TEMBUS: Pematang_Selatan <-> Pematang_Barat : 15 pasang segitiga
+  TEMBUS: Pematang_Selatan <-> Pematang_Timur : 13 pasang segitiga
+  TEMBUS: Pematang_Selatan <-> Pematang_Tengah_V : 17 pasang segitiga
+  TEMBUS: Pematang_Selatan <-> Air_Petak : 10 pasang segitiga
+  TEMBUS: Pematang_Selatan <-> Air_Petak.002 : 8 pasang segitiga
+  TEMBUS: Pematang_Selatan <-> Padi_Hijau : 81 pasang segitiga
+  TEMBUS: Pematang_Selatan <-> Padi_Muda : 50 pasang segitiga
+  TEMBUS: Pematang_Tengah <-> Pematang_Barat : 16 pasang segitiga
+  TEMBUS: Pematang_Tengah <-> Pematang_Timur : 16 pasang segitiga
+  TEMBUS: Pematang_Tengah <-> Pematang_Tengah_V : 20 pasang segitiga
+  TEMBUS: Pematang_Tengah <-> Air_Petak : 8 pasang segitiga
+  TEMBUS: Pematang_Tengah <-> Air_Petak.001 : 10 pasang segitiga
+  TEMBUS: Pematang_Tengah <-> Air_Petak.002 : 10 pasang segitiga
+  TEMBUS: Pematang_Tengah <-> Air_Petak.003 : 8 pasang segitiga
+  TEMBUS: Pematang_Barat <-> Air_Petak : 5 pasang segitiga
+  TEMBUS: Pematang_Barat <-> Air_Petak.001 : 5 pasang segitiga
+  TEMBUS: Pematang_Timur <-> Air_Petak.002 : 6 pasang segitiga
+  TEMBUS: Pematang_Timur <-> Air_Petak.003 : 4 pasang segitiga
+  TEMBUS: Pematang_Tengah_V <-> Air_Petak : 11 pasang segitiga
+  TEMBUS: Pematang_Tengah_V <-> Air_Petak.001 : 9 pasang segitiga
+  TEMBUS: Pematang_Tengah_V <-> Air_Petak.002 : 9 pasang segitiga
+  TEMBUS: Pematang_Tengah_V <-> Air_Petak.003 : 11 pasang segitiga
+TOTAL PASANGAN TEMBUS: 35

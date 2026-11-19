@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://skrip/foto_w1w3_ulang.gd" id="1_burst"]
+
+[node name="FotoW1W3Ulang" type="Node"]
+script = ExtResource("1_burst")

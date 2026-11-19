@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://skrip/foto_hud_rombak.gd" id="1_hud"]
+
+[node name="FotoHudRombak" type="Node"]
+script = ExtResource("1_hud")

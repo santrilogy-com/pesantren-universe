@@ -1,0 +1,32 @@
+; Engine configuration file.
+; Pesantren Verse v2 — ALPHA (Rangga, 17 Nov 2026). Godot 4.7.2, GL Compatibility.
+
+config_version=5
+
+[application]
+
+config/name="Pesantren Verse v2"
+config/description="Pesantren Verse v2 ALPHA — dunia baru Godot."
+run/main_scene="res://main.tscn"
+config/features=PackedStringArray("4.7", "GL Compatibility")
+config/icon="res://icon.svg"
+
+[display]
+
+window/size/viewport_width=1280
+window/size/viewport_height=720
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+
+[input_devices]
+
+pointing/emulate_touch_from_mouse=true
+
+[physics]
+
+3d/physics_engine="Jolt"
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"

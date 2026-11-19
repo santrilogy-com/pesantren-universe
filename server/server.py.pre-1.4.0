@@ -1,0 +1,608 @@
+#!/usr/bin/env python3
+"""Pesantren Verse API — Fase 1: verifikasi ID + sinkron poin + ranking.
+
+Stdlib Python saja (tanpa dependensi): http.server + sqlite3.
+Dijalankan sebagai service systemd, di depan Caddy (HTTPS).
+
+Endpoint:
+  GET  /health                  -> status service
+  GET  /                       -> daftar endpoint
+  POST /api/santri/register     -> daftar santri baru, terbitkan ID PV-XXXX (PUBLIK,
+                                  tanpa token); sistem TUNGGAL (tanpa jalur);
+                                  ig_username WAJIB (identitas login),
+                                  password/kota/email opsional
+  POST /api/santri/login        -> login pakai ig_username (+ password bila sudah diset);
+                                  login berhasil mengembalikan token sesi 1 jam
+  POST /api/santri/set_password -> isi/ubah password sendiri (token sesi dari login,
+                                  BUKAN token bersama X-PV-Token)
+  POST /api/santri/verify      -> verifikasi ID + nama, kembalikan status santri
+  POST /api/santri/points      -> kirim poin misi, kembalikan total terbaru (butuh token)
+  GET  /api/ranking?limit=N    -> leaderboard global
+
+Auth: header X-PV-Token (shared secret, dari file .env) HANYA untuk
+POST /api/santri/points (pemberian poin oleh game/server tepercaya).
+POST /api/santri/register PUBLIK (pendaftaran terbuka, siapa pun boleh
+daftar — rate limit 120/menit/IP tetap berlaku). POST /api/santri/login
+publik dan mengembalikan token sesi (acak, 1 jam, satu sesi per santri,
+hangus setelah dipakai); POST /api/santri/set_password memakai token sesi
+itu (field "session" di body), BUKAN X-PV-Token — jadi token bersama tidak
+pernah keluar dari server dan app cukup menyimpan token sesi santri.
+Endpoint baca (verify, ranking, health) publik tapi dibatasi rate limit.
+
+Aturan yang disamakan dengan game Godot (scripts/save_data.gd):
+  - ID format PV-XXXX (4 angka, huruf besar), berurutan dari nomor tertinggi.
+  - Tier: >=100 Penjaga Lentera, >=50 Pembuka Peti, >=25 Penjelajah,
+    sisanya Santri Baru.
+  - Nama santri maks 30 huruf.
+"""
+import hashlib
+import json
+import os
+import secrets
+import re
+import sqlite3
+import threading
+import time
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from urllib.parse import urlparse, parse_qs
+
+VERSION = "1.3.0"
+DB_PATH = os.environ.get("PV_DB", "/home/ubuntu/pesantren-verse-server/data/pesantren.db")
+TOKEN = os.environ.get("PV_TOKEN", "")
+PORT = int(os.environ.get("PV_PORT", "8790"))
+HOST = os.environ.get("PV_HOST", "127.0.0.1")
+MAX_BODY = 64 * 1024          # 64 KB
+RATE_LIMIT = 120              # request per menit per IP
+RATE_WINDOW = 60
+
+ID_RE = re.compile(r"^PV-\d{4}$")
+IG_RE = re.compile(r"^[a-z0-9._]{1,64}$")
+
+# Password santri: DIISI SENDIRI oleh user (saat daftar atau lewat
+# set_password), disimpan sebagai HASH format "sha256$<salt_hex>$<digest_hex>"
+# — plaintext tidak pernah disimpan dan tidak pernah dikembalikan endpoint
+# mana pun. Login: username IG saja bila belum ada password; bila sudah ada
+# password, wajib cocok.
+
+
+def hash_password(pw: str) -> str:
+    salt = secrets.token_hex(8)
+    digest = hashlib.sha256((salt + pw).encode("utf-8")).hexdigest()
+    return f"sha256${salt}${digest}"
+
+
+def cek_password(pw: str, stored) -> bool:
+    """Cocokkan password dengan hash tersimpan (format sha256$salt$digest)."""
+    if not stored or not isinstance(pw, str):
+        return False
+    try:
+        _, salt, digest = stored.split("$")
+    except ValueError:
+        return False
+    return hashlib.sha256((salt + pw).encode("utf-8")).hexdigest() == digest
+
+
+def norm_ig_username(s) -> str:
+    """Normalisasi username IG opsional: tanpa '@', huruf kecil."""
+    if not isinstance(s, str):
+        return ""
+    return s.strip().lstrip("@").strip().lower()
+
+
+def tier_for_points(poin: int) -> str:
+    if poin >= 100:
+        return "Penjaga Lentera"
+    if poin >= 50:
+        return "Pembuka Peti"
+    if poin >= 25:
+        return "Penjelajah"
+    return "Santri Baru"
+
+
+def norm_id(s) -> str:
+    return s.strip().upper() if isinstance(s, str) else ""
+
+
+# ---------------------------------------------------------------- DB
+_db_lock = threading.Lock()
+_conn = None
+
+
+def db() -> sqlite3.Connection:
+    global _conn
+    if _conn is None:
+        os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+        _conn = sqlite3.connect(DB_PATH, check_same_thread=False)
+        _conn.row_factory = sqlite3.Row
+        _conn.execute("PRAGMA journal_mode=WAL")
+        _conn.execute("PRAGMA synchronous=NORMAL")
+        _conn.execute("PRAGMA foreign_keys=ON")
+        _conn.executescript("""
+            CREATE TABLE IF NOT EXISTS santri (
+                id TEXT PRIMARY KEY,
+                nama TEXT NOT NULL,
+                jalur TEXT NOT NULL DEFAULT 'Misi',
+                password_hash TEXT,
+                ig_username TEXT,
+                kota TEXT,
+                email TEXT,
+                total_poin INTEGER NOT NULL DEFAULT 0,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS points_log (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                santri_id TEXT NOT NULL REFERENCES santri(id),
+                misi TEXT NOT NULL,
+                poin INTEGER NOT NULL,
+                event_id TEXT UNIQUE,
+                created_at TEXT NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS idx_points_santri ON points_log(santri_id);
+            CREATE TABLE IF NOT EXISTS sesi_login (
+                token TEXT PRIMARY KEY,
+                santri_id TEXT NOT NULL REFERENCES santri(id),
+                created_epoch INTEGER NOT NULL,
+                expires_epoch INTEGER NOT NULL,
+                used INTEGER NOT NULL DEFAULT 0
+            );
+            CREATE INDEX IF NOT EXISTS idx_sesi_santri ON sesi_login(santri_id);
+            CREATE INDEX IF NOT EXISTS idx_santri_poin ON santri(total_poin DESC);
+        """)
+        # Migrasi kolom baru (idempotent): DB lama belum punya kolom ini.
+        cols = {r[1] for r in _conn.execute("PRAGMA table_info(santri)")}
+        if "password_hash" not in cols:
+            _conn.execute("ALTER TABLE santri ADD COLUMN password_hash TEXT")
+        if "ig_username" not in cols:
+            _conn.execute("ALTER TABLE santri ADD COLUMN ig_username TEXT")
+        if "kota" not in cols:
+            _conn.execute("ALTER TABLE santri ADD COLUMN kota TEXT")
+        if "email" not in cols:
+            _conn.execute("ALTER TABLE santri ADD COLUMN email TEXT")
+        _conn.commit()
+    return _conn
+
+
+def now_iso() -> str:
+    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
+
+def santri_view(row) -> dict:
+    return {
+        "id": row["id"],
+        "nama": row["nama"],
+        "jalur": row["jalur"],
+        "total_poin": row["total_poin"],
+        "tier": tier_for_points(row["total_poin"]),
+        "created_at": row["created_at"],
+    }
+
+
+def misi_selesai(c, santri_id: str) -> int:
+    r = c.execute("SELECT COUNT(DISTINCT misi) AS n FROM points_log WHERE santri_id=?",
+                  (santri_id,)).fetchone()
+    return r["n"] if r else 0
+
+
+# ---------------------------------------------------------------- Sesi login
+# Token sesi: diterbitkan _login saat login berhasil. Acak (token_urlsafe),
+# berlaku 1 jam, SATU sesi per santri (login baru menghapus sesi lama santri
+# itu), hangus setelah dipakai untuk set_password (sekali pakai) atau
+# kedaluwarsa. Dipakai _set_password sebagai pengganti token bersama
+# X-PV-Token, supaya app bisa memakai server tanpa memegang token bersama.
+SESI_TTL_DETIK = 3600  # 1 jam
+
+
+def _buat_sesi(santri_id: str) -> str:
+    token = secrets.token_urlsafe(32)
+    now = int(time.time())
+    with _db_lock:
+        c = db()
+        c.execute("DELETE FROM sesi_login WHERE santri_id=?", (santri_id,))
+        # Bersihkan sesi kedaluwarsa yang sudah lama (housekeeping ringan).
+        c.execute("DELETE FROM sesi_login WHERE expires_epoch < ?", (now - 86400,))
+        c.execute("INSERT INTO sesi_login (token, santri_id, created_epoch, "
+                  "expires_epoch, used) VALUES (?, ?, ?, ?, 0)",
+                  (token, santri_id, now, now + SESI_TTL_DETIK))
+        c.commit()
+    return token
+
+
+def _cek_sesi(token):
+    """Validasi token sesi. Kembalikan (santri_id, None) bila valid,
+    atau (None, pesan_error) bila tidak valid / sudah dipakai / kedaluwarsa."""
+    if not isinstance(token, str) or not token:
+        return None, "Token sesi tidak valid"
+    with _db_lock:
+        c = db()
+        row = c.execute("SELECT * FROM sesi_login WHERE token=?",
+                        (token,)).fetchone()
+    if row is None:
+        return None, "Token sesi tidak valid"
+    if row["used"]:
+        return None, "Token sesi sudah dipakai"
+    if int(time.time()) > row["expires_epoch"]:
+        return None, "Token sesi sudah kedaluwarsa"
+    return row["santri_id"], None
+
+
+# ---------------------------------------------------------------- HTTP
+class Handler(BaseHTTPRequestHandler):
+    protocol_version = "HTTP/1.1"
+    _hits = {}  # ip -> [timestamp, ...]
+
+    # -- util ------------------------------------------------------
+    def log_message(self, fmt, *args):
+        print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] {self.address_string()} {fmt % args}",
+              flush=True)
+
+    def _cors(self):
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, X-PV-Token")
+
+    def _send(self, status: int, obj: dict):
+        body = json.dumps(obj, ensure_ascii=False).encode("utf-8")
+        self.send_response(status)
+        self._cors()
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _err(self, status: int, msg: str):
+        self._send(status, {"ok": False, "error": msg})
+
+    def _rate_ok(self) -> bool:
+        ip = self.client_address[0]
+        t = time.time()
+        hits = [x for x in self._hits.get(ip, []) if t - x < RATE_WINDOW]
+        hits.append(t)
+        self._hits[ip] = hits
+        return len(hits) <= RATE_LIMIT
+
+    def _read_raw_body(self):
+        """Baca body request sampai habis (wajib: kalau body tidak dibaca,
+        sisanya akan dibaca sebagai request berikutnya di koneksi keep-alive
+        yang dipakai ulang reverse proxy — merusak request selanjutnya)."""
+        try:
+            n = int(self.headers.get("Content-Length") or 0)
+        except ValueError:
+            return None, "Content-Length tidak valid"
+        if n < 0:
+            return None, "Content-Length tidak valid"
+        if n > MAX_BODY:
+            return None, "Body terlalu besar"
+        return self.rfile.read(n) if n else b"", None
+
+    def _read_json(self):
+        raw = getattr(self, "_body", b"")
+        if not raw:
+            return {}, None
+        try:
+            data = json.loads(raw.decode("utf-8"))
+        except (ValueError, UnicodeDecodeError):
+            return None, "Body harus JSON yang valid"
+        if not isinstance(data, dict):
+            return None, "Body harus objek JSON"
+        return data, None
+
+    def _need_token(self) -> bool:
+        if not TOKEN:
+            return True  # tanpa token terpasang, tolak tulis (fail closed)
+        return self.headers.get("X-PV-Token") == TOKEN
+
+    # -- verb ------------------------------------------------------
+    def do_OPTIONS(self):
+        if not self._rate_ok():
+            self._send(429, {"ok": False, "error": "Terlalu banyak permintaan"})
+            return
+        self.send_response(204)
+        self._cors()
+        self.send_header("Content-Length", "0")
+        self.end_headers()
+
+    def do_GET(self):
+        if not self._rate_ok():
+            self._send(429, {"ok": False, "error": "Terlalu banyak permintaan"})
+            return
+        u = urlparse(self.path)
+        if u.path == "/health":
+            self._send(200, {"ok": True, "service": "pesantren-verse-api",
+                             "version": VERSION, "time": now_iso()})
+        elif u.path == "/":
+            self._send(200, {"ok": True, "service": "pesantren-verse-api",
+                             "version": VERSION, "endpoints": [
+                                 "POST /api/santri/register (publik)",
+                                 "POST /api/santri/verify",
+                                 "POST /api/santri/login (token sesi)",
+                                 "POST /api/santri/set_password (token sesi)",
+                                 "POST /api/santri/points (token)",
+                                 "GET  /api/ranking?limit=N",
+                                 "GET  /health"]})
+        elif u.path == "/api/ranking":
+            self._ranking(parse_qs(u.query))
+        else:
+            self._err(404, "Endpoint tidak dikenal")
+
+    def do_POST(self):
+        if not self._rate_ok():
+            self._send(429, {"ok": False, "error": "Terlalu banyak permintaan"})
+            return
+        body, err = self._read_raw_body()
+        if err:
+            self._err(400, err)
+            return
+        self._body = body
+        u = urlparse(self.path)
+        if u.path == "/api/santri/register":
+            self._register()
+        elif u.path == "/api/santri/verify":
+            self._verify()
+        elif u.path == "/api/santri/login":
+            self._login()
+        elif u.path == "/api/santri/set_password":
+            self._set_password()
+        elif u.path == "/api/santri/points":
+            self._points()
+        else:
+            self._err(404, "Endpoint tidak dikenal")
+
+    # -- endpoint --------------------------------------------------
+    def _ranking(self, qs):
+        try:
+            limit = int(qs.get("limit", ["10"])[0])
+        except ValueError:
+            limit = 10
+        limit = max(1, min(50, limit))
+        with _db_lock:
+            c = db()
+            rows = c.execute(
+                "SELECT id, nama, jalur, total_poin, created_at FROM santri "
+                "ORDER BY total_poin DESC, created_at ASC LIMIT ?", (limit,)).fetchall()
+            total = c.execute("SELECT COUNT(*) AS n FROM santri").fetchone()["n"]
+        ranking = []
+        for i, r in enumerate(rows, 1):
+            ranking.append({"rank": i, "id": r["id"], "nama": r["nama"],
+                            "jalur": r["jalur"], "total_poin": r["total_poin"],
+                            "tier": tier_for_points(r["total_poin"])})
+        self._send(200, {"ok": True, "total_santri": total, "ranking": ranking})
+
+    def _register(self):
+        # PUBLIK (v1.3.0): pendaftaran terbuka, tanpa token. Rate limit
+        # 120/menit/IP (di do_POST) tetap berlaku.
+        data, err = self._read_json()
+        if err:
+            self._err(400, err)
+            return
+        nama = (data.get("nama") or "").strip()
+        # Sistem tunggal (keputusan 15 Nov 2026): tidak ada lagi pilihan
+        # jalur — field "jalur" bila dikirim diabaikan, bukan error.
+        # Login pakai ig_username (keputusan 16 Nov 2026): wajib + unik.
+        ig_raw = data.get("ig_username")
+        ig = norm_ig_username(ig_raw) if isinstance(ig_raw, str) else ""
+        pw = data.get("password") or None
+        kota = (data.get("kota") or "").strip() if isinstance(data.get("kota"), str) else ""
+        email = (data.get("email") or "").strip() if isinstance(data.get("email"), str) else ""
+        if not nama or len(nama) > 30:
+            self._err(400, "Nama wajib diisi, maks 30 huruf")
+            return
+        if not ig or not IG_RE.match(ig):
+            self._err(400, "ig_username wajib diisi (huruf/angka/titik/garis bawah, maks 64)")
+            return
+        if pw is not None and (not isinstance(pw, str) or not (6 <= len(pw) <= 64)):
+            self._err(400, "Password minimal 6 karakter, maks 64")
+            return
+        if len(kota) > 64:
+            self._err(400, "Kota maks 64 huruf")
+            return
+        if email and (len(email) > 128 or "@" not in email):
+            self._err(400, "Email tidak valid")
+            return
+        with _db_lock:
+            c = db()
+            try:
+                c.execute("BEGIN IMMEDIATE")
+                dup = c.execute("SELECT id FROM santri WHERE ig_username=?",
+                                (ig,)).fetchone()
+                if dup:
+                    c.rollback()
+                    self._err(409, "ig_username sudah terdaftar sebagai santri")
+                    return
+                r = c.execute("SELECT MAX(CAST(SUBSTR(id, 4) AS INTEGER)) AS m "
+                              "FROM santri").fetchone()
+                nxt = (r["m"] or 0) + 1
+                new_id = f"PV-{nxt:04d}"
+                t = now_iso()
+                c.execute("INSERT INTO santri (id, nama, total_poin, password_hash, "
+                          "ig_username, kota, email, created_at, updated_at) "
+                          "VALUES (?, ?, 0, ?, ?, ?, ?, ?, ?)",
+                          (new_id, nama,
+                           hash_password(pw) if pw else None,
+                           ig, kota or None, email or None, t, t))
+                c.commit()
+            except sqlite3.Error as e:
+                c.rollback()
+                self._err(500, f"Gagal menyimpan: {e}")
+                return
+        # Password TIDAK PERNAH dikembalikan (tidak ada yang perlu di-DM-kan).
+        self._send(201, {"ok": True, "created": True, "id": new_id, "nama": nama,
+                         "ig_username": ig, "kota": kota or None,
+                         "email": email or None,
+                         "total_poin": 0, "tier": "Santri Baru"})
+
+    def _verify(self):
+        data, err = self._read_json()
+        if err:
+            self._err(400, err)
+            return
+        sid = norm_id(data.get("id"))
+        if not ID_RE.match(sid):
+            self._err(400, "ID harus berformat PV-XXXX")
+            return
+        with _db_lock:
+            c = db()
+            row = c.execute("SELECT * FROM santri WHERE id=?", (sid,)).fetchone()
+            if row is None:
+                self._send(200, {"ok": True, "found": False, "id": sid})
+                return
+            n_misi = misi_selesai(c, sid)
+        out = santri_view(row)
+        out.update({"ok": True, "found": True, "misi_selesai": n_misi})
+        self._send(200, out)
+
+    def _login(self):
+        """Login pakai ig_username. Bila santri belum punya password,
+        username saja cukup; bila sudah punya, password wajib cocok.
+        Login berhasil mengembalikan token sesi (field "session",
+        berlaku 1 jam, satu sesi per santri) untuk set_password."""
+        data, err = self._read_json()
+        if err:
+            self._err(400, err)
+            return
+        ig = norm_ig_username(data.get("ig_username"))
+        if not ig or not IG_RE.match(ig):
+            self._err(400, "ig_username wajib diisi")
+            return
+        pw = data.get("password")
+        with _db_lock:
+            c = db()
+            row = c.execute("SELECT * FROM santri WHERE ig_username=?",
+                            (ig,)).fetchone()
+            if row is None:
+                self._send(200, {"ok": True, "found": False, "ig_username": ig})
+                return
+            n_misi = misi_selesai(c, row["id"])
+        if row["password_hash"]:
+            if not isinstance(pw, str) or not cek_password(pw, row["password_hash"]):
+                self._err(401, "Password salah")
+                return
+        # Login berhasil -> terbitkan token sesi (1 jam, satu sesi per santri).
+        token_sesi = _buat_sesi(row["id"])
+        out = santri_view(row)
+        out.update({"ok": True, "found": True, "login": True,
+                    "ig_username": row["ig_username"], "misi_selesai": n_misi,
+                    "session": token_sesi, "session_expires_in": SESI_TTL_DETIK})
+        self._send(200, out)
+
+    def _set_password(self):
+        """Isi/ubah password sendiri (token sesi dari login, BUKAN token
+        bersama X-PV-Token). Token sesi hanya berlaku untuk santri pemiliknya
+        dan hangus setelah dipakai (sekali pakai) atau kedaluwarsa (1 jam).
+        Body: {"session": "<token>", "password": "<baru>"}; field "id"
+        opsional — bila diisi harus sama dengan pemilik token."""
+        data, err = self._read_json()
+        if err:
+            self._err(400, err)
+            return
+        sid_sesi, err_sesi = _cek_sesi(data.get("session"))
+        if err_sesi:
+            self._err(401, err_sesi)
+            return
+        sid = norm_id(data.get("id")) if data.get("id") else sid_sesi
+        if sid != sid_sesi:
+            self._err(403, "Token sesi bukan milik santri ini")
+            return
+        pw = data.get("password")
+        if not isinstance(pw, str) or not (6 <= len(pw) <= 64):
+            self._err(400, "Password minimal 6 karakter, maks 64")
+            return
+        with _db_lock:
+            c = db()
+            row = c.execute("SELECT id FROM santri WHERE id=?", (sid,)).fetchone()
+            if row is None:
+                self._err(404, "ID Santri tidak ditemukan")
+                return
+            try:
+                c.execute("BEGIN IMMEDIATE")
+                # Cek ulang di dalam transaksi (anti pakai-ganda bersamaan).
+                srow = c.execute("SELECT used, expires_epoch FROM sesi_login "
+                                 "WHERE token=?", (data.get("session"),)).fetchone()
+                if srow is None or srow["used"] or int(time.time()) > srow["expires_epoch"]:
+                    c.rollback()
+                    self._err(401, "Token sesi sudah dipakai atau kedaluwarsa")
+                    return
+                c.execute("UPDATE santri SET password_hash=?, updated_at=? WHERE id=?",
+                          (hash_password(pw), now_iso(), sid))
+                # Token sesi hangus setelah dipakai (sekali pakai).
+                c.execute("UPDATE sesi_login SET used=1 WHERE token=?",
+                          (data.get("session"),))
+                c.commit()
+            except sqlite3.Error as e:
+                c.rollback()
+                self._err(500, f"Gagal menyimpan: {e}")
+                return
+        self._send(200, {"ok": True, "id": sid, "password_set": True})
+
+    def _points(self):
+        if not self._need_token():
+            self._err(401, "Token tidak valid")
+            return
+        data, err = self._read_json()
+        if err:
+            self._err(400, err)
+            return
+        sid = norm_id(data.get("id"))
+        misi = (data.get("misi") or "").strip()
+        poin = data.get("poin")
+        event_id = data.get("event_id")
+        if not ID_RE.match(sid):
+            self._err(400, "ID harus berformat PV-XXXX")
+            return
+        if not misi or len(misi) > 64:
+            self._err(400, "Nama misi wajib diisi, maks 64 huruf")
+            return
+        if not isinstance(poin, int) or isinstance(poin, bool) or not (1 <= poin <= 100):
+            self._err(400, "Poin harus bilangan bulat 1-100")
+            return
+        if event_id is not None and (not isinstance(event_id, str) or not (1 <= len(event_id) <= 64)):
+            self._err(400, "event_id harus teks 1-64 karakter")
+            return
+        with _db_lock:
+            c = db()
+            row = c.execute("SELECT * FROM santri WHERE id=?", (sid,)).fetchone()
+            if row is None:
+                self._err(404, "ID Santri tidak ditemukan")
+                return
+            if event_id:
+                dup = c.execute("SELECT id FROM points_log WHERE event_id=?",
+                                (event_id,)).fetchone()
+                if dup:
+                    self._send(200, {"ok": True, "duplicate": True, "id": sid,
+                                     "total_poin": row["total_poin"],
+                                     "tier": tier_for_points(row["total_poin"]),
+                                     "misi_selesai": misi_selesai(c, sid)})
+                    return
+            try:
+                c.execute("BEGIN IMMEDIATE")
+                c.execute("INSERT INTO points_log (santri_id, misi, poin, event_id, created_at) "
+                          "VALUES (?, ?, ?, ?, ?)", (sid, misi, poin, event_id, now_iso()))
+                c.execute("UPDATE santri SET total_poin = total_poin + ?, updated_at=? WHERE id=?",
+                          (poin, now_iso(), sid))
+                c.commit()
+            except sqlite3.Error as e:
+                c.rollback()
+                self._err(500, f"Gagal menyimpan: {e}")
+                return
+            row = c.execute("SELECT * FROM santri WHERE id=?", (sid,)).fetchone()
+            n_misi = misi_selesai(c, sid)
+        self._send(200, {"ok": True, "duplicate": False, "id": sid,
+                         "total_poin": row["total_poin"],
+                         "tier": tier_for_points(row["total_poin"]),
+                         "misi_selesai": n_misi})
+
+
+def main():
+    db()  # buat tabel saat start
+    srv = ThreadingHTTPServer((HOST, PORT), Handler)
+    srv.daemon_threads = True
+    print(f"pesantren-verse-api v{VERSION} jalan di {HOST}:{PORT} (db: {DB_PATH})",
+          flush=True)
+    try:
+        srv.serve_forever()
+    except KeyboardInterrupt:
+        pass
+
+
+if __name__ == "__main__":
+    main()

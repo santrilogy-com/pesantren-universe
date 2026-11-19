@@ -1,0 +1,123 @@
+--- a/scripts/ui.gd
++++ b/scripts/ui.gd
+@@ -131,6 +131,18 @@
+ 
+ var _toast: Label
+ var _toast_timer: float = 0.0
++# BUBBLE-ML (Gita, 17 Nov 2026 — koreksi Mas ~21:30 WIB: bubble kotak
++# di atas kepala jelek): feed teks melayang ala Mobile Legends — pesan
++# chat tampil sebagai TEKS KECIL di sebelah analog (kiri bawah, di atas
++# joystick), TANPA kotak/border, latar transparan. Maks 3 baris, tiap
++# baris hidup 4 dtk lalu fade + hilang sendiri. Pesan baru masuk di
++# BAWAH (paling MLBB: pesan terbaru di bawah, yang lama naik) — baris
++# lama naik, lebih dari 3 baris = yang paling lama dibuang.
++var _feed_chat: VBoxContainer
++var _feed_baris: Array[Dictionary] = [] # {"row": HBoxContainer, "sisa": float}
++const FEED_CHAT_MAKS := 3
++const FEED_CHAT_DURASI := 4.0
++const FEED_CHAT_FADE := 1.0
+ var _rotate_overlay: Control
+ var _rotate_dismissed: bool = false
+ # RONDE 13: banner sholat berjamaah (muncul saat waktu sholat tiba).
+@@ -788,6 +800,9 @@
+ 	_joystick.position = Vector2(24, -244)
+ 	_joystick.size = Vector2(220, 220)
+ 	_hud.add_child(_joystick)
++	# BUBBLE-ML: feed chat melayang di ATAS joystick (lihat
++	# _build_feed_chat) — anak _hud, jadi ikut sembunyi di layar login.
++	_build_feed_chat()
+ 	# Tombol interaksi kanan bawah — berjangkar ke sudut kanan bawah.
+ 	_interact_btn = _make_button("MULAI MISI", EMAS, GELAP)
+ 	_interact_btn.custom_minimum_size = Vector2(210, 64)
+@@ -1229,6 +1244,72 @@
+ 	_interact_btn.text = teks
+ 
+ 
++# ---------- feed chat melayang ala Mobile Legends (BUBBLE-ML) ----------
++## Posisi: kiri bawah, 12 px DI ATAS joystick (joystick: y -244..-24,
++## 220x220 di (24,-244)). Wadah 520x208 di (24,-464): bawah wadah di
++## -256 (12 px di atas joystick), kiri sejajar joystick (x=24). Baris
++## menumpuk ke ATAS (alignment END: baris baru di bawah, yang lama
++## naik) — feed tidak pernah menutup joystick, tombol Reset Posisi
++## (kanan bawah), atau minimap (kiri atas). TANPA PanelContainer /
++## stylebox / latar — hanya Label dengan bayangan (pola label HUD
++## poin/misi) supaya terbaca di atas dunia 3D.
++func _build_feed_chat() -> void:
++	_feed_chat = VBoxContainer.new()
++	_feed_chat.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
++	_feed_chat.position = Vector2(24, -464)
++	_feed_chat.size = Vector2(520, 208)
++	_feed_chat.alignment = BoxContainer.ALIGNMENT_END
++	_feed_chat.add_theme_constant_override("separation", 4)
++	_feed_chat.mouse_filter = Control.MOUSE_FILTER_IGNORE
++	_hud.add_child(_feed_chat)
++
++
++## Tampilkan satu pesan di feed melayang. Dipanggil main.gd:
++## - pesan pemain: _on_chat_sent -> tampilkan_pesan_melayang(nama, teks)
++## - pesan NPC: sinyal SantriNPC.pesan -> connect ke fungsi ini.
++## Nama emas (#f2c14e, warna judul panel chat), teks putih, font 18.
++func tampilkan_pesan_melayang(nama: String, teks: String) -> void:
++	if _feed_chat == null:
++		return
++	var bersih := Palette.rapikan_bubble(teks, 100)
++	var baris := HBoxContainer.new()
++	baris.add_theme_constant_override("separation", 6)
++	baris.mouse_filter = Control.MOUSE_FILTER_IGNORE
++	var nama_label := _make_label(nama + ":", 18, Color("#f2c14e"))
++	nama_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
++	baris.add_child(nama_label)
++	var teks_label := _make_label(bersih, 18, Color.WHITE)
++	teks_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
++	teks_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
++	teks_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
++	baris.add_child(teks_label)
++	# Bayangan hitam supaya terbaca di atas dunia 3D (pola label HUD).
++	for l in [nama_label, teks_label]:
++		l.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.85))
++		l.add_theme_constant_override("shadow_offset_x", 2)
++		l.add_theme_constant_override("shadow_offset_y", 2)
++	_feed_chat.add_child(baris)
++	_feed_baris.append({"row": baris, "sisa": FEED_CHAT_DURASI})
++	while _feed_baris.size() > FEED_CHAT_MAKS:
++		var lama: Dictionary = _feed_baris.pop_front()
++		(lama["row"] as HBoxContainer).queue_free()
++
++
++## Jumlah baris feed yang sedang tampil (untuk tes headless).
++func jumlah_pesan_melayang() -> int:
++	return _feed_baris.size()
++
++
++## Teks tiap baris feed yang sedang tampil, dari atas ke bawah
++## (untuk tes headless: urutan + baris yang dibuang).
++func pesan_melayang_terlihat() -> Array[String]:
++	var hasil: Array[String] = []
++	for entri in _feed_baris:
++		var row := entri["row"] as HBoxContainer
++		hasil.append((row.get_child(1) as Label).text)
++	return hasil
++
++
+ # ---------- panel overlay (misi / peta / smartboard / dashboard) ----------
+ ## Ukuran panel overlay yang dijamin muat di viewport — fungsi murni,
+ ## bisa dites di 390x844 portrait dan 844x390 landscape.
+@@ -2911,6 +2992,18 @@
+ 		_toast_timer -= delta
+ 		if _toast_timer <= 0.0:
+ 			_toast.visible = false
++	# BUBBLE-ML: tiap baris feed hidup 4 dtk; 1 dtk terakhir fade
++	# (modulate 1 -> 0), lalu baris dibuang.
++	for i in range(_feed_baris.size() - 1, -1, -1):
++		var entri: Dictionary = _feed_baris[i]
++		entri["sisa"] = float(entri["sisa"]) - delta
++		var sisa := float(entri["sisa"])
++		var row := entri["row"] as HBoxContainer
++		if sisa <= 0.0:
++			_feed_baris.remove_at(i)
++			row.queue_free()
++		elif sisa < FEED_CHAT_FADE:
++			row.modulate.a = sisa / FEED_CHAT_FADE
+ 	# FULLSCREEN: sinkron label tombol tiap 0,5 dtk (jaring pengaman
+ 	# kalau browser keluar fullscreen tanpa resize — mis. ESC).
+ 	_sinkron_layar_penuh_timer -= delta

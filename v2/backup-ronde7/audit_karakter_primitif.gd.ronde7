@@ -1,0 +1,290 @@
+extends Node
+## Audit anti-tembus karakter primitif v2 (Kirana, 17 Nov 2026) — headless:
+##   godot --headless --path . skrip/audit_karakter_primitif.tscn
+## Cek geometri 7 karakter (putra/putri/Bilal/Faris/Kyai/Ustadzah/
+## Satpam): penutup kepala menempel (tidak melayang), tangan + bahu
+## menyambung (tidak putus), kacamata di depan wajah, sarung menutupi
+## kaki, sandal menyentuh tanah, tinggi wajar, semua transform finite.
+## BUKAN tes gerak/pose — itu ranah agen lain. Keluar 0 bila lulus.
+
+var _lulus := 0
+var _gagal := 0
+
+
+func _cek(nama: String, ok: bool) -> void:
+	if ok:
+		_lulus += 1
+		print("LULUS: " + nama)
+	else:
+		_gagal += 1
+		print("GAGAL: " + nama)
+
+
+## AABB gabungan sebuah node + semua turunannya, di ruang dunia,
+## dihitung dari mesh (bukan rendering server — jalan di headless).
+func _aabb_dunia(n: Node) -> AABB:
+	var a := AABB()
+	var ada := false
+	if n is MeshInstance3D:
+		var mi := n as MeshInstance3D
+		if mi.mesh != null:
+			a = mi.global_transform * mi.mesh.get_aabb()
+			ada = true
+	for c in n.get_children():
+		var sub := _aabb_dunia(c)
+		if sub.size.x > 0.0 and sub.size.y > 0.0 and sub.size.z > 0.0:
+			if ada:
+				a = a.merge(sub)
+			else:
+				a = sub
+				ada = true
+	return a
+
+
+func _bagian(root: Node, nama: String) -> Node:
+	return root.find_child(nama, true, false)
+
+
+func _aabb_bagian(root: Node, nama: String) -> AABB:
+	var n := _bagian(root, nama)
+	if n == null:
+		return AABB()
+	return _aabb_dunia(n)
+
+
+## AABB gabungan beberapa node (mis. drape dada 3 bagian ronde 5).
+func _aabb_gabungan(root: Node, nama_list: Array) -> AABB:
+	var a := AABB()
+	var ada := false
+	for nama in nama_list:
+		var sub := _aabb_bagian(root, String(nama))
+		if sub.size.x > 0.0 and sub.size.y > 0.0 and sub.size.z > 0.0:
+			if ada:
+				a = a.merge(sub)
+			else:
+				a = sub
+				ada = true
+	return a
+
+
+func _semua_finite(n: Node) -> bool:
+	if n is Node3D:
+		var t := (n as Node3D).global_transform
+		if not t.origin.is_finite():
+			return false
+		for i in range(3):
+			if not t.basis[i].is_finite():
+				return false
+	for c in n.get_children():
+		if not _semua_finite(c):
+			return false
+	return true
+
+
+func _karakter() -> Array:
+	var putri := MissionData.OUTFIT_USTADZAH.duplicate()
+	putri["abaya"] = "#007a61"
+	putri["hijab_warna"] = "#f5e4cc"
+	putri["kacamata"] = true
+	putri["kulit"] = "#ffc09f"
+	var putra := MissionData.OUTFIT_DEFAULT.duplicate()
+	putra["kacamata"] = true
+	var bilal := MissionData.OUTFIT_DEFAULT.duplicate()
+	bilal["sarung"] = "#1d4e6b"
+	bilal["kulit"] = "#8a5a33"
+	bilal["kacamata"] = true
+	bilal["songkok"] = "#1a1a1a"
+	var faris := MissionData.OUTFIT_DEFAULT.duplicate()
+	faris["sarung"] = "#6b3a1d"
+	faris["kulit"] = "#e8b98a"
+	faris["kacamata"] = false
+	faris["songkok"] = "#faf7f0"
+	return [
+		["putra", "Santri Putra", putra, "peci"],
+		["putri", "Santriwati", putri, "hijab"],
+		["bilal", "Bilal", bilal, "peci"],
+		["faris", "Faris", faris, "peci"],
+		["kyai", "Ust. Aqsal Murad", MissionData.OUTFIT_KYAI, "serban"],
+		["ustadzah", "Ustadzah Mariyah", MissionData.OUTFIT_USTADZAH, "hijab"],
+		["satpam", "Satpam", MissionData.OUTFIT_SATPAM, "peci"],
+	]
+
+
+func _ready() -> void:
+	var daftar: Array = _karakter()
+	for item in daftar:
+		var slug: String = item[0]
+		var nama: String = item[1]
+		var outfit: Dictionary = item[2]
+		var tutup: String = item[3]
+		var built: Dictionary = SantriPlayer.build_visual(nama, outfit)
+		var root: Node3D = built["root"]
+		add_child(root)
+		for i in 3:
+			await get_tree().process_frame
+		_cek("%s: transform semua finite" % slug, _semua_finite(root))
+		var a_kepala := _aabb_bagian(root, "Kepala")
+		_cek("%s: kepala ada" % slug, a_kepala.size.x > 0.1)
+		# Penutup kepala MENEMPEL: AABB-nya beririsan dengan kepala
+		# (bukan melayang di atas) dan puncaknya di atas ubun.
+		var a_tutup := AABB()
+		if tutup == "peci":
+			a_tutup = _aabb_bagian(root, "Peci")
+		elif tutup == "serban":
+			a_tutup = _aabb_bagian(root, "Serban")
+		else:
+			a_tutup = _aabb_bagian(root, "HijabKubah")
+		_cek("%s: penutup kepala menempel (irisan dgn kepala)" % slug, a_tutup.intersects(a_kepala))
+		_cek("%s: penutup kepala di atas ubun (puncak %.2f > %.2f)" % [slug, a_tutup.end.y, a_kepala.end.y], a_tutup.end.y > a_kepala.end.y - 0.05)
+		# Bahu + tangan menyambung (tidak putus / tidak melayang).
+		# Bahu menyambung: santriwan/Kyai/Satpam ke torso; muslimah ke
+		# ABAYA (lengan keluar dari gamis, torso tersembunyi di dalam).
+		var badan := "Abaya" if bool(outfit.get("muslimah", false)) else "Torso"
+		_cek("%s: bahu kiri menyatu %s" % [slug, badan.to_lower()], _aabb_bagian(root, "BahuKiri").intersects(_aabb_bagian(root, badan)))
+		_cek("%s: bahu kanan menyatu %s" % [slug, badan.to_lower()], _aabb_bagian(root, "BahuKanan").intersects(_aabb_bagian(root, badan)))
+		_cek("%s: tangan kiri menyatu lengan bawah" % slug, _aabb_bagian(root, "TanganKiri").intersects(_aabb_bagian(root, "LenganBawahKiri")))
+		_cek("%s: tangan kanan menyatu lengan bawah" % slug, _aabb_bagian(root, "TanganKanan").intersects(_aabb_bagian(root, "LenganBawahKanan")))
+		# Tangan TIDAK menembus torso: pusat tangan di luar radius torso.
+		var a_tl := _aabb_bagian(root, "TanganKiri")
+		var a_tr := _aabb_bagian(root, "TanganKanan")
+		_cek("%s: tangan kiri di luar badan (|x| %.2f)" % [slug, absf(a_tl.get_center().x)], absf(a_tl.get_center().x) > 0.20)
+		_cek("%s: tangan kanan di luar badan (|x| %.2f)" % [slug, absf(a_tr.get_center().x)], absf(a_tr.get_center().x) > 0.20)
+		# Sarung/abaya menutupi kaki sampai mata kaki.
+		var a_sarung := _aabb_bagian(root, "Sarung")
+		if a_sarung.size.x <= 0.0:
+			a_sarung = _aabb_bagian(root, "Abaya")
+		_cek("%s: sarung/abaya bawah di mata kaki (%.2f)" % [slug, a_sarung.position.y], a_sarung.position.y <= 0.15)
+		_cek("%s: sarung/abaya atas menutupi pinggang (%.2f)" % [slug, a_sarung.end.y], a_sarung.end.y >= 0.85)
+		# Sandal menyentuh tanah (tidak melayang / tidak tenggelam).
+		var a_sandal := _aabb_bagian(root, "SandalKiri")
+		_cek("%s: sandal kiri menyentuh tanah (bawah %.3f)" % [slug, a_sandal.position.y], a_sandal.position.y >= -0.01 and a_sandal.position.y <= 0.03)
+		# Tinggi total wajar (puncak penutup kepala).
+		var a_semua := _aabb_dunia(root)
+		_cek("%s: tinggi total wajar (%.2f m)" % [slug, a_semua.end.y], a_semua.end.y >= 1.85 and a_semua.end.y <= 2.10)
+		# Kacamata (bila dipakai): bidang depan lensa/bingkai di depan
+		# wajah (z > 0.23, tidak menembus kepala); gagang memang
+		# menjulur ke belakang (z min ~0.13) menuju telinga.
+		if bool(outfit.get("kacamata", false)):
+			var a_kc := _aabb_bagian(root, "Kacamata")
+			_cek("%s: kacamata di depan wajah (depan z %.2f)" % [slug, a_kc.end.z], a_kc.end.z > 0.23 and a_kc.end.z < 0.32 and a_kc.position.z > 0.05)
+		# Detail khas per peran.
+		if slug == "kyai":
+			_cek("kyai: jenggot ada", _bagian(root, "Jenggot") != null)
+			_cek("kyai: kumis ada", _bagian(root, "Kumis") != null)
+			_cek("kyai: jenggot di bawah dagu (bawah %.2f)" % _aabb_bagian(root, "Jenggot").position.y, _aabb_bagian(root, "Jenggot").position.y < 1.45)
+		if slug == "satpam":
+			var lencana := _bagian(root, "Lencana")
+			_cek("satpam: lencana ada", lencana != null)
+			if lencana != null:
+				var a_l := _aabb_dunia(lencana)
+				_cek("satpam: lencana di dada kiri (x %.2f, y %.2f, z %.2f)" % [a_l.get_center().x, a_l.get_center().y, a_l.get_center().z], a_l.get_center().x > 0.03 and a_l.get_center().y > 1.05 and a_l.get_center().y < 1.35 and a_l.get_center().z > 0.18)
+		if slug == "putri" or slug == "ustadzah":
+			_cek("%s: jilbab drape belakang ada" % slug, _bagian(root, "HijabDrape") != null)
+			_cek("%s: jilbab tidak pakai kotak (drape bukan BoxMesh)" % slug, not ((_bagian(root, "HijabDrape") as MeshInstance3D).mesh is BoxMesh))
+			_cek("%s: strip jilbab bukan kotak" % slug, not ((_bagian(root, "HijabSisiKiri") as MeshInstance3D).mesh is BoxMesh))
+			# KIRANA 18 Nov 2026 (bug HP Mas 07:08 WIB: "jilbabnya kek
+			# bukan jilbab, kek lagi gendong benda aneh") — cek regresi
+			# geometri: drape depan HARUS menempel dada (bukan bundel
+			# yang menonjol), cape HARUS kerah bahu (bukan piring),
+			# drape belakang HARUS menempel punggung (bukan papan),
+			# bukaan wajah HARUS tetap terbuka.
+			# RONDE 2 (Kirana, 18 Nov 2026 — verdict Mas 07:47 WIB:
+			# "kaya ada piringan.. bagian belakang kepala terlihat"):
+			# cape DIHAPUS (bukan lagi kerah — tidak ada piringan sama
+			# sekali), diganti HijabLeher yang membungkus dagu/leher;
+			# kubah HARUS lebih lebar dari kepala (menutupi sisi
+			# kepala, bukan topi); drape HARUS lebar di atas (frustum,
+			# bukan elipsoid menyempit) supaya tengkuk tertutup.
+			# RONDE 5: drape dada kini 3 bagian (HijabDepan +
+			# HijabDepanBawah + HijabDepanUjung) — semua cek drape
+			# memakai AABB gabungan ketiganya.
+			var a_depan := _aabb_gabungan(root, ["HijabDepan", "HijabDepanBawah", "HijabDepanUjung"])
+			_cek("%s: drape depan menempel dada (depan z %.2f <= 0.30)" % [slug, a_depan.end.z], a_depan.end.z <= 0.30)
+			_cek("%s: cape piringan sudah dihapus" % slug, _bagian(root, "HijabCape") == null)
+			_cek("%s: leher jilbab ada" % slug, _bagian(root, "HijabLeher") != null)
+			var a_leher := _aabb_bagian(root, "HijabLeher")
+			_cek("%s: leher membungkus dagu/leher (irisan dgn kepala)" % slug, a_leher.intersects(_aabb_bagian(root, "Kepala")))
+			_cek("%s: leher menyambung ke abaya" % slug, a_leher.intersects(_aabb_bagian(root, "Abaya")))
+			# RONDE 3 (Kirana, 18 Nov 2026 — verdict Mas 08:12 WIB:
+			# "Jilbabnya harusnya di bagian depan juga. Sampai dagu."):
+			# HijabLeher duduk DI DALAM kepala di y=1,47..1,51, jadi
+			# kulit dagu/leher terlihat dari depan. Tambah HijabDagu
+			# (frustum) yang membungkus dagu bawah dari depan: puncak
+			# harus mencapai garis dagu (y~1,51, di bawah mulut 1,55),
+			# depan harus di depan permukaan kepala di y=1,50 (0,179)
+			# tapi tetap di belakang mulut (z=0,210), dan ujung bawah
+			# harus masuk ke abaya/dada (tidak menggantung).
+			_cek("%s: dagu jilbab ada" % slug, _bagian(root, "HijabDagu") != null)
+			_cek("%s: dagu jilbab tidak pakai kotak (bukan BoxMesh)" % slug, not ((_bagian(root, "HijabDagu") as MeshInstance3D).mesh is BoxMesh))
+			var a_dagu := _aabb_bagian(root, "HijabDagu")
+			_cek("%s: dagu mencapai garis dagu (puncak y %.2f, 1.50..1.53)" % [slug, a_dagu.end.y], a_dagu.end.y >= 1.50 and a_dagu.end.y <= 1.53)
+			_cek("%s: dagu menutupi leher depan (depan z %.2f >= 0.19)" % [slug, a_dagu.end.z], a_dagu.end.z >= 0.19)
+			_cek("%s: dagu tidak menutupi mulut (depan z %.2f < 0.21, puncak y %.2f < 1.55)" % [slug, a_dagu.end.z, a_dagu.end.y], a_dagu.end.z < 0.21 and a_dagu.end.y < 1.55)
+			_cek("%s: dagu menyambung ke bawah (bawah y %.2f <= 1.35, irisan dgn abaya)" % [slug, a_dagu.position.y], a_dagu.position.y <= 1.35 and a_dagu.intersects(_aabb_bagian(root, "Abaya")))
+			var a_kubah := _aabb_bagian(root, "HijabKubah")
+			_cek("%s: kubah lebih lebar dari kepala (lebar x %.2f >= 0.52)" % [slug, a_kubah.size.x], a_kubah.size.x >= 0.52)
+			var a_drape := _aabb_bagian(root, "HijabDrape")
+			_cek("%s: drape belakang menempel punggung (belakang z %.2f >= -0.32)" % [slug, a_drape.position.z], a_drape.position.z >= -0.32)
+			_cek("%s: drape lebar di atas (lebar x %.2f >= 0.48)" % [slug, a_drape.size.x], a_drape.size.x >= 0.48)
+			var a_sisi_l := _aabb_bagian(root, "HijabSisiKiri")
+			var a_sisi_r := _aabb_bagian(root, "HijabSisiKanan")
+			# Strip membingkai tepi wajah (pusat |x| ~0.225, batang
+			# ramping) — bukan menutupi mata/mulut. Diukur dari pusat
+			# + lebar AABB karena ujung bawah strip dimiringkan ke
+			# rahang (tepi dalam AABB bukan bukaan di tinggi mata).
+			_cek("%s: bukaan wajah terbuka (strip di tepi wajah, pusat |x| %.2f, lebar %.2f)" % [slug, absf(a_sisi_l.get_center().x), a_sisi_l.size.x], absf(a_sisi_l.get_center().x) >= 0.20 and absf(a_sisi_r.get_center().x) >= 0.20 and a_sisi_l.size.x <= 0.13 and a_sisi_r.size.x <= 0.13)
+			# RONDE 4 (Kirana, 18 Nov 2026 — verdict Mas 09:37 WIB:
+			# "Ya kayak jilbab.. menutup sampai dada."): drape depan
+			# harus MENUTUPI DADA (bukan tambalan kecil di dada atas),
+			# kubah harus LONGGAR (bukan topi ketat), strip harus
+			# menyambung ke drape dada.
+			_cek("%s: drape dada sampai dada tengah (bawah y %.2f <= 0.90)" % [slug, a_depan.position.y], a_depan.position.y <= 0.90)
+			_cek("%s: drape dada lebar menutupi dada (lebar x %.2f >= 0.44)" % [slug, a_depan.size.x], a_depan.size.x >= 0.44)
+			_cek("%s: drape dada menyambung ke abaya (irisan dgn abaya)" % slug, a_depan.intersects(_aabb_bagian(root, "Abaya")))
+			_cek("%s: kubah longgar (lebar x %.2f >= 0.58)" % [slug, a_kubah.size.x], a_kubah.size.x >= 0.58)
+			_cek("%s: strip menyambung ke drape dada (bawah y %.2f <= 1.32)" % [slug, a_sisi_l.position.y], a_sisi_l.position.y <= 1.32)
+			# RONDE 5 (Kirana, 18 Nov 2026 — gambar konsep jilbab
+			# v1 DI-ACC Mas 09:56 WIB: "Nah ini bagus.. jilbab
+			# beneran." 3D mengikuti gambar): drape dada 3 bagian.
+			# (1) puncak drape sampai y=1,42 — TIDAK ADA pita hijau
+			# di kerah; (2) tepi bawah melengkung U: rim tier bawah
+			# di ~0,95, lidah tengah menjuntai di bawahnya;
+			# (3) lidah lebar menutupi dada, bukan tambalan sempit.
+			_cek("%s: drape dada 3 bagian ada" % slug, _bagian(root, "HijabDepanBawah") != null and _bagian(root, "HijabDepanUjung") != null)
+			_cek("%s: drape dada bukan kotak" % slug, not ((_bagian(root, "HijabDepanBawah") as MeshInstance3D).mesh is BoxMesh) and not ((_bagian(root, "HijabDepanUjung") as MeshInstance3D).mesh is BoxMesh))
+			_cek("%s: drape dada menutupi kerah (puncak y %.2f >= 1.41)" % [slug, a_depan.end.y], a_depan.end.y >= 1.41)
+			var a_depan_bawah := _aabb_bagian(root, "HijabDepanBawah")
+			var a_depan_ujung := _aabb_bagian(root, "HijabDepanUjung")
+			_cek("%s: tepi bawah melengkung U (rim bawah y %.2f >= 0.93, lidah bawah y %.2f <= 0.90)" % [slug, a_depan_bawah.position.y, a_depan_ujung.position.y], a_depan_bawah.position.y >= 0.93 and a_depan_ujung.position.y <= 0.90)
+			_cek("%s: lidah bawah lebar menutupi dada (lebar x %.2f >= 0.44)" % [slug, a_depan_ujung.size.x], a_depan_ujung.size.x >= 0.44)
+			# RONDE 6 (Kirana, 18 Nov 2026 — verdict Mas 10:35 WIB:
+			# "Malah jadi kek orang kristen"): depan terbaca wimple
+			# + veil — lubang wajah bundar rapat + drape panel datar.
+			# (1) lipatan lembut TERLIHAT di drape (4 kapsul
+			# diagonal, warna digelapkan); (2) strip dimekarkan ke
+			# bawah (bukaan trapesium, bukan bundar); (3) lidah
+			# bawah melebar melewati bahu; (4) sambungan tier
+			# tidak bersilangan (ujung atas tier bawah masuk ke
+			# dalam tier atas — bintik gelap ronde 5 hilang).
+			_cek("%s: lipatan drape ada" % slug, _bagian(root, "HijabLipatanKiriAtas") != null and _bagian(root, "HijabLipatanKananAtas") != null and _bagian(root, "HijabLipatanKiriBawah") != null and _bagian(root, "HijabLipatanKananBawah") != null)
+			_cek("%s: lipatan drape bukan kotak" % slug, not ((_bagian(root, "HijabLipatanKiriAtas") as MeshInstance3D).mesh is BoxMesh) and not ((_bagian(root, "HijabLipatanKananBawah") as MeshInstance3D).mesh is BoxMesh))
+			_cek("%s: strip melebar ke bawah (tepi luar |x| %.2f >= 0.25)" % [slug, absf(a_sisi_l.position.x)], absf(a_sisi_l.position.x) >= 0.25 and absf(a_sisi_r.end.x) >= 0.25)
+			_cek("%s: lidah bawah melebar melewati bahu (lebar x %.2f >= 0.50)" % [slug, a_depan_ujung.size.x], a_depan_ujung.size.x >= 0.50)
+			# RONDE 7 (Kirana, 18 Nov 2026 — koreksi Mas 10:54 WIB:
+			# "Jilbab harus menutupi pipi lalu ke dagu dan ke dada.
+			# Seperti referensi."): ronde 6 melebarkan bukaan
+			# (trapesium) sehingga pipi terekspos — arah salah.
+			# Kini 2 bola pipih (HijabPipi) membungkus pipi:
+			# grid Python membuktikan 0 titik kulit di zona pipi
+			# (y 1,55..1,66, |x| 0,14..0,22) dan 0 kain di tengah
+			# wajah (mata/hidung/mulut/alis).
+			_cek("%s: pipi jilbab ada" % slug, _bagian(root, "HijabPipiKiri") != null and _bagian(root, "HijabPipiKanan") != null)
+			_cek("%s: pipi jilbab bukan kotak" % slug, not ((_bagian(root, "HijabPipiKiri") as MeshInstance3D).mesh is BoxMesh) and not ((_bagian(root, "HijabPipiKanan") as MeshInstance3D).mesh is BoxMesh))
+			var a_pipi_r := _aabb_bagian(root, "HijabPipiKanan")
+			var a_pipi_l := _aabb_bagian(root, "HijabPipiKiri")
+			_cek("%s: pipi menutupi pipi (depan z %.2f >= 0.19, irisan dgn kepala)" % [slug, a_pipi_r.end.z], a_pipi_r.end.z >= 0.19 and a_pipi_r.intersects(_aabb_bagian(root, "Kepala")) and a_pipi_l.end.z >= 0.19 and a_pipi_l.intersects(_aabb_bagian(root, "Kepala")))
+			_cek("%s: pipi tidak menutupi tengah wajah (tepi dalam |x| %.2f >= 0.07)" % [slug, a_pipi_r.position.x], a_pipi_r.position.x >= 0.07 and absf(a_pipi_l.end.x) >= 0.07)
+		remove_child(root)
+		root.queue_free()
+	print("AUDIT KARAKTER: %d lulus, %d gagal" % [_lulus, _gagal])
+	get_tree().quit(0 if _gagal == 0 else 1)

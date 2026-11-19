@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://fototabrakan01"]
+
+[ext_resource type="Script" path="res://skrip/foto_tabrakan.gd" id="1"]
+
+[node name="FotoTabrakan" type="Node"]
+script = ExtResource("1")

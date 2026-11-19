@@ -1,0 +1,3 @@
+CEK TEMBUS: /home/hatch/workspace/pesantren-verse/v2/model-3d/lingkungan/pagar/pagar-bambu.blend — 2 objek mesh
+  TEMBUS: Bilah_Bambu <-> Rel_Tiang_Jati : 363 pasang segitiga
+TOTAL PASANGAN TEMBUS: 1

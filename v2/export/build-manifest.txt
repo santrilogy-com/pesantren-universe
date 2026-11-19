@@ -1,0 +1,11 @@
+build-manifest — Pesantren Universe multiplayer (Web + Dedicated Server)
+waktu: 2026-11-18 04:41:24 UTC
+commit: no-git-repo
+fingerprint-proyek: 71467c1fa72a38596fe82d93ca0e6b8c18b6aabc9b7a8a541887872ef9a513e1
+sumber-build: snapshot sementara dari /home/hatch/workspace/pesantren-verse/v2/godot-dunia (dihapus setelah build)
+godot: 4.7.2.stable.official.ed1daf0bf
+web: /home/hatch/workspace/pesantren-verse/v2/export/web/index.html
+web-index.html sha256: bf08982896bd1b7ef5b4dab5e29d17e57a28411137f03703063d6c0b1f15e79d bytes: 5538
+web-index.pck sha256: 3dbc6ef8e78afe1387e45e3c73382d9ad432e1fe9482359cb7584cb31a367e52 bytes: 23503844
+server: /home/hatch/workspace/pesantren-verse/v2/export/server/pesantren-verse-server
+server sha256: d9f79ab89b5ae369aeed11c6052d402e8218cd503bf85b4a235f9c30c46a7c63 bytes: 73519416

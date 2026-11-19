@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://skrip/foto_audit_tekstur.gd" id="1_foto"]
+
+[node name="FotoAuditTekstur" type="Node"]
+script = ExtResource("1_foto")
