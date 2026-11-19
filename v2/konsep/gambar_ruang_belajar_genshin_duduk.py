@@ -11,6 +11,9 @@ Revisi §8 atas koreksi Mas (19 Nov 15:00):
   2. Sanusi DUDUK + papan tulis KECIL di sampingnya untuk keterangan
      (isi papan mengikuti pesan yang sedang dibahas). Putri: sama dengan
      Ustzh. Fatimah (mockup C, latar Musholla).
+Revisi §8 lanjutan (koreksi Mas 19 Nov 15:09): teks penghitung "Pesan X
+dari 14 • Materi" di pojok kanan bawah kotak dialog DIHAPUS — hanya
+bilah emas tipis di tepi bawah kotak yang tetap (progres tanpa teks).
 Alur 14 pesan + poin 35 + cabang "Belum" maks 2x + resume TIDAK berubah.
 Palet GayaMisi, font Baloo 2. Latar = render gerbang/musholla (stand-in
 dunia; di game latarnya dunia live tempat ustadz duduk).
@@ -209,8 +212,10 @@ def pesan_dialog(d, teks, fsz=22, y0=574):
         y += lh
     return garis, y
 
-def footer_progres(d, kiri, progres):
-    d.text((1202, 668), kiri, font=font(15), fill=KREM_R, anchor="ra")
+def footer_progres(d, progres):
+    # Revisi §8 (koreksi Mas 19 Nov 15:09): teks penghitung "Pesan X dari 14
+    # • Materi" DIHAPUS — hanya bilah emas tipis di tepi bawah kotak yang
+    # tetap sebagai indikator progres tanpa teks.
     x0, x1, by = 40, 1240, 690
     d.rectangle([x0, by, x1, by + 5], fill=(10, 18, 22))
     d.rectangle([x0, by, x0 + (x1 - x0) * progres, by + 5], fill=EMAS)
@@ -262,7 +267,7 @@ def mockup_a():
     kepala_dialog(d)
     pesan_dialog(d, "kalam itu artinya adalah susunan kalimat. Kalimat disini "
                     "maksudnya adalah kata dalam bahasa indonesia. Paham?")
-    footer_progres(d, "Pesan 2 dari 14  •  Materi", 2 / 14)
+    footer_progres(d, 2 / 14)
     img.convert("RGB").save(f"{OUT}/konsep-ruang-belajar-genshin-duduk-v1.png")
 
 # ---------------------------------------------------------------- B. DUDUK — SEDANG BICARA (bukan mengetik)
@@ -293,8 +298,7 @@ def mockup_b():
     lx = 78 + d.textlength(garis[-1], font=f) + 6
     ly = 572 + (len(garis) - 1) * int(21 * 1.35)
     d.rectangle([lx, ly + 2, lx + 10, ly + 24], fill=EMAS_T)
-    footer_progres(d, "Pesan 4 dari 14  •  Materi — penjelasan ulang 1 dari 2",
-                   4 / 14)
+    footer_progres(d, 4 / 14)
     img.convert("RGB").save(f"{OUT}/konsep-ruang-belajar-genshin-duduk-bicara-v1.png")
 
 # ---------------------------------------------------------------- C. DUDUK — PUTRI (Fatimah, Musholla)
@@ -312,7 +316,7 @@ def mockup_c():
     kepala_dialog(d, nama="Ustzh. Fatimah")
     pesan_dialog(d, "kalam itu artinya adalah susunan kalimat. Kalimat disini "
                     "maksudnya adalah kata dalam bahasa indonesia. Paham?")
-    footer_progres(d, "Pesan 2 dari 14  •  Materi", 2 / 14)
+    footer_progres(d, 2 / 14)
     img.convert("RGB").save(f"{OUT}/konsep-ruang-belajar-genshin-duduk-fatimah-v1.png")
 
 mockup_a()

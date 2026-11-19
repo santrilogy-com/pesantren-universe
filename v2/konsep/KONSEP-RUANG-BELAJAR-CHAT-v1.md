@@ -71,9 +71,11 @@ landscape, dim di belakang) — isinya diganti chat:
 - **Tombol jawaban (di bawah chat):** maks 2 untuk cek ("Paham, lanjut ›"
   emas / "Belum, jelaskan lagi" outline); 4 untuk soal (A–D outline, huruf
   seperti sekarang). Pola tombol = DialogMisi (emas pertama + panah ›).
-- **Footer:** "Pesan X dari 14 • Materi/Latihan/Kuis" + bilah progres emas +
-  chip "× Tutup". Pill 3 langkah ("Materi/Latihan/Kuis") DIGANTI bilah
-  progres — posisi dalam percakapan lebih penting daripada nama langkah.
+- **Footer:** ~~"Pesan X dari 14 • Materi/Latihan/Kuis" +~~ bilah progres
+  emas + chip "× Tutup". **(Teks "Pesan X dari 14" DIHAPUS §8,
+  19 Nov 15:09 — hanya bilah emas yang tetap.)** Pill 3 langkah
+  ("Materi/Latihan/Kuis") DIGANTI bilah progres — posisi dalam
+  percakapan lebih penting daripada nama langkah.
 - **Catatan mockup:** "×" di mockup ditulis "×" (U+00D7) karena Baloo 2 di
   PIL tak membawa glif "✕" (U+2715); di game tetap "✕" seperti sekarang.
   Contoh Arab di mockup ditulis transliterasi (PIL tak membentuk huruf
@@ -333,8 +335,10 @@ cabang "Belum"). Skrip: `gambar_ruang_belajar_genshin.py`.
 - **Tombol "Auto" kiri atas** = saklar alur otomatis (pertanyaan §5
   no. 2): Auto ON = materi mengalir sendiri; Auto OFF = tiap pesan
   butuh tap.
-- **Progres tetap ada** — bilah emas tipis di tepi bawah kotak + teks
-  kecil "Pesan X dari 14 • Materi" di kanan bawah kotak.
+- **Progres tetap ada** — bilah emas tipis di tepi bawah kotak.
+  ~~+ teks kecil "Pesan X dari 14 • Materi" di kanan bawah kotak.~~
+  **DIHAPUS §8 (koreksi Mas 19 Nov 15:09)** — penghitung pesan
+  dihapus; bilah emas tipis tetap sebagai progres tanpa teks.
 - **Efek bicara (REVISI §8 — dulu "efek ketik"):** huruf muncul
   satu-satu + kursor blok emas (digambar, bukan glif font) = penanda
   "sedang bicara". ~~Status "Ust. Sanusi sedang mengetik…" di kiri
@@ -400,6 +404,13 @@ berubah).
    kecil buat keterangan."
    → Saat belajar, ustadz DUDUK dengan papan tulis KECIL di sampingnya
    untuk keterangan.
+
+**Koreksi Mas (19 Nov 15:09):**
+3. "Tidak usah pesan .. dari ..." → HAPUS tulisan "Pesan X dari 14 •
+   Materi" (penghitung pesan di pojok kanan bawah kotak dialog).
+   Bilah emas tipis di tepi bawah kotak TETAP sebagai indikator
+   progres tanpa teks. Ketiga mockup §8 di-render ulang tanpa teks
+   penghitung.
 
 **Yang TIDAK berubah:** alur 14 pesan (§2), poin 35, cabang "Belum" maks
 2×, resume `rb_chat_pos`, anti-farming (§3), diagram alur, tampilan
@@ -485,9 +496,10 @@ Alasan Sinta memilih ini (bukan tampil langsung penuh):**
   dialog belajar terbuka.
 - **Tes** (`test_ruang_belajar_chat.gd`, tambahan dari §4/§7): ustadz
   duduk saat dialog (pose duduk aktif), papan tulis tampil dengan isi
-  mengikuti pesan, TIDAK ADA teks "mengetik" di mana pun, tombol
-  jawaban tidak pernah dalam keadaan redup/terkunci, pilihan muncul
-  setelah kalimat selesai.
+  mengikuti pesan, TIDAK ADA teks "mengetik" di mana pun, TIDAK ADA
+  teks penghitung "Pesan X dari 14" di mana pun (bilah emas tipis
+  tetap), tombol jawaban tidak pernah dalam keadaan redup/terkunci,
+  pilihan muncul setelah kalimat selesai.
 
 ### Catatan mockup (jujur)
 
