@@ -3514,7 +3514,19 @@ func _lantai_visual_y(pos: Vector3) -> float:
 	if absf(pos.x) <= 8.0 and pos.z >= -24.0 and pos.z <= -4.0:
 		return 0.5
 	if absf(pos.x) <= 3.6 and pos.z >= -4.1 and pos.z <= 1.6:
-		return TanggaSurau.pijakan(pos.z)
+		# Lebar PER ANAK TANGGA (cermin npc.gd _tinggi_tanah):
+		# T3 3,6 / T2 3,3 / T1 3,0 / serambi 3,2. Dulu satu lebar
+		# 3,6 untuk semua z — rumah Kyai (-3,5,-2,0) di rumput
+		# barat serambi salah terbaca 0,5 (Sinta, 19 Nov 2026).
+		var lebar := 3.2
+		if pos.z >= 0.4:
+			lebar = 3.6
+		elif pos.z >= -0.2:
+			lebar = 3.3
+		elif pos.z >= -0.8:
+			lebar = 3.0
+		if absf(pos.x) <= lebar:
+			return TanggaSurau.pijakan(pos.z)
 	return 0.0
 
 

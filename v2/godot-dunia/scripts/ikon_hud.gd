@@ -122,9 +122,12 @@ func _bintang() -> void:
 
 
 func _bintang_kosong() -> void:
+	# Garis TIPIS (bukan TEBAL): garis TEBAL menutupi hampir seluruh
+	# bintang kecil (jari-jari dalam cuma 6.5) sehingga bintang
+	# "kosong" terbaca seperti bintang isi di foto web 19 Nov 2026.
 	var titik := _bintang_poin()
 	titik.append(titik[0])
-	draw_polyline(titik, _c, TEBAL, true)
+	draw_polyline(titik, _c, TEBAL_TIPIS, true)
 
 
 func _gambar() -> void:

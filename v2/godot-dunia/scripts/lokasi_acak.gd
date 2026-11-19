@@ -44,7 +44,12 @@ const KANDIDAT: Array[Dictionary] = [
 	{
 		"id": "surau",
 		"nama": "Surau",
-		"pos": Vector3(0, 0, -14),
+		# y=0,5 = lantai visual Surau (plinth GLB 0,5 m, tanpa
+		# collider). Sanusi DIAM (tidak pernah _langkah_ke) — y
+		# spawn 0 membuatnya tenggelam separuh badan saat santri
+		# menghampirinya (Sinta, 19 Nov 2026 — tindak lanjut
+		# temuan lantai Surau). Kandidat lain tanah terbuka y=0.
+		"pos": Vector3(0, 0.5, -14),
 		"status": "live",
 		"sumber": "KONSEP-TATA-LETAK.md §2 — Surau (0,−14), live di game",
 	},
