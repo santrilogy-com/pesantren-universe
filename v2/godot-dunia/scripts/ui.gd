@@ -995,7 +995,12 @@ func _on_gender_dipilih(jk: String) -> void:
 func _set_centang_tombol(b: Button, aktif: bool) -> void:
 	if b == null:
 		return
-	var ikon := b.get_meta("ikon_centang") as IkonHUD
+	# get_meta() MELEMPAR ERROR bila kunci belum ada — bahkan bentuk
+	# dua argumen (default null) tetap error di Godot 4.7.2 (terbukti
+	# probe /tmp/probe_meta.gd). Jadi: cek has_meta() dulu.
+	var ikon: IkonHUD = null
+	if b.has_meta("ikon_centang"):
+		ikon = b.get_meta("ikon_centang") as IkonHUD
 	if ikon == null:
 		ikon = IkonHUD.new()
 		ikon.jenis = "centang"

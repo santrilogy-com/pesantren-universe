@@ -32,6 +32,17 @@ func _on_register_sinyal(ig: String, nama: String, jk: String) -> void:
 	_sinyal_register.append([ig, nama, jk])
 
 
+## Centang pilihan-aktif kini IKON gambar-kode (Tara, 19 Nov 2026 —
+## "✓" teks tofu di web), bukan prefix teks tombol.
+func _centang_terlihat(b: Button) -> bool:
+	# get_meta() error bila kunci belum ada (bahkan bentuk 2-argumen
+	# di 4.7.2) — cek has_meta() dulu.
+	if not b.has_meta("ikon_centang"):
+		return false
+	var ikon := b.get_meta("ikon_centang") as IkonHUD
+	return ikon != null and ikon.visible
+
+
 func _ready() -> void:
 	var packed := load("res://main.tscn") as PackedScene
 	_main = packed.instantiate()
@@ -50,8 +61,8 @@ func _ready() -> void:
 	_cek("tombol putra ada", ui._reg_putra_btn != null)
 	_cek("tombol putri ada", ui._reg_putri_btn != null)
 	_cek("gender default putra", ui.gender_daftar_terpilih() == "putra")
-	_cek("tombol putra bertanda terpilih", ui._reg_putra_btn.text.begins_with("✓"))
-	_cek("tombol putri belum terpilih", not ui._reg_putri_btn.text.begins_with("✓"))
+	_cek("tombol putra bertanda terpilih", _centang_terlihat(ui._reg_putra_btn))
+	_cek("tombol putri belum terpilih", not _centang_terlihat(ui._reg_putri_btn))
 	# Metrik: kotak daftar muat di layar HP portrait 390x844.
 	# tinggi_viewport di sini LOGIS (visible rect), bukan fisik:
 	# skala 0.3 -> tinggi logis = 844 / 0.3. Mode kompak tidak
@@ -62,8 +73,8 @@ func _ready() -> void:
 	# Toggle ke putri.
 	ui._on_gender_dipilih("putri")
 	_cek("toggle putri", ui.gender_daftar_terpilih() == "putri")
-	_cek("tombol putri bertanda terpilih", ui._reg_putri_btn.text.begins_with("✓"))
-	_cek("tombol putra lepas tanda", not ui._reg_putra_btn.text.begins_with("✓"))
+	_cek("tombol putri bertanda terpilih", _centang_terlihat(ui._reg_putri_btn))
+	_cek("tombol putra lepas tanda", not _centang_terlihat(ui._reg_putra_btn))
 	ui._on_gender_dipilih("putra")
 	_cek("toggle kembali putra", ui.gender_daftar_terpilih() == "putra")
 	# Validasi: nama terlalu pendek -> galat, sinyal TIDAK jalan.
@@ -153,7 +164,7 @@ func _ready() -> void:
 	for i in 3:
 		await get_tree().process_frame
 	var pos_putri: Vector3 = _main._player.global_position
-	_cek("spawn putri (130,14)", absf(pos_putri.x - 130.0) < 1.0 and absf(pos_putri.z - 14.0) < 1.0)
+	_cek("spawn putri (140,16)", absf(pos_putri.x - 140.0) < 1.0 and absf(pos_putri.z - 16.0) < 1.0)
 	_cek("visual putri abaya+jilbab", _main._player.apakah_muslimah())
 	_main._terapkan_register_server({"id": "PV-0005", "nama": "Tes Putra", "ig_username": "tes.putra.x", "jenis_kelamin": "putra"})
 	_main._masuk_pesantren("Tes spawn putra")
@@ -178,7 +189,7 @@ func _ready() -> void:
 		print("LIVE ID: " + id_live + " | ig=" + IG_TES + " | gender=putri")
 		_cek("LIVE gender putri tersimpan", String(_main._save.get("jenis_kelamin", "")) == "putri")
 		var pos_live: Vector3 = _main._player.global_position
-		_cek("LIVE spawn putri (130,14)", absf(pos_live.x - 130.0) < 1.0 and absf(pos_live.z - 14.0) < 1.0)
+		_cek("LIVE spawn putri (140,16)", absf(pos_live.x - 140.0) < 1.0 and absf(pos_live.z - 16.0) < 1.0)
 	elif ui._reg_error.text.contains("sudah dipakai"):
 		# Tes diulang: akun sudah ada dari jalan sebelumnya — verifikasi
 		# lewat login live bahwa akun itu memang putri, lalu masuk.

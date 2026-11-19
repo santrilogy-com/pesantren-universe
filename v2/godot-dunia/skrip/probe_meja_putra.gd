@@ -63,7 +63,61 @@ func _ready() -> void:
 		q.collision_mask = 0xFFFFFFFF
 		var hit := ruang.intersect_ray(q)
 		print("PROBE-LANTAI %s: %s" % [label[0], str(hit.get("position", "TIDAK-KENA"))])
-	# Screenshot di momen yang sama (bandingkan dengan foto script):
+	# PANEL: kenapa tidak ter-render? Cetak visible/material/AABB tiap
+	# anak meja, lalu paksa panel depan jadi MERAH TERANG — kalau merah
+	# muncul di screenshot, nodenya me-render dan mat_kayu-nya yang
+	# bermasalah; kalau tetap tidak ada, node-nya tidak ter-render.
+	var meja2: Node3D = _main._meja_belajar
+	if meja2 != null:
+		for anak in meja2.get_children():
+			var mi := anak as MeshInstance3D
+			if mi == null:
+				continue
+			var mat := mi.material_override as StandardMaterial3D
+			var uk := Vector3.ZERO
+			if mi.mesh is BoxMesh:
+				uk = (mi.mesh as BoxMesh).size
+			print("PROBE-PANEL anak ukuran=%s visible=%s mat=%s albedo=%s aabb=%s" % [str(uk), str(mi.visible), str(mat != null), str(mat.albedo_color) if mat != null else "-", str(mi.get_aabb())])
+			if uk == Vector3(1.07, 0.5, 0.03):
+				var merah := StandardMaterial3D.new()
+				merah.albedo_color = Color("#ff0000")
+				mi.material_override = merah
+				print("PROBE-PANEL panel depan dipaksa MERAH")
+	# SINAR KAMERA->PANEL: apa yang menghalangi? Raycast dari kamera
+	# ke tengah panel depan — laporkan collider PERTAMA yang kena.
+	var cam2 := get_viewport().get_camera_3d()
+	if cam2 != null and meja2 != null:
+		var target_panel := Vector3(0, 0.30, -13.11)
+		var q2 := PhysicsRayQueryParameters3D.create(cam2.global_position, target_panel)
+		q2.collision_mask = 0xFFFFFFFF
+		var hit2 := ruang.intersect_ray(q2)
+		print("PROBE-SINAR kamera=%s target=%s hit=%s" % [str(cam2.global_position), str(target_panel), str(hit2.get("position", "TIDAK-KENA")) + " collider=" + str(hit2.get("collider", "-"))])
+		# Bola uji visual: merah di posisi panel, hijau 1 m lebih dekat
+		# ke kamera (y sama), biru di atas meja (y=1,0), kuning 2 m ke
+		# samping (y sama) — screenshot membuktikan mana yang kelihatan.
+		# Tangga bola: cari tinggi PASTI permukaan yang menyembunyikan
+		# semua benda di y=0,3 (bola merah/hijau/kuning tak kelihatan,
+		# biru y=1,0 kelihatan) — dugaanku lantai visual Surau di
+		# ~0,5 (raycast fisika tak bisa melihatnya: tak ada collider).
+		for uji in [
+			["tangga-04", Vector3(-0.8, 0.40, -13.11), Color("#ff8800")],
+			["tangga-05", Vector3(-0.4, 0.50, -13.11), Color("#ff00ff")],
+			["tangga-06", Vector3(0, 0.60, -13.11), Color("#00ffff")],
+			["tangga-07", Vector3(0.4, 0.70, -13.11), Color("#ffffff")],
+			["tangga-08", Vector3(0.8, 0.80, -13.11), Color("#8800ff")],
+		]:
+			var bola := MeshInstance3D.new()
+			var sm := SphereMesh.new()
+			sm.radius = 0.12
+			sm.height = 0.24
+			bola.mesh = sm
+			var bm := StandardMaterial3D.new()
+			bm.albedo_color = uji[2]
+			bola.material_override = bm
+			bola.position = uji[1]
+			bola.name = "BolaUji_" + String(uji[0])
+			_main.add_child(bola)
+			print("PROBE-BOLA %s di %s" % [uji[0], str(uji[1])])
 	# kalau panel ADA di screenshot ini tapi TIDAK di foto script,
 	# maka jalurnya yang beda; kalau sama-sama tidak ada, panelnya
 	# memang tidak ter-render di adegan putra walau ada di tree.

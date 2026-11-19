@@ -152,6 +152,10 @@ var _dialog_cam_yaw_lama := 0.0
 var _dialog_cam_pitch_lama := -0.35
 var _papan_belajar: Node3D = null
 var _meja_belajar: Node3D = null
+## Tinggi y ustadz SEBELUM adegan belajar (dikembalikan saat
+## adegan berakhir — lihat _mulai_adegan_belajar).
+var _guru_y_sebelum_adegan := 0.0
+var _guru_dinaikkan_adegan := false
 var _papan_judul: Label3D = null
 var _papan_isi: Label3D = null
 const TAKBIR_TAHAN_DETIK := 4.0
@@ -3495,10 +3499,41 @@ func _pengajar_dialog() -> SantriNPC:
 ## Mulai adegan belajar: ustadz DUDUK menghadap pemain, papan
 ## tulis kecil di sampingnya, kamera membingkai beliau, HUD
 ## disembunyikan. Dipanggil SEBELUM buka_ruang_belajar().
+## Tinggi lantai VISUAL di posisi dunia (Sinta, 19 Nov 2026 —
+## akar "tenggelam"): lantai FISIK (raycast) di y=0, tapi lantai
+## visual Surau (GLB 20x16 m, pusat (0,-14)) di y=0,5 — NPC
+## (Node3D, tanpa fisika) yang diteleport ke y=0 di Surau
+## tenggelam 0,5 m ke dalam lantai. Probe tangga bola 19 Nov:
+## semua benda di y<=0,5 tak kelihatan di (0,-13), bola y>=0,6
+## kelihatan; raycast kamera->panel TIDAK KENA apa-apa (lantai
+## visual tak punya collider — raycast tembus ke tanah y=0).
+##   - Dalam jejak gedung Surau (|x|<=8, z -24..-4): 0,5.
+##   - Anak tangga + serambi depan pintu: TanggaSurau.pijakan(z).
+##   - Di luar itu: 0,0 (tanah plaza / halaman putri).
+func _lantai_visual_y(pos: Vector3) -> float:
+	if absf(pos.x) <= 8.0 and pos.z >= -24.0 and pos.z <= -4.0:
+		return 0.5
+	if absf(pos.x) <= 3.6 and pos.z >= -4.1 and pos.z <= 1.6:
+		return TanggaSurau.pijakan(pos.z)
+	return 0.0
+
+
 func _mulai_adegan_belajar() -> void:
 	var guru := _pengajar_dialog()
 	if guru == null or _player == null:
 		return
+	# NAIKKAN ustadz ke lantai VISUAL sebelum duduk (Sinta, 19 Nov
+	# 2026): di Surau lantainya 0,5 — kalau tidak, ia duduk
+	# tenggelam 0,5 m di lantai dan meja + papan ikut tenggelam
+	# (meja/papan memakai guru.global_position.y). Dikembalikan
+	# ke y semula saat adegan berakhir (_akhiri_adegan_belajar).
+	_guru_y_sebelum_adegan = guru.global_position.y
+	var lantai_y := _lantai_visual_y(guru.global_position)
+	if lantai_y > guru.global_position.y + 0.01:
+		guru.global_position.y = lantai_y
+		_guru_dinaikkan_adegan = true
+	else:
+		_guru_dinaikkan_adegan = false
 	# Kamera dialog: dari arah pemain, digeser 0,6 rad (tiga
 	# perempat) supaya ustadz tidak tampak datar dari depan.
 	var ke_pemain := _player.global_position - guru.global_position
@@ -3525,6 +3560,12 @@ func _akhiri_adegan_belajar() -> void:
 	var guru := _pengajar_dialog()
 	if guru != null:
 		guru.berdiri_belajar()
+		# Kembalikan y ustadz ke sebelum adegan (bila tadi
+		# dinaikkan ke lantai visual) supaya ia tidak melayang
+		# 0,5 m saat berjalan kembali ke plaza (waypoint y=0).
+		if _guru_dinaikkan_adegan:
+			guru.global_position.y = _guru_y_sebelum_adegan
+			_guru_dinaikkan_adegan = false
 	_hapus_papan_belajar()
 	_hapus_meja_belajar()
 	_cam_yaw = _dialog_cam_yaw_lama
@@ -3605,9 +3646,13 @@ func _hapus_meja_belajar() -> void:
 
 
 ## Meja belajar: papan atas jati 1,15x0,55 m (permukaan y 0,60) +
-## dua panel samping kayu gelap + lis emas di tepi depan (senada
-## bingkai papan) + kitab zamrud + buku kecil coklat di atasnya.
-## Lokal +Z = arah hadap ustadz (ke pemain/kamera).
+## badan SATU BALOK PADAT kayu gelap (panel depan+samping terpisah
+## TIDAK ter-render di adegan putra — lihat catatan di bawah) +
+## lis emas di tepi depan (senada bingkai papan) + kitab zamrud +
+## buku kecil coklat di atasnya. Lokal +Z = arah hadap ustadz
+## (ke pemain/kamera). Posisi y node = lantai visual (0,5 di
+## Surau, 0 di plaza) — dipasang _mulai_adegan_belajar lewat
+## guru.global_position.y SETELAH ustadz dinaikkan ke lantai.
 func _buat_meja_tulis(pos: Vector3, yaw: float) -> Node3D:
 	var meja := Node3D.new()
 	meja.name = "MejaBelajar"
@@ -3624,23 +3669,22 @@ func _buat_meja_tulis(pos: Vector3, yaw: float) -> Node3D:
 	meja.add_child(atas)
 	var mat_kayu := StandardMaterial3D.new()
 	mat_kayu.albedo_color = Color("#5a3d24")
-	for sx in [-1.0, 1.0]:
-		var panel := MeshInstance3D.new()
-		var pkotak := BoxMesh.new()
-		pkotak.size = Vector3(0.04, 0.56, 0.50)
-		panel.mesh = pkotak
-		panel.material_override = mat_kayu
-		panel.position = Vector3(sx * 0.545, 0.28, 0)
-		meja.add_child(panel)
-	# Panel depan penuh (sisi kamera): meja terbaca PADAT sebagai
-	# meja guru, bukan papan melayang — menutupi pangkuan sepenuhnya.
-	var depan := MeshInstance3D.new()
-	var dkotak := BoxMesh.new()
-	dkotak.size = Vector3(1.07, 0.50, 0.03)
-	depan.mesh = dkotak
-	depan.material_override = mat_kayu
-	depan.position = Vector3(0, 0.30, 0.24)
-	meja.add_child(depan)
+	# Badan meja SATU BALOK PADAT (Sinta, 19 Nov 2026): panel depan +
+	# panel samping terpisah TIDAK TER-RENDER di adegan putra walau
+	# nodenya ada di tree (visible=true, material ada, AABB benar —
+	# dibuktikan probe: panel dipaksa MERAH pun 0 piksel merah di
+	# screenshot; sedang panel yang sama tampil normal di adegan
+	# putri). Satu balok menghindari teka-teki itu sepenuhnya dan
+	# terbaca lebih padat sebagai meja guru. Ukuran sama: 1,15 lebar
+	# x 0,56 tinggi x 0,55 dalam, pusat y=0,28 (0..0,56, di bawah
+	# papan atas yang permukaannya di y=0,605).
+	var badan := MeshInstance3D.new()
+	var bdkotak := BoxMesh.new()
+	bdkotak.size = Vector3(1.15, 0.56, 0.55)
+	badan.mesh = bdkotak
+	badan.material_override = mat_kayu
+	badan.position = Vector3(0, 0.28, 0)
+	meja.add_child(badan)
 	var mat_emas := StandardMaterial3D.new()
 	mat_emas.albedo_color = Color("#c9a227")
 	var lis := MeshInstance3D.new()
@@ -4534,9 +4578,21 @@ func _rute_ke_pintu_surau(dari: Vector3) -> Array[Vector3]:
 		# -11,44) jadi koridor lama hanya 0,5 m dari muka annex.
 		# Koridor baru x=-10: 1,5 m timur annex + 2 m barat dinding
 		# barat Surau (x=-8) — kedua sisinya lega.
-		rute.append(Vector3(-10, 0, 18.0))
-		rute.append(Vector3(-10, 0, 2.0))
-		rute.append(Vector3(0, 0, 2.0))
+		# 20 NPC v1 (Raka — tes test_npc_20 run 3): dari BARAT
+		# Asrama dengan z<18 (mis. zona P2 (-38,2)) — segmen
+		# langsung ke (-10,18) memotong Asrama (tengah (-24,10)).
+		# Lewat koridor UTARA Asrama dulu (z=2, di utara tapak
+		# z>=4): barat di z=2, baru timur ke koridor. Dari selatan
+		# (z>=18) tetap jalur lama (z 18..20 di selatan tapak).
+		if dari.z < 18.0:
+			if dari.z > 2.0:
+				rute.append(Vector3(dari.x, 0, 2.0))
+			rute.append(Vector3(-10, 0, 2.0))
+			rute.append(Vector3(0, 0, 2.0))
+		else:
+			rute.append(Vector3(-10, 0, 18.0))
+			rute.append(Vector3(-10, 0, 2.0))
+			rute.append(Vector3(0, 0, 2.0))
 	else:
 		rute.append(Vector3(0, 0, 2.0))
 	# REVISI (Mas 17 Nov 22:51 WIB: Surau lurus) — KOREKSI 23:15 WIB
@@ -4631,6 +4687,17 @@ func _rute_pulang(npc: SantriNPC) -> Array[Vector3]:
 		if rumah.distance_to(Vector3(0, 0, 2.0)) > 0.5:
 			rute.append(Vector3(0, 0, 2.0))
 		rute.append(Vector3(-10, 0, 2.0))
+		# 20 NPC v1 (Raka — pola yang sama seperti
+		# _rute_ke_pintu_surau): rumah di BARAT Asrama dengan z<18
+		# (samping/utara Asrama, mis. (-58,6) — posisi NPC saat
+		# sesi mulai) — segmen (-10,18)->rumah memotong Asrama
+		# (tengah (-24,10)). Lewat koridor UTARA (z=2) dulu: barat
+		# di z=2, baru selatan ke rumah. Dari selatan (z>=18)
+		# tetap jalur lama (z 18..20 di selatan tapak).
+		if rumah.z < 18.0:
+			rute.append(Vector3(rumah.x, 0, 2.0))
+			rute.append(rumah)
+			return rute
 		rute.append(Vector3(-10, 0, 18.0))
 		rute.append(rumah)
 		return rute
