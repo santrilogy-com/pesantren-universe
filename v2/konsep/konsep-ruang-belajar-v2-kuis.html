@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>Konsep Ruang Belajar v2 — Chat Latihan &amp; Tugas</title>
+<style>
+  @page { size: 1280px 720px; margin: 0; }
+  @font-face {
+    font-family: 'Baloo 2';
+    src: url('file:///home/hatch/workspace/pesantren-verse/v2/godot-dunia/fonts/Baloo2-Variable.ttf') format('truetype');
+    font-weight: 400 800;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1280px; height: 720px; overflow: hidden; }
+  body {
+    font-family: 'Baloo 2', sans-serif;
+    background: #04150f;
+    position: relative;
+  }
+  .latar {
+    position: absolute; inset: 0;
+    background: url('file:///home/hatch/workspace/pesantren-verse/v2/konsep/konsep-panel-misi-v2-latar.png') center / cover no-repeat;
+  }
+  .gelap { position: absolute; inset: 0; background: rgba(4, 21, 15, 0.35); }
+  .auto {
+    position: absolute; left: 24px; top: 22px;
+    background: rgba(4, 21, 15, 0.85);
+    border: 1.5px solid rgba(242, 193, 78, 0.8);
+    color: #f2c14e; font-weight: 700; font-size: 20px;
+    padding: 6px 16px; border-radius: 20px;
+  }
+  /* Gelembung kecil player di atas kotak */
+  .gelembung {
+    position: absolute; right: 48px; bottom: 330px;
+    background: #f2c14e; color: #043b2c; font-weight: 700; font-size: 20px;
+    padding: 8px 18px; border-radius: 18px 18px 4px 18px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.45);
+  }
+  /* Kotak dialog bawah */
+  .dialog {
+    position: absolute; left: 0; right: 0; bottom: 0; height: 316px;
+    background: rgba(4, 21, 15, 0.93);
+    border-top: 2px solid #c9a227;
+    padding: 16px 48px 0;
+    color: #f2ead6;
+  }
+  .nama-row { display: flex; align-items: center; }
+  .avatar {
+    width: 52px; height: 52px; border-radius: 50%;
+    background: #065f46; border: 2.5px solid #f2c14e;
+    color: #f2c14e; font-weight: 800; font-size: 26px;
+    text-align: center; line-height: 48px; margin-right: 14px;
+  }
+  .nama { color: #f2c14e; font-weight: 800; font-size: 26px; }
+  .nama-garis { height: 2px; background: #c9a227; width: 180px; margin: 4px 0 10px 66px; }
+  .teks { font-size: 23px; line-height: 1.4; color: #ffffff; }
+  .soal { font-size: 24px; line-height: 1.4; color: #f2c14e; font-weight: 700; margin-top: 6px; }
+  .opsi { margin-top: 12px; }
+  .opsi span {
+    display: inline-block; width: 280px; text-align: center;
+    border: 2px solid #f2ead6; color: #f2ead6; font-weight: 700; font-size: 21px;
+    padding: 8px 0; border-radius: 12px; margin-right: 12px; margin-bottom: 10px;
+  }
+  .opsi span.emas { background: linear-gradient(180deg, #f2c14e, #d9a92c); border-color: #f2c14e; color: #043b2c; }
+  .tugas {
+    margin-top: 4px; border: 1.5px solid rgba(242, 193, 78, 0.7); border-radius: 10px;
+    padding: 6px 14px; font-size: 18px; color: #f2ead6;
+  }
+  .tugas b { color: #f2c14e; }
+  .progres { position: absolute; left: 0; bottom: 0; height: 6px; width: 1280px; background: rgba(255,255,255,0.14); }
+  .progres i { display: block; height: 6px; width: 640px; background: #f2c14e; }
+  .label-progres {
+    position: absolute; right: 48px; bottom: 14px;
+    color: rgba(242, 234, 214, 0.65); font-size: 16px; font-weight: 600;
+  }
+</style>
+</head>
+<body>
+  <div class="latar"></div>
+  <div class="gelap"></div>
+  <div class="auto">Auto &#8226; ON</div>
+
+  <div class="gelembung">Sudah dibaca semua, Ustadz.</div>
+
+  <div class="dialog">
+    <div class="nama-row">
+      <div class="avatar">S</div>
+      <div class="nama">Ust. Sanusi</div>
+    </div>
+    <div class="nama-garis"></div>
+    <div class="teks">Bagus. Sekarang kita latihan &#8212; 5 soal.</div>
+    <div class="soal">L1 &#8212; Coba tebak, madrasatun (sekolah) itu jenis kata apa?</div>
+    <div class="opsi">
+      <span>A. Isim</span><span>B. Fi&#8217;il</span><span>C. Huruf</span><span>D. Kata ganti</span>
+    </div>
+    <div class="tugas"><b>Tugas dari Ustadz &#183; +5 poin</b> &#8212; setelah kuis: hafalkan baitnya, lalu baca 1 bab di rak kitab.</div>
+    <div class="label-progres">Latihan 1/5 &#183; +15 poin</div>
+    <div class="progres"><i></i></div>
+  </div>
+</body>
+</html>

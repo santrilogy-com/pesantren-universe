@@ -23,12 +23,12 @@ extends Node3D
 ## disamakan.
 ##
 ## Pose yang dimainkan (PoseIds): POSE_IDLE, POSE_JALAN, POSE_DUDUK,
-## POSE_SHOLAT — nilai target rotasi disalin dari
+## POSE_SHOLAT, POSE_SALAMAN — nilai target rotasi disalin dari
 ## `SantriPlayer._terapkan_pose` (player.gd) supaya avatar remote
-## duduk/sholat PERSIS seperti avatar lokal. Pose lain (MENULIS,
-## SALAMAN, MELAMBAI, TIDUR) untuk sekarang jatuh ke idle — Fase 1
-## hanya menyinkronkan pose 0–3 (prep doc §1.2); kalau player.gd
-## mulai mengirim pose 4–7, cabang itu harus ditambahkan di sini.
+## duduk/sholat/salaman PERSIS seperti avatar lokal. Pose lain
+## (MENULIS, MELAMBAI, TIDUR) untuk sekarang jatuh ke idle — Fase 1
+## hanya menyinkronkan pose 0–3 + 5; kalau player.gd mulai mengirim
+## pose 4/6/7, cabang itu harus ditambahkan di sini.
 
 ## --- Variabel sync: HANYA MultiplayerSynchronizer yang menulis. ---
 ## Posisi avatar pemilik, direplikasi 10 Hz (ALWAYS).
@@ -273,9 +273,35 @@ func _terapkan_pose(delta: float) -> void:
 			(_rig["knee_l"] as Node3D).rotation.z = lerpf((_rig["knee_l"] as Node3D).rotation.z, 0.0, k2)
 			(_rig["knee_r"] as Node3D).rotation.z = lerpf((_rig["knee_r"] as Node3D).rotation.z, 0.0, k2)
 			_lerp_pakaian(delta, SantriPlayer.PAKAIAN_DEFAULT)
+		PoseIds.POSE_SALAMAN:
+			# Salaman (Raka, 20 Nov 2026): tangan kanan terulur,
+			# badan sedikit condong — nilai = player.gd "salaman".
+			_idle_t = 0.0
+			var k3 := minf(1.0, delta * 8.0)
+			_visual.position.y = lerpf(_visual.position.y, 0.0, k3)
+			_visual.rotation.x = lerpf(_visual.rotation.x, 0.08, k3)
+			(_rig["arm_l"] as Node3D).rotation.x = lerpf((_rig["arm_l"] as Node3D).rotation.x, 0.0, k3)
+			(_rig["arm_r"] as Node3D).rotation.x = lerpf((_rig["arm_r"] as Node3D).rotation.x, -1.45, k3)
+			(_rig["arm_l"] as Node3D).rotation.z = lerpf((_rig["arm_l"] as Node3D).rotation.z, 0.05, k3)
+			(_rig["arm_r"] as Node3D).rotation.z = lerpf((_rig["arm_r"] as Node3D).rotation.z, -0.05, k3)
+			(_rig["elbow_l"] as Node3D).rotation.x = lerpf((_rig["elbow_l"] as Node3D).rotation.x, 0.0, k3)
+			(_rig["elbow_r"] as Node3D).rotation.x = lerpf((_rig["elbow_r"] as Node3D).rotation.x, -0.1, k3)
+			(_rig["leg_l"] as Node3D).rotation.x = lerpf((_rig["leg_l"] as Node3D).rotation.x, 0.0, k3)
+			(_rig["leg_r"] as Node3D).rotation.x = lerpf((_rig["leg_r"] as Node3D).rotation.x, 0.0, k3)
+			(_rig["leg_l"] as Node3D).rotation.y = lerpf((_rig["leg_l"] as Node3D).rotation.y, 0.0, k3)
+			(_rig["leg_r"] as Node3D).rotation.y = lerpf((_rig["leg_r"] as Node3D).rotation.y, 0.0, k3)
+			(_rig["leg_l"] as Node3D).rotation.z = lerpf((_rig["leg_l"] as Node3D).rotation.z, 0.0, k3)
+			(_rig["leg_r"] as Node3D).rotation.z = lerpf((_rig["leg_r"] as Node3D).rotation.z, 0.0, k3)
+			(_rig["knee_l"] as Node3D).rotation.x = lerpf((_rig["knee_l"] as Node3D).rotation.x, 0.0, k3)
+			(_rig["knee_r"] as Node3D).rotation.x = lerpf((_rig["knee_r"] as Node3D).rotation.x, 0.0, k3)
+			(_rig["knee_l"] as Node3D).rotation.y = lerpf((_rig["knee_l"] as Node3D).rotation.y, 0.0, k3)
+			(_rig["knee_r"] as Node3D).rotation.y = lerpf((_rig["knee_r"] as Node3D).rotation.y, 0.0, k3)
+			(_rig["knee_l"] as Node3D).rotation.z = lerpf((_rig["knee_l"] as Node3D).rotation.z, 0.0, k3)
+			(_rig["knee_r"] as Node3D).rotation.z = lerpf((_rig["knee_r"] as Node3D).rotation.z, 0.0, k3)
+			_lerp_pakaian(delta, SantriPlayer.PAKAIAN_DEFAULT)
 		_:
 			# POSE_IDLE + pose lain yang belum didukung remote
-			# (MENULIS/SALAMAN/MELAMBAI/TIDUR): idle napas. Pose tak
+			# (MENULIS/MELAMBAI/TIDUR): idle napas. Pose tak
 			# dikenal tidak boleh membekukan avatar — jatuh ke idle.
 			_idle_t += delta
 			AnimasiMixamo.terapkan_idle(_rig, delta, _idle_t, _fase_acak)

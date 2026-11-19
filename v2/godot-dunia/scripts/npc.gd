@@ -131,6 +131,15 @@ var _hormat_dari_duduk: bool = false
 var _hormat_aktivitas_tersimpan: Dictionary = {}
 var _hormat_cooldown_npc: float = 0.0
 var _hormat_pasangan: Dictionary = {}
+# SALAMAN PEMAIN (Raka, 20 Nov 2026) — NPC merespons salaman yang
+# dipicu pemain (main.gd _on_aksi "salaman"). _salaman: "" / "hadap" /
+# "jabat". _salaman_aktivitas_tersimpan = simpanan aktivitas pola
+# hormat (kursi DITAHAN, dipulihkan di _akhiri_salaman).
+var _salaman: String = ""
+var _salaman_timer: float = 0.0
+var _salaman_pemain: Node3D = null
+var _salaman_cooldown: float = 0.0
+var _salaman_aktivitas_tersimpan: Dictionary = {}
 # 20 NPC v1 — jeda patroli (guru berhenti ±4 dtk saat disalami).
 var _jeda_sampai: float = 0.0
 
@@ -376,6 +385,10 @@ func _waypoint_terdekat() -> Vector3:
 
 
 func _process(delta: float) -> void:
+	# SALAMAN PEMAIN: cooldown berkurang terus (bukan cuma saat
+	# _cek_hormat jalan — NPC patroli/diam tidak pernah ke sana).
+	if _salaman_cooldown > 0.0:
+		_salaman_cooldown -= delta
 	# BUBBLE-ML: blok timer bubble DIHAPUS — bubble 3D tidak pernah
 	# tampil lagi (say() memancarkan sinyal `pesan`, bukan menyalakan
 	# Label3D).
@@ -408,6 +421,13 @@ func _process(delta: float) -> void:
 	if _duduk_belajar:
 		_visual.rotation.y = lerpf(_visual.rotation.y, _duduk_belajar_yaw, minf(1.0, delta * 6.0))
 		_terapkan_duduk_baca(delta)
+		return
+	# SALAMAN PEMAIN (Raka, 20 Nov 2026): NPC merespons salaman yang
+	# dipicu pemain — di bawah sholat/duduk_belajar, di atas
+	# jeda/patroli/aktivitas: NPC berhenti sejenak, hadap pemain,
+	# jabat tangan, lalu lanjut aktivitas semula.
+	if _salaman != "":
+		_proses_salaman(delta)
 		return
 	# 20 NPC v1 — jeda hormat: guru yang sedang disalami berhenti
 	# ±4 dtk (di bawah sholat/duduk_belajar, di atas patroli/keliling).
@@ -484,6 +504,8 @@ func mulai_rute(titik: Array[Vector3]) -> void:
 	# NPC kembali keliling bebas setelah sholat via selesai_sholat).
 	if _hormat != "":
 		_batalkan_hormat()
+	if _salaman != "":
+		_batalkan_salaman()
 	if _aktivitas != "":
 		_akhiri_aktivitas()
 	_mode_sholat = true
@@ -1331,3 +1353,132 @@ func _batalkan_hormat() -> void:
 	_hormat_guru = null
 	_hormat_timer = 0.0
 	_hormat_aktivitas_tersimpan = {}
+
+
+## ---------- salaman pemain (Raka, 20 Nov 2026) ----------
+## Salaman yang DIPICU PEMAIN (△ Aksi → Salaman, main.gd _on_aksi) —
+## beda dari hormat varian B (NPC→guru, otomatis). NPC: hadap pemain
+## (±0,4 dtk, berdiri dulu bila sedang duduk) → jabat tangan 2 dtk
+## (pose = b_salaman hormat, tangan kanan terulur) → kembali ke
+## aktivitas semula (kursi DITAHAN seperti hormat). Cooldown 10 dtk
+## per NPC supaya tidak spam. v1 luar ruangan saja; tolak saat sholat
+## / duduk belajar / hormat / panel misi terbuka (dicek pemanggil).
+const SALAMAN_JARAK_MAKS := 3.0
+const SALAMAN_JABAT_DURASI := 2.0
+const SALAMAN_COOLDOWN := 10.0
+
+
+## Dipanggil main.gd saat pemain menekan Salaman di dekat NPC ini.
+## true = NPC menerima (mulai hadap + jabat); false = tolak (pemain
+## tetap pose salaman solo).
+func terima_salaman(pemain: Node3D) -> bool:
+	if _salaman != "" or _mode_sholat or _duduk_belajar or _hormat != "":
+		return false
+	if global_position.z < -100.0:
+		return false
+	if _salaman_cooldown > 0.0:
+		return false
+	if pemain == null or not is_instance_valid(pemain):
+		return false
+	if global_position.distance_to(pemain.global_position) > SALAMAN_JARAK_MAKS:
+		return false
+	# Simpan aktivitas (pola _mulai_hormat) — kursi DITAHAN selama
+	# salaman, dipulihkan sesudahnya (lihat _akhiri_salaman).
+	if _aktivitas != "":
+		_salaman_aktivitas_tersimpan = {
+			"aktivitas": _aktivitas, "timer": _aktivitas_timer,
+			"kursi": _aktivitas_kursi, "rute": _aktivitas_rute,
+			"rute_idx": _aktivitas_rute_idx, "yaw": _aktivitas_yaw,
+		}
+		_aktivitas = ""
+		_aktivitas_rute = []
+		_aktivitas_rute_idx = 0
+		if _kitab_pangku != null:
+			_kitab_pangku.visible = false
+		if _kitab_tangan != null:
+			_kitab_tangan.visible = false
+	_salaman_pemain = pemain
+	_salaman = "hadap"
+	_salaman_timer = 0.0
+	_salaman_cooldown = SALAMAN_COOLDOWN
+	return true
+
+
+func _proses_salaman(delta: float) -> void:
+	var k := minf(1.0, delta * 8.0)
+	match _salaman:
+		"hadap":
+			if _salaman_pemain == null or not is_instance_valid(_salaman_pemain):
+				_batalkan_salaman()
+				return
+			# Hadap pemain + berdiri dari duduk (kaki lurus, badan naik).
+			var ke_pemain := _salaman_pemain.global_position - global_position
+			ke_pemain.y = 0.0
+			if ke_pemain.length() > 0.05:
+				_visual.rotation.y = lerp_angle(_visual.rotation.y, atan2(ke_pemain.x, ke_pemain.z), minf(1.0, delta * 6.0))
+			_visual.position.y = lerpf(_visual.position.y, 0.0, k)
+			_visual.rotation.x = lerpf(_visual.rotation.x, 0.0, k)
+			_leg_l.rotation.x = lerpf(_leg_l.rotation.x, 0.0, k)
+			_leg_r.rotation.x = lerpf(_leg_r.rotation.x, 0.0, k)
+			_leg_l.rotation.y = lerpf(_leg_l.rotation.y, 0.0, k)
+			_leg_r.rotation.y = lerpf(_leg_r.rotation.y, 0.0, k)
+			_leg_l.rotation.z = lerpf(_leg_l.rotation.z, 0.0, k)
+			_leg_r.rotation.z = lerpf(_leg_r.rotation.z, 0.0, k)
+			_knee_l.rotation.x = lerpf(_knee_l.rotation.x, 0.0, k)
+			_knee_r.rotation.x = lerpf(_knee_r.rotation.x, 0.0, k)
+			_terapkan_pakaian(delta, SantriPlayer.PAKAIAN_DEFAULT)
+			_salaman_timer += delta
+			if _salaman_timer >= 0.4:
+				_salaman = "jabat"
+				_salaman_timer = 0.0
+		"jabat":
+			# Jabat tangan (nilai = b_salaman hormat): tangan kanan
+			# terulur, badan sedikit condong.
+			_visual.rotation.x = lerpf(_visual.rotation.x, 0.08, k)
+			_arm_l.rotation.x = lerpf(_arm_l.rotation.x, 0.0, k)
+			_arm_r.rotation.x = lerpf(_arm_r.rotation.x, -1.45, k)
+			_arm_l.rotation.z = lerpf(_arm_l.rotation.z, 0.05, k)
+			_arm_r.rotation.z = lerpf(_arm_r.rotation.z, -0.05, k)
+			_elbow_l.rotation.x = lerpf(_elbow_l.rotation.x, 0.0, k)
+			_elbow_r.rotation.x = lerpf(_elbow_r.rotation.x, -0.1, k)
+			_salaman_timer += delta
+			if _salaman_timer >= SALAMAN_JABAT_DURASI:
+				_akhiri_salaman()
+
+
+## Salaman selesai normal: pulihkan aktivitas yang disimpan (pola
+## _akhiri_hormat — kembali duduk di kursi / kitab di tangan).
+func _akhiri_salaman() -> void:
+	_visual.rotation.x = 0.0
+	_salaman = ""
+	_salaman_pemain = null
+	_salaman_timer = 0.0
+	if not _salaman_aktivitas_tersimpan.is_empty():
+		var s: Dictionary = _salaman_aktivitas_tersimpan
+		_aktivitas = String(s.get("aktivitas", ""))
+		_aktivitas_timer = float(s.get("timer", 0.0))
+		_aktivitas_kursi = s.get("kursi", {})
+		_aktivitas_rute = []
+		for p in s.get("rute", []):
+			_aktivitas_rute.append(p)
+		_aktivitas_rute_idx = int(s.get("rute_idx", 0))
+		_aktivitas_yaw = float(s.get("yaw", 0.0))
+		_salaman_aktivitas_tersimpan = {}
+		if _aktivitas in ["duduk", "baca_kamar"] and not _aktivitas_kursi.is_empty():
+			# Kembali ke posisi kursi.
+			var sp: Vector3 = _aktivitas_kursi["pos"]
+			position = sp
+			_visual.rotation.y = _aktivitas_yaw
+		elif _aktivitas == "jalan_kitab" and _kitab_tangan != null:
+			_kitab_tangan.visible = true
+
+
+## Salaman dibatalkan paksa (mis. sholat mulai / pemain hilang):
+## buang simpanan aktivitas (pola _batalkan_hormat — kursi dilepas
+## _akhiri_aktivitas oleh pemanggil, di sini hanya state yang bersih).
+func _batalkan_salaman() -> void:
+	_visual.rotation.x = 0.0
+	_salaman = ""
+	_salaman_pemain = null
+	_salaman_timer = 0.0
+	_salaman_aktivitas_tersimpan = {}

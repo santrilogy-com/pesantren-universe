@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>Konsep Ruang Belajar v2 — Reader Modul</title>
+<style>
+  @page { size: 1280px 720px; margin: 0; }
+  @font-face {
+    font-family: 'Baloo 2';
+    src: url('file:///home/hatch/workspace/pesantren-verse/v2/godot-dunia/fonts/Baloo2-Variable.ttf') format('truetype');
+    font-weight: 400 800;
+  }
+  @font-face {
+    font-family: 'Amiri';
+    src: url('file:///home/hatch/workspace/pesantren-verse/v2/godot-dunia/fonts/Amiri-Regular.ttf') format('truetype');
+    font-weight: 400;
+  }
+  @font-face {
+    font-family: 'Amiri';
+    src: url('file:///home/hatch/workspace/pesantren-verse/v2/godot-dunia/fonts/Amiri-Bold.ttf') format('truetype');
+    font-weight: 700;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1280px; height: 720px; overflow: hidden; }
+  body { font-family: 'Baloo 2', sans-serif; background: #f2ead6; color: #1e2b26; position: relative; }
+  .wrap { padding: 18px 44px 0; }
+  /* Header */
+  .kicker { text-align: center; color: #c9a227; font-weight: 800; font-size: 17px; letter-spacing: 3px; }
+  .judul { text-align: center; color: #065f46; font-weight: 800; font-size: 31px; line-height: 1.1; }
+  .sub { text-align: center; color: #4a6b5c; font-size: 16px; margin-top: 2px; }
+  .tutup {
+    position: absolute; right: 44px; top: 20px; width: 46px; height: 46px;
+    border: 2px solid #888; border-radius: 10px; color: #666;
+    font-size: 26px; font-weight: 700; text-align: center; line-height: 42px;
+  }
+  .garis-emas { height: 2px; background: #c9a227; margin: 12px 0 10px; }
+  /* Daftar isi */
+  .chips { text-align: center; }
+  .chip {
+    display: inline-block; border: 1.5px solid #065f46; color: #065f46;
+    font-size: 15px; font-weight: 700; border-radius: 16px;
+    padding: 3px 11px; margin: 2px 3px;
+  }
+  .chip.baca { border-color: #c9a227; color: #8a6d1a; }
+  .centang { display: inline-block; width: 7px; height: 13px; border-right: 3px solid #8a6d1a; border-bottom: 3px solid #8a6d1a; transform: rotate(45deg); margin-right: 6px; }
+  .chip.aktif { background: #f2c14e; border-color: #c9a227; color: #043b2c; }
+  /* Isi bagian */
+  .isi { margin-top: 12px; }
+  .judul-bagian { color: #065f46; font-weight: 800; font-size: 26px; }
+  .teks { font-size: 21px; line-height: 1.5; margin-top: 6px; }
+  .kartu {
+    background: #fbf6e9; border: 1.5px solid #d8cfae; border-radius: 12px;
+    padding: 8px 16px; margin-top: 10px;
+  }
+  .arab { font-family: 'Amiri', serif; font-size: 32px; text-align: right; color: #043b2c; line-height: 1.3; }
+  .latin { font-size: 18px; color: #4a6b5c; margin-top: 2px; }
+  .rumus {
+    margin-top: 10px; background: #fdf3cf; border: 2px solid #c9a227;
+    border-radius: 12px; padding: 8px 16px; font-size: 20px; font-weight: 700; color: #5c4a08;
+  }
+  .rujukan { margin-top: 8px; font-size: 15px; color: #888; }
+  /* Footer */
+  .footer {
+    position: absolute; left: 44px; right: 44px; bottom: 0; height: 78px;
+    border-top: 2px solid #c9a227; padding-top: 10px;
+  }
+  .nav { display: inline-block; border: 2px solid #065f46; color: #065f46; font-weight: 700; font-size: 19px; border-radius: 10px; padding: 6px 18px; }
+  .tengah { display: inline-block; width: 560px; text-align: center; vertical-align: top; }
+  .progres-teks { font-size: 16px; color: #4a6b5c; font-weight: 700; }
+  .progres-bar { height: 6px; background: #ddd2b2; border-radius: 3px; margin-top: 5px; }
+  .progres-bar i { display: block; height: 6px; width: 320px; background: #c9a227; border-radius: 3px; }
+  .btn-latihan {
+    display: inline-block; background: #cfc4a0; color: #6b623f;
+    font-weight: 800; font-size: 19px; border-radius: 10px; padding: 8px 20px;
+  }
+  .catatan-gate { font-size: 14px; color: #8a6d1a; text-align: right; margin-top: 3px; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="tutup">&#215;</div>
+    <div class="kicker">RUANG BELAJAR</div>
+    <div class="judul">Nahwu Dasar &#8212; Modul 01</div>
+    <div class="sub">Mengenal Kata &#183; Bagian 1 (Hijau)</div>
+    <div class="garis-emas"></div>
+    <div class="chips">
+      <span class="chip baca"><span class="centang"></span>1 Kalam</span><span class="chip aktif">2 Isim</span><span class="chip baca"><span class="centang"></span>3 Fi&#8217;il</span><span class="chip">4 Huruf</span><span class="chip">5 Rumus</span><span class="chip">6 Mabni</span><span class="chip">7 Akhir Kata</span><span class="chip">Bait</span><span class="chip">Rangkuman</span>
+    </div>
+
+    <div class="isi">
+      <div class="judul-bagian">&#167;2 &nbsp;Isim &#8212; Kata Benda dan Nama</div>
+      <div class="teks">Isim adalah kata yang menunjukkan arti pada dirinya sendiri dan <b>tidak terikat waktu</b>. Orang, benda, tempat, sifat, dan nama kegiatan bisa menjadi isim.</div>
+      <div class="kartu">
+        <div class="arab" dir="rtl">&#1605;&#1615;&#1581;&#1614;&#1605;&#1614;&#1617;&#1583;&#1612;</div>
+        <div class="latin">Muhammadun &#8212; &#8220;Muhammad&#8221; &#183; nama orang</div>
+      </div>
+      <div class="kartu">
+        <div class="arab" dir="rtl">&#1605;&#1614;&#1587;&#1618;&#1580;&#1616;&#1583;&#1612;</div>
+        <div class="latin">masjidun &#8212; &#8220;masjid&#8221; &#183; tempat</div>
+      </div>
+      <div class="rumus">Rumus: ada tanwin / al- / huruf jer / disandarkan = pasti ISIM.</div>
+      <div class="rujukan">Rujukan: Jurumiyah, Bab al-Kalam; Al-Miftah Jilid 1.</div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <span class="nav">&#8249; Bagian</span>
+    <span class="tengah">
+      <span class="progres-teks">Dibaca 4/7 bagian</span>
+      <span class="progres-bar"><i></i></span>
+    </span>
+    <span class="nav">Bagian &#8250;</span>
+    &nbsp;&nbsp;
+    <span class="btn-latihan">Mulai Latihan &#8250;</span>
+    <div class="catatan-gate">Baca dulu semua bagian (4/7) &#8212; tombol aktif setelah 7/7</div>
+  </div>
+</body>
+</html>

@@ -777,6 +777,10 @@ func _ready() -> void:
 	_manajer_misi.tes_selesai.connect(_on_manajer_tes_selesai)
 	# RONDE 6: aksi karakter + ganti outfit (kamar cangkruk).
 	_ui.aksi_dipilih.connect(_on_aksi)
+	# SALAMAN PEMAIN (Raka, 20 Nov 2026): ajakan salaman dari pemain lain.
+	var nm_salaman := _mp_network_manager()
+	if nm_salaman != null and nm_salaman.has_signal("salaman_diajak"):
+		nm_salaman.salaman_diajak.connect(_on_salaman_diajak)
 	_ui.outfit_dipilih.connect(_on_outfit_dipilih)
 	# RONDE 13: tombol "Ikut Sholat" di banner sholat berjamaah.
 	_ui.ikut_sholat_pressed.connect(_on_ikut_sholat)
@@ -4055,15 +4059,50 @@ func _on_aksi(nama: String) -> void:
 		if _sholat_aktif:
 			_ui.show_sholat_banner(_sholat_nama, "Musholla" if _pemain_adalah_putri() else "Surau")
 	var aksi_sebelum := _player.aksi_saat_ini()
-	# Salaman: hadap NPC terdekat (<= 6 m) dulu supaya pose-nya
-	# mengarah ke lawan bicara.
+	# SALAMAN PEMAIN (Raka, 20 Nov 2026): cari lawan salaman terdekat
+	# (<= 2,5 m) — NPC (termasuk Sanusi/Fatimah, yang SENGAJA tidak
+	# masuk _npcs) atau pemain lain (MP). NPC merespons via
+	# terima_salaman; pemain lain dikirimi ajakan RPC (auto-terima
+	# bila ia dekat + senggang). Tanpa target: perilaku lama — hadap
+	# NPC terdekat (<= 6 m), pose salaman solo.
+	var salaman_target_ok := false
 	if nama == "salaman":
-		var dekat := _npc_terdekat(6.0)
-		if dekat != null:
-			var arah := dekat.global_position - _player.global_position
-			arah.y = 0.0
-			if arah.length() > 0.05:
-				_player.set_facing(atan2(-arah.x, -arah.z))
+		var target_npc := _salaman_npc_terdekat()
+		var target_pemain := _salaman_pemain_lain_terdekat()
+		var jarak_npc := 999.0
+		var jarak_pemain := 999.0
+		if target_npc != null:
+			jarak_npc = _player.global_position.distance_to(target_npc.global_position)
+		if target_pemain != null:
+			jarak_pemain = _player.global_position.distance_to(target_pemain.global_position)
+		if target_npc != null and jarak_npc <= jarak_pemain:
+			var arah_npc := target_npc.global_position - _player.global_position
+			arah_npc.y = 0.0
+			if arah_npc.length() > 0.05:
+				_player.set_facing(atan2(-arah_npc.x, -arah_npc.z))
+			if _salaman_siap() and target_npc.terima_salaman(_player):
+				_salaman_cooldown_sampai = Time.get_ticks_msec() / 1000.0 + SALAMAN_COOLDOWN_PEMAIN
+				salaman_target_ok = true
+				_ui.toast("Salaman dengan %s." % target_npc.nama_santri())
+		elif target_pemain != null:
+			var arah_pm := target_pemain.global_position - _player.global_position
+			arah_pm.y = 0.0
+			if arah_pm.length() > 0.05:
+				_player.set_facing(atan2(-arah_pm.x, -arah_pm.z))
+			if _salaman_siap():
+				_salaman_cooldown_sampai = Time.get_ticks_msec() / 1000.0 + SALAMAN_COOLDOWN_PEMAIN
+				salaman_target_ok = true
+				var nm_kirim := _mp_network_manager()
+				if nm_kirim != null and nm_kirim.has_method("kirim_ajak_salaman"):
+					nm_kirim.kirim_ajak_salaman(int(String(target_pemain.name)), String(_player.get("_nama")))
+				_ui.toast("Salaman dengan %s." % _mp_nama_avatar(target_pemain))
+		else:
+			var dekat := _npc_terdekat(6.0)
+			if dekat != null:
+				var arah := dekat.global_position - _player.global_position
+				arah.y = 0.0
+				if arah.length() > 0.05:
+					_player.set_facing(atan2(-arah.x, -arah.z))
 	# Tidur: di kamar cangkruk, dekat tempat tidur — snap pemain ke
 	# tempat tidur dulu, lalu pose berbaring.
 	# KASUR (Wulan): boleh juga tidur di Surau/Musholla — di titik
@@ -4144,7 +4183,7 @@ func _on_aksi(nama: String) -> void:
 	var label_pose := {"duduk": "Duduk bersila.", "berdiri": "Berdiri.", "salaman": "Salaman.", "menulis": "Menulis.", "melambai": "Melambai.", "tidur": "Selamat tidur, santri."}
 	if nama == "bawa_kitab":
 		_ui.toast("Kitab dipegang." if _player.bawa_kitab_aktif() else "Kitab disimpan.")
-	elif label_pose.has(nama):
+	elif label_pose.has(nama) and not (nama == "salaman" and salaman_target_ok):
 		_ui.toast(String(label_pose[nama]))
 
 
@@ -4157,6 +4196,82 @@ func _npc_terdekat(jarak_maks: float) -> SantriNPC:
 			best_d = d
 			best = npc
 	return best
+
+
+## SALAMAN PEMAIN (Raka, 20 Nov 2026) — pemicu: △ Aksi → Salaman.
+## Jarak jabat 2,5 m (toleransi sinkronisasi posisi MP 10 Hz);
+## cooldown pemain 5 dtk (anti-spam ajakan + NPC).
+const SALAMAN_JARAK := 2.5
+const SALAMAN_COOLDOWN_PEMAIN := 5.0
+
+var _salaman_cooldown_sampai: float = 0.0
+
+
+func _salaman_siap() -> bool:
+	return Time.get_ticks_msec() / 1000.0 >= _salaman_cooldown_sampai
+
+
+## NPC salaman terdekat (<= SALAMAN_JARAK): _npcs + Sanusi + Fatimah
+## (keduanya SENGAJA tidak masuk _npcs — keikutsertaan sholat mereka
+## belum diputuskan; salaman tidak butuh sajadah, jadi boleh).
+func _salaman_npc_terdekat() -> SantriNPC:
+	var best: SantriNPC = null
+	var best_d := SALAMAN_JARAK
+	for npc in _npcs:
+		var d := _player.global_position.distance_to(npc.global_position)
+		if d < best_d:
+			best_d = d
+			best = npc
+	for guru in [_sanusi, _fatimah]:
+		if guru != null:
+			var dg := _player.global_position.distance_to(guru.global_position)
+			if dg < best_d:
+				best_d = dg
+				best = guru
+	return best
+
+
+## Pemain lain (MP) terdekat (<= SALAMAN_JARAK): avatar RemotePlayer
+## di _players (bukan avatar sendiri). null bila offline / tidak ada.
+func _salaman_pemain_lain_terdekat() -> Node3D:
+	if _players == null:
+		return null
+	var best: Node3D = null
+	var best_d := SALAMAN_JARAK
+	for c in _players.get_children():
+		if not (c is RemotePlayer):
+			continue
+		var d := _player.global_position.distance_to((c as Node3D).global_position)
+		if d < best_d:
+			best_d = d
+			best = c as Node3D
+	return best
+
+
+## Ajakan salaman masuk dari pemain lain (sinyal NetworkManager).
+## Auto-terima v1: bila pengajak masih dekat (<= 3 m, toleransi
+## sinkronisasi) dan pemain sedang senggang (tidak sholat, panel misi
+## tertutup), hadap pengajak + pose salaman. Bila sibuk/jauh: abaikan
+## diam-diam (pengajak tetap pose solo — tidak ada undangan menggantung).
+func _on_salaman_diajak(dari_peer: int, nama: String) -> void:
+	if _players == null or _player == null:
+		return
+	if _pemain_ikut_sholat or _panel_misi_terbuka():
+		return
+	if not _salaman_siap():
+		return
+	var pengajak := _players.get_node_or_null(str(dari_peer)) as Node3D
+	if pengajak == null or not (pengajak is RemotePlayer):
+		return
+	if _player.global_position.distance_to(pengajak.global_position) > 3.0:
+		return
+	var arah := pengajak.global_position - _player.global_position
+	arah.y = 0.0
+	if arah.length() > 0.05:
+		_player.set_facing(atan2(-arah.x, -arah.z))
+	_salaman_cooldown_sampai = Time.get_ticks_msec() / 1000.0 + SALAMAN_COOLDOWN_PEMAIN
+	_player.set_aksi("salaman")
+	_ui.toast("%s mengajak salaman." % nama)
 
 
 func _on_ganti_baju_requested() -> void:
