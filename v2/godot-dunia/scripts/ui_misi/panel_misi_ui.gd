@@ -348,8 +348,10 @@ func _tambah_strip_tugas() -> void:
 		v.add_child(baris_status)
 	else:
 		v.add_child(GayaMisi.buat_label("Belum selesai • +%d poin" % poin, 16, GayaMisi.KREM))
+	# IKON PANEL (Tara, 19 Nov 2026): "→" (U+2192) tofu di web —
+	# Baloo 2 tak punya panah itu; "›" (U+203A) terbukti aman.
 	_konten.add_child(GayaMisi.buat_label(
-		"Pola misi: cari Ustadz → belajar → tugas dari Ustadz",
+		"Pola misi: cari Ustadz › belajar › tugas dari Ustadz",
 		14, GayaMisi.KREM_REDUP
 	))
 

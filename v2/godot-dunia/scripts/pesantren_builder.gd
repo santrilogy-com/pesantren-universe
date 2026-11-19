@@ -106,6 +106,30 @@ const CANGKRUK_POS := Vector2(-22, -18)
 const CANGKRUK_DOOR := Vector3(-22, 0, -14)
 const CANGKRUK_EXIT := Vector3(-22, 0, -12.5)
 
+## --- Kantor Putra SEMENTARA (Gilang, 19 Nov 2026 — perintah Mas
+## 18:09 WIB "Bikin kantor putra sementara") ---
+## Bangunan kecil sementara (pola _gedung KampusPutri, primitif
+## Godot) supaya Tes Kenaikan putra (langkah 6, N1.T) punya tempat
+## sendiri — selama ini venue-nya SEMENTARA di Surau (0,-14).
+## Posisi: pusat (-11,-4), 6x5 m, tinggi 3,4, pintu SELATAN
+## (menghadap plaza, plakat "KANTOR" terbaca dari plaza).
+## Tapak: x -14..-8, z -6,5..-1,5 — satu-satunya petak kosong dekat
+## Surau yang bersih dari: Surau (x -8..8), Cangkruk (x -27..-17),
+## Asrama Putra (x -33..-15, z 4..16), koridor NPC (x=-28, z=2,
+## x=-10), waypoint P1/P2, plot (Kelas (16,0), Masjid (0,-32),
+## Perpus (0,20)), tembok x=14, jalan (N-S x -1,5..1,5; E-W
+## z -1,25..1,25), pohon (-10,-8) 2,5 m di utara dinding.
+## CATATAN: tapak ini menumpang 2x1,5 m di sudut tenggara tapak
+## Wudhu rencana (-16,-8) 8x6 (KONSEP-TATA-LETAK.md masterplan) —
+## Wudhu BELUM dibangun; saat Wudhu dibangun, kantor sementara ini
+## HARUS pindah/dibongkar. Mas bisa minta pindah kapan saja.
+## Pintu di (-11,-1,5); keluar/venue tes di (-11,0) — 1,5 m di
+## selatan pintu, di atas jalan E-W (lihat Onboarding.VENUE_TES_PUTRA).
+## Interior TIDAK ada — tes dibuka dari luar (langkah 6 main.gd).
+const KANTOR_PUTRA_POS := Vector3(-11, 0, -4)
+const KANTOR_PUTRA_DOOR := Vector3(-11, 0, -1.5)
+const KANTOR_PUTRA_EXIT := Vector3(-11, 0, 0)
+
 ## --- RONDE 20: Musholla Ar-Raudhah (putri, terpisah) ---
 ## Plot (18,-24), eksterior 10x8 m (sedikit lebih kecil dari Surau
 ## 12x10), kubah + menara kecil serasi Surau, pintu selatan, diputar
@@ -303,6 +327,7 @@ static func build() -> Dictionary:
 	# 18 Nov (Nadia): cangkang Asrama Putra (-24,10) — ACC Mas 09:37 WIB.
 	var asrama_putra := AsramaPutra.build(root)
 	_cangkruk(root)
+	var kantor_putra := _kantor_putra(root)
 	_tembok(root)
 	# RONDE 22: tembok keliling (Cakra, tembok_putri.gd) + semua
 	# jalan (Sinta, jalan_ronde22.gd) — file sendiri, bukan inline.
@@ -358,6 +383,11 @@ static func build() -> Dictionary:
 		"asrama_putra_exit": asrama_putra["asrama_putra_exit"],
 		"asrama_putra_pos": asrama_putra["asrama_putra_pos"],
 		"kantor_ustadzah_pos": kampus["kantor_ustadzah_pos"],
+		# 19 Nov (Gilang): Kantor Putra SEMENTARA (-11,-4) — perintah
+		# Mas 18:09 WIB; venue Tes Kenaikan putra (lihat onboarding.gd).
+		"kantor_putra_door": kantor_putra["kantor_putra_door"],
+		"kantor_putra_exit": kantor_putra["kantor_putra_exit"],
+		"kantor_putra_pos": kantor_putra["kantor_putra_pos"],
 		"madrasah_pos": kampus["madrasah_pos"],
 		"studio_pos": kampus["studio_pos"],
 		"pos_jaga_tl": kampus["pos_jaga_tl"],
@@ -1178,6 +1208,26 @@ static func _cangkruk(root: Node3D) -> void:
 		var sd := Palette.cylinder(0.11, 0.11, 0.035, Vector3(sx, 0.02, 0), Color("#5a3a22"))
 		sd.scale = Vector3(0.9, 1.0, 1.5)
 		sandal_luar.add_child(sd)
+
+
+## Kantor Putra SEMENTARA (Gilang, 19 Nov 2026 — perintah Mas
+## 18:09 WIB "Bikin kantor putra sementara").
+## Pola _gedung KampusPutri (Kantor Ustadzah) dipakai ulang persis:
+## dinding krem + collision penuh, atap datar zamrud + lis emas,
+## jendela bingkai emas, plakat "KANTOR" font 32 di atas pintu,
+## daun pintu jati TERTUTUP (masuk tetap teleport — di sini TIDAK
+## ADA interior; tes dibuka dari luar, venue = titik keluar).
+## Ukuran 6x5 m, tinggi 3,4, pintu SELATAN (menghadap plaza).
+## Tapak di npc.gd TAPAK + skrip/test_npc_tembus.gd CANGKANG ikut
+## ditambah ("KantorPutra") supaya segmen NPC divalidasi menghindar.
+static func _kantor_putra(root: Node3D) -> Dictionary:
+	var pintu: Vector3 = KampusPutri._gedung(root, "KantorPutra", KANTOR_PUTRA_POS.x, KANTOR_PUTRA_POS.z, 6.0, 5.0, 3.4, "S", "KANTOR")
+	KampusPutri._daun_pintu(root, "PintuKantorPutra", pintu, "S")
+	return {
+		"kantor_putra_door": pintu,
+		"kantor_putra_exit": KANTOR_PUTRA_EXIT,
+		"kantor_putra_pos": KANTOR_PUTRA_POS,
+	}
 
 
 ## RONDE 21 — Tembok pemisah putra/putri (menggantikan pagar kayu

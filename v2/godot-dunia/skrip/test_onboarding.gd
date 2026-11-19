@@ -85,7 +85,9 @@ func _ready() -> void:
 	_cek("Langkah 5 modul 1 dari 30", int(m5["modul"]) == 1 and String(m5["deskripsi"]).contains("1 dari 30"))
 	Onboarding.maju(sm) # 6
 	var m6 := Onboarding.misi_aktif(sm)
-	_cek("Langkah 6 putra target = Surau (0,-14) SEMENTARA", (m6["target_pos"] as Vector3).distance_to(Vector3(0, 0, -14)) < 0.01)
+	# 19 Nov 2026 (Gilang): target langkah 6 putra PINDAH Surau
+	# (0,-14) -> depan pintu Kantor Putra SEMENTARA (-11,0).
+	_cek("Langkah 6 putra target = Kantor Putra (-11,0)", (m6["target_pos"] as Vector3).distance_to(Vector3(-11, 0, 0)) < 0.01)
 	var m6p := Onboarding.misi_aktif(sm, "putri")
 	_cek("Langkah 6 putri target = Kantor Ustadzah (148,-33) SEMENTARA", (m6p["target_pos"] as Vector3).distance_to(Vector3(148, 0, -33)) < 0.01)
 
@@ -164,11 +166,14 @@ func _ready() -> void:
 	_cek("REFRESH_PER_MISI default true (usulan butir 18)", LokasiAcak.REFRESH_PER_MISI)
 
 	# ---------- venue tes ----------
-	_cek("venue_tes putra = Surau (0,-14)", Onboarding.venue_tes("putra").distance_to(Vector3(0, 0, -14)) < 0.01)
+	# 19 Nov 2026 (Gilang): venue putra PINDAH Surau (0,-14) ->
+	# depan pintu Kantor Putra SEMENTARA (-11,0) — venue lama tidak
+	# terjangkau pemain (dinding Surau bercollision, 8 m > 3,5 m).
+	_cek("venue_tes putra = Kantor Putra (-11,0)", Onboarding.venue_tes("putra").distance_to(Vector3(-11, 0, 0)) < 0.01)
 	_cek("venue_tes putri = Kantor Ustadzah (148,-33)", Onboarding.venue_tes("putri").distance_to(Vector3(148, 0, -33)) < 0.01)
-	_cek("venue_tes gender tak dikenal = putra (default)", Onboarding.venue_tes("").distance_to(Vector3(0, 0, -14)) < 0.01)
+	_cek("venue_tes gender tak dikenal = putra (default)", Onboarding.venue_tes("").distance_to(Vector3(-11, 0, 0)) < 0.01)
 	_cek("venue_tes_id putri = kantor_ustadzah", Onboarding.venue_tes_id("putri") == "kantor_ustadzah")
-	_cek("venue_tes_id putra = surau", Onboarding.venue_tes_id("putra") == "surau")
+	_cek("venue_tes_id putra = kantor_putra", Onboarding.venue_tes_id("putra") == "kantor_putra")
 
 	# ---------- topik percakapan (butir 17 — DRAF) ----------
 	_cek("TOPIK_PERCAKAPAN = 6 butir (§1A)", Onboarding.TOPIK_PERCAKAPAN.size() == 6)

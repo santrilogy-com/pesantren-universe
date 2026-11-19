@@ -43,6 +43,9 @@ const CANGKANG := {
 	"Surau": [Vector2(-8, -24), Vector2(8, -4)],
 	"Cangkruk": [Vector2(-27, -22), Vector2(-17, -14)],
 	"AsramaPutra": [Vector2(-33.25, 4), Vector2(-14.75, 16)],
+	# 19 Nov (Gilang): Kantor Putra SEMENTARA (-11,-4), 6x5 m —
+	# salinan di scripts/npc.gd TAPAK ikut diubah.
+	"KantorPutra": [Vector2(-14, -6.5), Vector2(-8, -1.5)],
 	"Musholla": [Vector2(128, -29), Vector2(140, -19)],
 	"AsramaPutri": [Vector2(146, 3), Vector2(164, 15)],
 }

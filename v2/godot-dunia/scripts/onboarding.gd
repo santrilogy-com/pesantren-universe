@@ -35,9 +35,11 @@ class_name Onboarding
 ## HAL YANG TIDAK DIKARANG (pertanyaan §9 terbuka):
 ##   - Butir 18 (mekanik random): lihat LokasiAcak — REFRESH_PER_MISI
 ##     + daftar kandidat = USULAN, menunggu keputusan Mas.
-##   - Butir 19 (kantor putra): venue_tes() lokasi-agnostik; default
-##     SEMENTARA putra Surau (0,−14) / putri Kantor Ustadzah
-##     (148,−33) — SEMENTARA, menunggu butir 19, BUKAN keputusan.
+##   - Butir 19 (kantor putra): venue_tes() lokasi-agnostik.
+##     19 Nov 2026 (Gilang, perintah Mas 18:09 WIB "Bikin kantor
+##     putra sementara"): Kantor Putra SEMENTARA dibangun di
+##     (-11,-4) (pesantren_builder.gd) — venue putra PINDAH ke
+##     depan pintunya (-11,0). Putri TETAP Kantor Ustadzah (148,-33).
 ##     (Koreksi gelombang 2, Raka: (150,−28) SALAH — yang benar
 ##     (148,−33) sesuai kampus_putri.gd KANTOR_USTADZAH_POS dan
 ##     KONSEP-TATA-LETAK.md relokasi U3; draf §6.1 + §9 butir 19
@@ -171,14 +173,16 @@ const OUTFIT_SANUSI := {
 	"kacamata": false,
 }
 
-## Venue tes kenaikan — SEMENTARA, menunggu §9 butir 19 (kantor
-## putra BELUM ADA di peta). BUKAN keputusan: begitu butir 19
-## terjawab, ganti konstanta di sini saja.
-##   putra: Surau (0,−14) — tempat tes lama (§6.2, kontradiksi lama
-##     Surau/Musholla vs Kantor dibersihkan di v5.3).
-##   putri: Kantor Ustadzah (148,−33) — draf §6.1 + tugas A8
-##     (koreksi gelombang 2: dulu (150,−28), salah).
-const VENUE_TES_PUTRA := Vector3(0, 0, -14)
+## Venue tes kenaikan — titik di DEPAN pintu gedung (pemain harus
+## bisa berdiri di sana; jarak interaksi 3,5 m).
+##   putra: depan pintu Kantor Putra SEMENTARA (-11,0) — 19 Nov 2026
+##     (Gilang, perintah Mas 18:09 WIB). Venue LAMA (0,−14, tengah
+##     Surau) TIDAK TERJANGKAU pemain: dinding Surau bercollision,
+##     titik terdekat dari luar 8 m > 3,5 m — tes putra tidak bisa
+##     dibuka dari dunia sebelum pindah ini.
+##   putri: Kantor Ustadzah (148,−33) — titik tengah gedung; pemain
+##     bisa berdiri di dinding utara/selatan (3,0 m < 3,5 m).
+const VENUE_TES_PUTRA := Vector3(-11, 0, 0)
 const VENUE_TES_PUTRI := Vector3(148, 0, -33)
 
 
@@ -346,11 +350,11 @@ static func venue_tes(jenis_kelamin: String) -> Vector3:
 	return VENUE_TES_PUTRA
 
 
-## Id lokasi venue tes (untuk panel misi): "surau" / "kantor_ustadzah".
+## Id lokasi venue tes (untuk panel misi): "kantor_putra" / "kantor_ustadzah".
 static func venue_tes_id(jenis_kelamin: String) -> String:
 	if jenis_kelamin == "putri":
 		return "kantor_ustadzah"
-	return "surau"
+	return "kantor_putra"
 
 
 ## Misi yang sedang aktif: judul + deskripsi + npc + target lokasi
