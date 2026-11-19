@@ -7,7 +7,8 @@ extends Node
 ## Fase 4: tolak saat sholat. Fase 5: tolak saat duduk belajar.
 ## Fase 6: solo tanpa target (offline, tanpa RPC). Fase 7: Sanusi +
 ## Fatimah (tidak masuk _npcs) ikut bisa disalami. Fase 8: guard MP
-## offline — _on_salaman_diajak tanpa _players tidak crash.
+## offline — watcher _salaman_cek_undangan_peer tanpa _players
+## tidak crash (salaman MP tanpa RPC: ajakan = pose_id peer).
 ## Jalankan headless (HOME terisolasi — jangan pakai save VM):
 ##   HOME=/tmp/iso-salaman godot --headless --path . --scene res://skrip/test_salaman.tscn
 ## Exit 0 = semua lulus; bukan-nol = ada gagal. 0 SCRIPT ERROR dicek
@@ -167,13 +168,25 @@ func _ready() -> void:
 	print("SALAMAN: === FASE 7 Sanusi + Fatimah ===")
 	for guru in [_main._sanusi, _main._fatimah]:
 		var nama_guru: String = String(guru.get("_nama"))
+		# Lokasi guru diacak tiap run (LokasiAcak) dan BISA jatuh di
+		# zona seberang yang tidak bisa dicapai pemain uji — Sanusi
+		# di (64,-24) plot Masjid Besar (x>14, z<16: larangan putra)
+		# bikin run 7 gagal BUKAN karena salaman rusak. Uji mekanisme
+		# di titik deterministik yang bisa dicapai (temuan terpisah:
+		# lokasi acak guru kadang tak terjangkau — laporkan ke Xam).
+		if guru == _main._sanusi:
+			guru.global_position = Vector3(0, 0, -14)
+			guru.set("_target", Vector3(0, 0, -14))
+			_main._save["jenis_kelamin"] = "putra"
+		else:
+			guru.global_position = Vector3(122, 0, 32)
+			guru.set("_target", Vector3(122, 0, 32))
+			_main._save["jenis_kelamin"] = "putri"
 		# RONDE 21 (batas putra/putri KERAS, _cek_batas): pemain putra
 		# TIDAK BISA mencapai Fatimah (area putri, x>14) — didorong
 		# balik ke posisi legal terakhir. Uji Fatimah sebagai
 		# santriwati (save jenis_kelamin — yang dibaca
 		# _pemain_adalah_putri); putra menguji Sanusi, putri Fatimah.
-		if guru == _main._fatimah:
-			_main._save["jenis_kelamin"] = "putri"
 		# Tunggu cooldown pemain (5 dtk) dari salaman sebelumnya habis
 		# DULU — baru teleport + bersihkan area, supaya tidak ada NPC
 		# yang sempat berjalan masuk radius 1,5 m selama menunggu
@@ -203,8 +216,8 @@ func _ready() -> void:
 	print("SALAMAN: === FASE 8 guard offline ===")
 	_cek("f8: tidak ada pemain lain saat offline", _main._salaman_pemain_lain_terdekat() == null)
 	var aksi_sebelum: String = String(_main._player.aksi_saat_ini())
-	_main._on_salaman_diajak(99999, "Tes")
-	_cek("f8: ajakan masuk tanpa _players tidak crash + pose tidak berubah", String(_main._player.aksi_saat_ini()) == aksi_sebelum)
+	_main._salaman_cek_undangan_peer()
+	_cek("f8: watcher tanpa _players tidak crash + pose tidak berubah", String(_main._player.aksi_saat_ini()) == aksi_sebelum)
 
 	print("SALAMAN-SELESAI lulus=%d gagal=%d" % [_lulus, _gagal])
 	get_tree().quit(0 if _gagal == 0 else 1)

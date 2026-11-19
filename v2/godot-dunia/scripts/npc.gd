@@ -96,6 +96,8 @@ var _tunik: bool = false
 var _sarung: MeshInstance3D
 var _sarung_hem: MeshInstance3D
 var _sarung_trim: MeshInstance3D
+var _lutut_l: MeshInstance3D
+var _lutut_r: MeshInstance3D
 var _torso: MeshInstance3D
 # RONDE 20 — ikut sholat berjamaah? Satpam TIDAK (tetap di pos).
 var _ikut_sholat: bool = true
@@ -213,6 +215,8 @@ func setup(nama_santri: String, pos: Vector3, wps: Array[Vector3], outfit: Dicti
 	_sarung = built["sarung"]
 	_sarung_hem = built["sarung_hem"]
 	_sarung_trim = built["sarung_trim"]
+	_lutut_l = built["lutut_l"]
+	_lutut_r = built["lutut_r"]
 	_torso = built["torso"]
 	# ANIMASI-MIXAMO: rig untuk modul animasi.
 	_rig = AnimasiMixamo.rig_dari_built(built)
@@ -421,6 +425,14 @@ func _process(delta: float) -> void:
 	if _duduk_belajar:
 		_visual.rotation.y = lerpf(_visual.rotation.y, _duduk_belajar_yaw, minf(1.0, delta * 6.0))
 		_terapkan_duduk_baca(delta)
+		return
+	# ADEGAN TES DI DALAM KANTOR (Gilang, 20 Nov 2026): penguji
+	# duduk di kursi penguji — di atas patroli/diam (seperti
+	# duduk_belajar). Kursi tes selalu jenis "kursi" (kaki
+	# menjuntai); kitab pangku terlihat (penguji membawa kitab).
+	if _duduk_tes:
+		_visual.rotation.y = lerpf(_visual.rotation.y, _duduk_tes_yaw, minf(1.0, delta * 6.0))
+		_terapkan_duduk_kursi(delta, float((_duduk_tes_kursi["pos"] as Vector3).y), true)
 		return
 	# SALAMAN PEMAIN (Raka, 20 Nov 2026): NPC merespons salaman yang
 	# dipicu pemain — di bawah sholat/duduk_belajar, di atas
@@ -848,6 +860,11 @@ func _terapkan_duduk_sesuai_kursi(delta: float, kitab_terlihat: bool) -> void:
 ## 1,5 m ke selatan kaki kasur ("kasur"). y dihitung pemanggil via
 ## _tinggi_tanah (bangun registry sudah y = lantai).
 func _titik_bangun(kursi: Dictionary) -> Vector3:
+	# Kursi tes (KURSI_TES) + registry pemain membawa "bangun"
+	# sendiri — pakai itu dulu (bangun di lorong / belakang kursi,
+	# BUKAN ke arah meja).
+	if kursi.has("bangun"):
+		return kursi["bangun"]
 	var id := String(kursi.get("id", ""))
 	if id != "":
 		var entri: Dictionary = KursiPemain.dari_id(id)
@@ -881,6 +898,51 @@ func sedang_duduk_belajar() -> bool:
 	return _duduk_belajar
 
 
+## ADEGAN TES DI DALAM KANTOR (Gilang, 20 Nov 2026 — konsep Laras,
+## ACC Mas 00:37 WIB): penguji duduk deterministik di kursi penguji.
+## Teleport langsung (tanpa rute jalan, tanpa mesin aktivitas:
+## Sanusi/Fatimah mode DIAM, _proses_aktivitas tidak jalan untuk
+## mereka). Duduk sampai berdiri_tes() dipanggil main.gd — BUKAN
+## timer acak seperti aktivitas DUDUK_KURSI biasa. Dipakai
+## _cek_penguji_tes() di main.gd (hanya saat langkah 6).
+var _duduk_tes: bool = false
+var _duduk_tes_yaw: float = 0.0
+var _duduk_tes_kursi: Dictionary = {}
+
+
+func duduk_tes(kursi: Dictionary) -> void:
+	if kursi.is_empty():
+		return
+	if _aktivitas != "":
+		_akhiri_aktivitas()
+	# Adegan belajar (langkah 5) sudah selesai saat langkah 6
+	# dimulai — pastikan flag-nya bersih supaya cabang _process
+	# duduk_tes tidak kalah oleh duduk_belajar.
+	berdiri_belajar()
+	_duduk_tes = true
+	_duduk_tes_kursi = kursi
+	_duduk_tes_yaw = float(kursi.get("yaw", 0.0))
+	_aktivitas_yaw = _duduk_tes_yaw
+	var sp: Vector3 = kursi["pos"]
+	position = Vector3(sp.x, _tinggi_tanah(sp), sp.z)
+	_visual.rotation.y = _duduk_tes_yaw
+
+
+func berdiri_tes() -> void:
+	if not _duduk_tes:
+		return
+	_duduk_tes = false
+	var bangun := _titik_bangun(_duduk_tes_kursi)
+	position = Vector3(bangun.x, _tinggi_tanah(bangun), bangun.z)
+	_terapkan_pakaian(1.0, SantriPlayer.PAKAIAN_DEFAULT)
+	_visual.position.y = 0.0
+	_duduk_tes_kursi = {}
+
+
+func sedang_duduk_tes() -> bool:
+	return _duduk_tes
+
+
 ## Lerp pakaian NPC ke target (pola player.gd _lerp_pakaian):
 ## sarung mengerut saat duduk, normal saat jalan.
 func _terapkan_pakaian(delta: float, target: Dictionary) -> void:
@@ -908,6 +970,12 @@ func _terapkan_pakaian(delta: float, target: Dictionary) -> void:
 		_sarung_hem.position.y = lerpf(_sarung_hem.position.y, target["hem_y"], k)
 	if _sarung_trim != null:
 		_sarung_trim.position.y = lerpf(_sarung_trim.position.y, target["trim_y"], k)
+	if _lutut_l != null:
+		_lutut_l.scale = _lutut_l.scale.lerp(target["lutut_scale"], k)
+		_lutut_l.visible = _lutut_l.scale.length_squared() > 0.0025
+	if _lutut_r != null:
+		_lutut_r.scale = _lutut_r.scale.lerp(target["lutut_scale"], k)
+		_lutut_r.visible = _lutut_r.scale.length_squared() > 0.0025
 	if _torso != null:
 		_torso.scale = _torso.scale.lerp(target["torso_scale"], k)
 
@@ -994,13 +1062,16 @@ const KURSI_DALAM = [
 ## Kirana) memakai _kursi_dari_id() di bawah untuk posisi kursi.
 const KURSI_TES = [
 	# --- Kantor Putra: pemain utara meja menghadap selatan (yaw 0),
-	# penguji selatan meja menghadap utara (yaw PI).
-	{"id": "tes_kantor_putra_pemain", "pos": Vector3(-90, 0.45, -300.65), "yaw": 0.0, "gedung": "kantor_putra", "jenis": "kursi", "putri": false, "dalam": true, "pintu_luar": Vector3(-18, 0, 20), "pintu_dalam": Vector3(-90, 0, -302.5), "spawn_dalam": Vector3(-90, 0, -301.9), "tes": true},
-	{"id": "tes_kantor_putra_penguji", "pos": Vector3(-90, 0.45, -298.95), "yaw": PI, "gedung": "kantor_putra", "jenis": "kursi", "putri": false, "dalam": true, "pintu_luar": Vector3(-18, 0, 20), "pintu_dalam": Vector3(-90, 0, -302.5), "spawn_dalam": Vector3(-90, 0, -301.9), "tes": true},
+	# penguji selatan meja menghadap utara (yaw PI). Bangun ke
+	# BELAKANG kursi (menjauhi meja — ke depan mendarat DI DALAM
+	# meja; pola bangun lorong kursi kelas).
+	{"id": "tes_kantor_putra_pemain", "pos": Vector3(-90, 0.45, -300.65), "yaw": 0.0, "gedung": "kantor_putra", "jenis": "kursi", "putri": false, "dalam": true, "bangun": Vector3(-90, 0, -301.45), "pintu_luar": Vector3(-18, 0, 20), "pintu_dalam": Vector3(-90, 0, -302.5), "spawn_dalam": Vector3(-90, 0, -301.9), "tes": true},
+	{"id": "tes_kantor_putra_penguji", "pos": Vector3(-90, 0.45, -298.95), "yaw": PI, "gedung": "kantor_putra", "jenis": "kursi", "putri": false, "dalam": true, "bangun": Vector3(-90, 0, -298.15), "pintu_luar": Vector3(-18, 0, 20), "pintu_dalam": Vector3(-90, 0, -302.5), "spawn_dalam": Vector3(-90, 0, -301.9), "tes": true},
 	# --- Kantor Ustadzah: pemain barat meja menghadap timur (yaw
-	# PI/2), penguji timur meja menghadap barat (yaw -PI/2).
-	{"id": "tes_kantor_ustadzah_pemain", "pos": Vector3(-121.15, 0.45, -300), "yaw": PI / 2.0, "gedung": "kantor_ustadzah", "jenis": "kursi", "putri": true, "dalam": true, "pintu_luar": Vector3(144, 0, -33), "pintu_dalam": Vector3(-124, 0, -300), "spawn_dalam": Vector3(-122.5, 0, -300), "tes": true},
-	{"id": "tes_kantor_ustadzah_penguji", "pos": Vector3(-118.85, 0.45, -300), "yaw": -PI / 2.0, "gedung": "kantor_ustadzah", "jenis": "kursi", "putri": true, "dalam": true, "pintu_luar": Vector3(144, 0, -33), "pintu_dalam": Vector3(-124, 0, -300), "spawn_dalam": Vector3(-122.5, 0, -300), "tes": true},
+	# PI/2), penguji timur meja menghadap barat (yaw -PI/2). Bangun
+	# ke belakang kursi (barat / timur).
+	{"id": "tes_kantor_ustadzah_pemain", "pos": Vector3(-121.15, 0.45, -300), "yaw": PI / 2.0, "gedung": "kantor_ustadzah", "jenis": "kursi", "putri": true, "dalam": true, "bangun": Vector3(-121.95, 0, -300), "pintu_luar": Vector3(144, 0, -33), "pintu_dalam": Vector3(-124, 0, -300), "spawn_dalam": Vector3(-122.5, 0, -300), "tes": true},
+	{"id": "tes_kantor_ustadzah_penguji", "pos": Vector3(-118.85, 0.45, -300), "yaw": -PI / 2.0, "gedung": "kantor_ustadzah", "jenis": "kursi", "putri": true, "dalam": true, "bangun": Vector3(-118.05, 0, -300), "pintu_luar": Vector3(144, 0, -33), "pintu_dalam": Vector3(-124, 0, -300), "spawn_dalam": Vector3(-122.5, 0, -300), "tes": true},
 ]
 
 

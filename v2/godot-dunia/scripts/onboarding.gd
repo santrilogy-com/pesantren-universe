@@ -120,7 +120,7 @@ const LANGKAH: Array[Dictionary] = [
 	{
 		"id": 6,
 		"judul": "Tes kenaikan di Kantor",
-		"deskripsi": "Setelah selesai belajar, pergi ke Kantor untuk ikut tes kenaikan (tes naik bagian N.T): kuis 10 soal, lulus bila benar minimal 8.",
+		"deskripsi": "Setelah selesai belajar, masuk ke Kantor dan duduk di kursi di hadapan penguji (Ust. Sanusi) untuk ikut tes kenaikan (tes naik bagian N.T): kuis 10 soal, lulus bila benar minimal 8.",
 		"npc": "",
 		"target": "venue_tes",
 	},
@@ -177,19 +177,19 @@ const OUTFIT_SANUSI := {
 	"kacamata": false,
 }
 
-## Venue tes kenaikan — titik di DEPAN pintu gedung (pemain harus
-## bisa berdiri di sana; jarak interaksi 3,5 m).
-##   putra: depan pintu Kantor Putra SEMENTARA (-18,18.5) — 19 Nov 2026
-##     (Gilang, perintah Mas 18:40 WIB "taruh di sebelah asrama tapi
-##     agak jauh": pindah dari (-11,-4) ke selatan Asrama Putra,
-##     celah 4 m dari dinding selatan asrama). Venue LAMA (0,−14, tengah
-##     Surau) TIDAK TERJANGKAU pemain: dinding Surau bercollision,
-##     titik terdekat dari luar 8 m > 3,5 m — tes putra tidak bisa
-##     dibuka dari dunia sebelum pindah ini.
-##   putri: Kantor Ustadzah (148,−33) — titik tengah gedung; pemain
-##     bisa berdiri di dinding utara/selatan (3,0 m < 3,5 m).
-const VENUE_TES_PUTRA := Vector3(-18, 0, 18.5)
-const VENUE_TES_PUTRI := Vector3(148, 0, -33)
+## Venue tes kenaikan — titik PINTU kantor (marker mengantar pemain
+## ke pintu; tes DIBUKA SETELAH duduk di kursi pemain di DALAM
+## kantor, berhadapan penguji — konsep tes-di-dalam-kantor Laras,
+## ACC Mas 00:37 WIB 20 Nov 2026; wiring Gilang).
+##   putra: pintu utara Kantor Putra (-18,20). Venue LAMA (-18,18.5,
+##     titik keluar) + venue Surau (0,−14) SUDAH MATI: tes tidak
+##     boleh terbuka lagi dari luar gedung (lihat _buka_ui_misi_
+##     terdekat + _cek_penguji_tes di main.gd).
+##   putri: pintu barat Kantor Ustadzah (144,−33). Titik tengah
+##     gedung lama (148,−33) SUDAH MATI (dulu terjangkau dari luar
+##     dinding, 3,0 m < 3,5 m — tes putri ikut terbuka dari luar).
+const VENUE_TES_PUTRA := Vector3(-18, 0, 20)
+const VENUE_TES_PUTRI := Vector3(144, 0, -33)
 
 
 ## ---------- baca / tulis save (defensif) ----------
@@ -349,7 +349,8 @@ static func tandai_hatam(save: Dictionary) -> int:
 
 ## Venue tes kenaikan per gender (lokasi-agnostik — posisi sebagai
 ## parameter). "putri" = Kantor Ustadzah; SELAIN itu = putra.
-## SEMENTARA, menunggu §9 butir 19 — lihat konstanta di atas.
+## §9 butir 19 BARU (DI-ACC Mas 00:37 WIB 20 Nov 2026): venue =
+## PINTU kantor (marker); tes dibuka setelah duduk di dalam.
 static func venue_tes(jenis_kelamin: String) -> Vector3:
 	if jenis_kelamin == "putri":
 		return VENUE_TES_PUTRI
@@ -409,7 +410,7 @@ static func misi_aktif(save: Dictionary, jenis_kelamin: String = "putra") -> Dic
 				npc = "Ustzh. Fatimah"
 				target_pos = LokasiAcak.pos_dari_id_putri(String(ob["fatimah_lokasi"]))
 			6:
-				deskripsi = "Setelah selesai belajar, pergi ke Kantor Ustadzah untuk ikut tes kenaikan (tes naik bagian N.T): kuis 10 soal, lulus bila benar minimal 8."
+				deskripsi = "Setelah selesai belajar, masuk ke Kantor Ustadzah dan duduk di kursi di hadapan Ustzh. Fatimah untuk ikut tes kenaikan (tes naik bagian N.T): kuis 10 soal, lulus bila benar minimal 8."
 			7:
 				deskripsi = "Lulus tes? Kembali belajar ke Ustzh. Fatimah (modul/bagian berikut), tes lagi di Kantor Ustadzah, ulangi sampai hatam Nahwu Dasar (4 Bagian). Gagal tes = ulangi belajar + tesnya saja, bukan dari awal."
 				npc = "Ustzh. Fatimah"

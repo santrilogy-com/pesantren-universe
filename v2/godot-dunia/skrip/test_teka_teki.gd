@@ -76,7 +76,7 @@ func _save_putri_langkah4(lok_id: String) -> Dictionary:
 func _ready() -> void:
 	# ---------- A. Tabel teka-teki: 12 entri verbatim draf ----------
 	_cek("Teka-teki: tabel 12 entri", DataTekaTeki.TEKA_TEKI.size() == 12)
-	var id_putra := ["surau", "kelas_putra", "taman_surau", "perpustakaan_taman", "masjid_besar", "kantin"]
+	var id_putra := ["surau", "kelas_putra", "taman_surau", "perpustakaan_taman", "taman_putra", "kantin"]
 	var id_putri := ["musholla_putri", "kelas_putri", "taman_putri", "asrama_putri", "kantor_ustadzah", "halaman_putri"]
 	var semua_ada := true
 	var semua_isi := true

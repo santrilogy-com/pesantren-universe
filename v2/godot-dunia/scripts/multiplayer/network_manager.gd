@@ -17,10 +17,13 @@ extends Node
 ##   join_rejected(alasan: String)   @rpc("any_peer", "reliable")
 ##       server -> klien. Penolakan bergabung ("ruangan penuh" /
 ##       "tiket tidak valid"); disconnect menyusul 0,5 dtk kemudian.
-##   ajak_salaman(dari_peer: int, nama: String) @rpc("any_peer", "reliable")
-##       peer -> peer (Raka, 20 Nov 2026). Ajakan salaman pemain ke
-##       pemain lain — routing lewat server, dieksekusi HANYA di peer
-##       target (rpc_id); server tidak ikut bermain pose.
+## SALAMAN MP (Raka, 20 Nov 2026): SENGAJA tanpa RPC baru — RPC baru
+## ajak_salaman DICOBA lalu DIBATALKAN: checksum RPC klien vs server
+## harus identik dan server live masih build lama; klien dengan RPC
+## baru langsung di-disconnect server saat handshake ("rpc node
+## checksum failed", terbukti tes MP 20 Nov). Ajakan salaman =
+## pose_id 5 itu sendiri (direplikasi synchronizer Fase 1, tanpa RPC);
+## main.gd _salaman_cek_undangan_peer() yang membalasnya.
 ##
 ## ALUR (klien):
 ##   main.gd _mp_mulai() -> _mp_minta_tiket() (REST, async) ->
@@ -85,10 +88,6 @@ signal bergabung_ditolak(alasan: String)
 signal zona_ditolak(pos_legal: Vector3)
 signal koneksi_gagal()
 signal terputus_dari_server()
-## Salaman pemain -> pemain (Raka, 20 Nov 2026): ajakan salaman masuk
-## dari peer lain — main.gd yang memutuskan menerima atau tidak
-## (jarak + tidak sholat/belajar/tes + cooldown).
-signal salaman_diajak(dari_peer: int, nama: String)
 
 ## peer_id -> {"deadline": float, "memvalidasi": bool}
 var _tiket_menunggu: Dictionary = {}
@@ -517,27 +516,6 @@ func join_rejected(alasan: String) -> void:
 		return
 	print("[MP] bergabung ditolak server: %s" % alasan)
 	bergabung_ditolak.emit(alasan)
-
-
-## Salaman pemain -> pemain (Raka, 20 Nov 2026). Dipanggil main.gd
-## _on_aksi("salaman") saat target terdekat adalah pemain lain.
-## rpc_id ke peer target — server hanya merutekan, tidak mengeksekusi.
-func kirim_ajak_salaman(peer_target: int, nama_pengirim: String) -> void:
-	if multiplayer.multiplayer_peer == null:
-		return
-	if peer_target <= 0 or peer_target == multiplayer.get_unique_id():
-		return
-	ajak_salaman.rpc_id(peer_target, multiplayer.get_unique_id(), nama_pengirim)
-
-
-## Peer -> peer: ajakan salaman masuk. Server ikut punya method ini
-## (kode sama) tapi tidak pernah jadi target rpc_id — yang mengeksekusi
-## hanya klien target. Server mengabaikan bila entah bagaimana sampai.
-@rpc("any_peer", "reliable")
-func ajak_salaman(dari_peer: int, nama: String) -> void:
-	if multiplayer.is_server():
-		return
-	salaman_diajak.emit(dari_peer, nama)
 
 
 ## ------------------------------------------------------------------

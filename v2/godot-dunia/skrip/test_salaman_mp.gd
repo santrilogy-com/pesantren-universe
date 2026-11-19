@@ -2,9 +2,13 @@ extends Node
 ## Tes salaman pemain -> pemain, 2 klien paralel (Raka, 20 Nov 2026).
 ## Pola test_mp_alur_web.gd (Dimas): alur web Main Bersama, lalu
 ## pengajak menekan Salaman di dekat penjawab (keduanya putra, spawn
-## sama (-4,14) — jarak ~0), penjawab auto-terima lewat RPC
-## ajak_salaman. Kriteria: pose_id peer == 5 di kedua arah + lengan
-## kanan avatar remote terulur (cabang POSE_SALAMAN remote_player.gd).
+## sama (-4,14) — jarak ~0). TANPA RPC (revisi pasca-tes MP 20 Nov:
+## RPC baru ajak_salaman bikin checksum klien vs server beda dan server
+## live langsung disconnect klien): ajakan = pose_id 5 pengajak yang
+## direplikasi synchronizer Fase 1; penjawab auto-terima lewat watcher
+## main.gd _salaman_cek_undangan_peer() tiap frame. Kriteria: pose_id
+## peer == 5 di kedua arah + lengan kanan avatar remote terulur
+## (cabang POSE_SALAMAN remote_player.gd).
 ##
 ## Dijalankan 2 klien paralel (seperti gate test_mp_alur_web):
 ##   godot --headless --fixed-fps 60 --path . skrip/test_salaman_mp.tscn -- \
@@ -152,7 +156,7 @@ func _ready() -> void:
 	_cek("online: avatar sendiri diadopsi", diadopsi)
 	var peer_terlihat := await _tunggu_sampai(
 		func() -> bool: return _avatar_peer() != null,
-		60.0, "avatar peer di Players")
+		120.0, "avatar peer di Players")
 	_cek("online: avatar peer terlihat", peer_terlihat)
 	if not peer_terlihat:
 		_cek_blokir("online: avatar peer terlihat", "klien kedua mungkin belum jalan")
@@ -178,8 +182,16 @@ func _ready() -> void:
 			60.0, "pose_id peer == 5 (penjawab auto-terima)")
 		_cek("pengajak: pose_id peer == 5 (penjawab membalas salaman)", peer_pose)
 		if peer_pose:
-			await get_tree().create_timer(1.0).timeout
-			_cek("pengajak: lengan kanan avatar peer terulur", _peer_tangan_terulur())
+			var tangan := await _tunggu_sampai(
+				func() -> bool: return _peer_tangan_terulur(),
+				3.0, "lengan kanan avatar peer terulur")
+			_cek("pengajak: lengan kanan avatar peer terulur", tangan)
+		# Tahan klien tetap hidup 5 dtk supaya penjawab sempat
+		# menyelesaikan cek lengannya SEBELUM avatar kita di-despawn
+		# (quit dini = avatar peer hilang di sisi penjawab — flake
+		# run MP pertama: cek lengan penjawab gagal padahal pose 5
+		# sudah terlihat di kedua arah).
+		await get_tree().create_timer(5.0).timeout
 	else:
 		# Penjawab: tunggu ajakan masuk (pose sendiri jadi salaman).
 		var diterima := await _tunggu_sampai(
@@ -191,8 +203,10 @@ func _ready() -> void:
 			30.0, "pose_id peer == 5 (pengajak salaman)")
 		_cek("penjawab: pose_id peer == 5 (pengajak salaman)", peer_pose)
 		if peer_pose:
-			await get_tree().create_timer(1.0).timeout
-			_cek("penjawab: lengan kanan avatar peer terulur", _peer_tangan_terulur())
+			var tangan := await _tunggu_sampai(
+				func() -> bool: return _peer_tangan_terulur(),
+				3.0, "lengan kanan avatar peer terulur")
+			_cek("penjawab: lengan kanan avatar peer terulur", tangan)
 
 	print("[SALAMAN-MP] RINGKASAN: %d lulus, %d gagal, %d blokir" % [_lulus, _gagal, _blokir])
 	_pulihkan_save()

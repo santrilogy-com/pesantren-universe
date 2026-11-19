@@ -419,6 +419,9 @@ var _di_dalam_kantor_putra: bool = false
 var _kantor_putra_root: Node3D
 var _kantor_putra_interior_door: Vector3 = Vector3(-90, 0, -302.5)
 var _kantor_putra_interior_spawn: Vector3 = Vector3(-90, 0, -301.9)
+# Adegan tes di dalam kantor (Gilang, 20 Nov 2026): penguji sedang
+# duduk di kursi penguji (true = sudah di-teleport + duduk_tes).
+var _penguji_tes_duduk: bool = false
 var _di_dalam_madrasah: bool = false
 var _madrasah_root: Node3D
 var _madrasah_interior_door: Vector3 = Vector3(-185, 0, -300)
@@ -797,10 +800,6 @@ func _ready() -> void:
 	_manajer_misi.tes_selesai.connect(_on_manajer_tes_selesai)
 	# RONDE 6: aksi karakter + ganti outfit (kamar cangkruk).
 	_ui.aksi_dipilih.connect(_on_aksi)
-	# SALAMAN PEMAIN (Raka, 20 Nov 2026): ajakan salaman dari pemain lain.
-	var nm_salaman := _mp_network_manager()
-	if nm_salaman != null and nm_salaman.has_signal("salaman_diajak"):
-		nm_salaman.salaman_diajak.connect(_on_salaman_diajak)
 	_ui.outfit_dipilih.connect(_on_outfit_dipilih)
 	# RONDE 13: tombol "Ikut Sholat" di banner sholat berjamaah.
 	_ui.ikut_sholat_pressed.connect(_on_ikut_sholat)
@@ -1646,6 +1645,9 @@ func _process(delta: float) -> void:
 	_cek_pintu_madrasah()
 	_cek_pintu_studio()
 	_cek_pintu_pos_jaga()
+	# ADEGAN TES DI DALAM KANTOR (Gilang, 20 Nov 2026): penguji
+	# duduk/berdiri mengikuti langkah 6 (lihat _cek_penguji_tes).
+	_cek_penguji_tes()
 	# ASRAMA PUTRI (Lestari): saat tidur di kasur susun, kapsul WAJIB
 	# tetap di posisi tidur — gravitasi player.gd menariknya jatuh
 	# ke lantai karena body kasur dimatikan (tidak ada pijakan di
@@ -1980,6 +1982,13 @@ func _update_interact_button() -> void:
 	if _ui.is_baca_buku_visible():
 		_ui.set_interact_visible(false)
 		return
+	# DUDUK KURSI (Gilang, 20 Nov 2026): pemain sedang duduk di
+	# kursi -> satu-satunya interaksi adalah BERDIRI (pintu/misi
+	# tidak boleh jalan selagi duduk — teleport selagi duduk akan
+	# membekukan pemain dalam pose duduk di tempat baru).
+	if _player != null and not _player.kursi_duduk().is_empty():
+		_ui.set_interact_visible(true, "BERDIRI")
+		return
 	# FASE A GELOMBANG 3 (UI misi) — PERBAIKAN TOMBOL ✕ (Raka,
 	# 18 Nov 2026, laporan Mas 20:30 WIB: "ga bisa tekan X pas
 	# deket"): dekat NPC alur santri baru (Kyai / Ustadzah / Sanusi /
@@ -2094,6 +2103,12 @@ func _update_interact_button() -> void:
 		return
 	if _di_dalam_cangkruk and _dekat_tempat_tidur():
 		_ui.set_interact_visible(true, "TIDUR")
+		return
+	# DUDUK KURSI (Gilang, 20 Nov 2026): dekat kursi registry yang
+	# boleh diduduki (taman, kelas, studio, kasur, kursi tes) ->
+	# tombol DUDUK. Kursi yang diklaim NPC tidak memunculkan tombol.
+	if not _kursi_duduk_terdekat().is_empty():
+		_ui.set_interact_visible(true, "DUDUK")
 		return
 	var dekat := _misi_terdekat()
 	if not dekat.is_empty():
@@ -2788,7 +2803,14 @@ func _dekat_pintu_kantor_putra_luar() -> bool:
 
 
 func _dekat_pintu_kantor_putra_dalam() -> bool:
-	return _player.global_position.distance_to(_kantor_putra_interior_door) < 2.5
+	# Radius 1,0 m (BUKAN 2,5 m seperti pintu lain): Kantor Putra
+	# hanya 6x5 m — kursi tes pemain (-90,-300.65) hanya 1,85 m
+	# dari pintu dalam (-90,-302.5). Dengan 2,5 m tombol KELUAR
+	# selalu menang atas DUDUK di kursi tes (adegan tes tidak bisa
+	# dimulai lewat ✕). Dengan 1,0 m: di spawn (0,6 m) tetap
+	# KELUAR, di kursi tes (1,85 m) DUDUK. Jalan menembus pintu
+	# (_cek_pintu_kantor_putra) tidak pakai radius ini.
+	return _player.global_position.distance_to(_kantor_putra_interior_door) < 1.0
 
 
 func _dekat_pintu_madrasah_luar() -> bool:
@@ -3055,6 +3077,14 @@ func _on_interact() -> void:
 	if _ui.is_baca_buku_visible():
 		_ui.close_baca_buku()
 		return
+	# DUDUK KURSI (Gilang, 20 Nov 2026): pemain sedang duduk di
+	# kursi -> ✕ = BERDIRI (turun ke lantai di samping kursi).
+	# Setelah cabang tutup-panel di atas: panel tes yang terbuka
+	# ditutup dulu dengan satu ketukan, ketukan berikut berdiri.
+	if _player != null and not _player.kursi_duduk().is_empty():
+		_player.berdiri_dari_kursi()
+		_ui.toast("Berdiri.")
+		return
 	# FASE A GELOMBANG 3 (UI misi, §1A): alur santri baru didahulukan
 	# atas kuis misi M1-M3 — dialog dulu, baru cari Sanusi, baru
 	# belajar, baru tes.
@@ -3155,6 +3185,16 @@ func _on_interact() -> void:
 		return
 	if _di_dalam_pos_jaga and _dekat_pintu_pos_jaga_dalam():
 		_keluar_pos_jaga()
+		return
+	# DUDUK KURSI (Gilang, 20 Nov 2026): dekat kursi registry ->
+	# duduk. Kursi tes pemain + langkah 6 -> panel tes terbuka
+	# OTOMATIS setelah duduk (adegan tes di dalam kantor).
+	var kursi := _kursi_duduk_terdekat()
+	if not kursi.is_empty():
+		_player.duduk_di_kursi(kursi)
+		_ui.toast("Duduk.")
+		if bool(kursi.get("tes", false)) and Onboarding.langkah_saat_ini(_save) == 6:
+			_manajer_misi.buka_tes(_bagian_tes_berikut())
 		return
 	# Smartboard (di dalam surau, dekat papan pintar).
 	if _di_dalam and _dekat_smartboard():
@@ -3326,10 +3366,93 @@ func _dekat_npc_misi() -> bool:
 			return true
 		return false
 	if langkah == 6:
-		var venue := Onboarding.venue_tes("putri" if putri else "putra")
-		if _player.global_position.distance_to(venue) <= CHAT_JARAK_INTERAKSI:
-			return true
+		# TES DI DALAM KANTOR (Gilang, 20 Nov 2026 — konsep Laras,
+		# ACC Mas 00:37 WIB): tes TIDAK lagi dibuka ✕ dari luar
+		# gedung — pemain masuk kantor, duduk di kursi pemain, panel
+		# tes terbuka otomatis (lihat _kursi_duduk_terdekat +
+		# _on_interact). Jadi tidak ada lagi tombol MULAI MISI di
+		# dekat venue luar.
+		return false
 	return false
+
+
+## DUDUK KURSI (Gilang, 20 Nov 2026 — permintaan Mas "bisa duduk di
+## kursi taman dll" + adegan tes Laras): kursi terdekat yang BOLEH
+## diduduki pemain — {} bila tidak ada. Jarak interaksi 2,5 m
+## (sama seperti pintu). Kursi berbagi yang sedang diklaim NPC
+## (28 kursi — cek SantriNPC._kursi_registry) DITOLAK: tombol
+## DUDUK tidak muncul. Kursi tes pemain (KURSI_TES, dicadangkan)
+## ikut dicek bila pemain di dalam kantor — tes hanya terbuka
+## otomatis saat langkah 6 (lihat _on_interact).
+func _kursi_duduk_terdekat() -> Dictionary:
+	if _player == null or not _player.kursi_duduk().is_empty():
+		return {}
+	if _panel_misi_terbuka():
+		return {}
+	var putri := _pemain_adalah_putri()
+	var dalam := _di_dalam or _di_dalam_cangkruk or _di_dalam_musholla or _di_dalam_kelas_putri or _di_dalam_asrama_putri or _di_dalam_asrama_putra or _di_dalam_kantor or _di_dalam_kantor_putra or _di_dalam_madrasah or _di_dalam_studio or _di_dalam_pos_jaga
+	# Kursi registry terdekat yang TIDAK diklaim NPC — pindai semua
+	# (bukan hanya yang terdekat: bangku 1a diklaim tapi 1b 0,8 m di
+	# sebelahnya bebas, pemain tetap bisa duduk).
+	var terbaik := {}
+	var jarak_terbaik := 2.5
+	for k in KursiPemain.KURSI_PEMAIN:
+		if bool(k["putri"]) != putri:
+			continue
+		if bool(k["dalam"]) != dalam:
+			continue
+		var p: Vector3 = k["pos"]
+		var d := Vector2(_player.global_position.x - p.x, _player.global_position.z - p.z).length()
+		if d > jarak_terbaik:
+			continue
+		var nid := String(k.get("npc_id", ""))
+		if nid != "" and SantriNPC._kursi_registry.has(nid):
+			continue
+		jarak_terbaik = d
+		terbaik = k
+	if not terbaik.is_empty():
+		return terbaik
+	# Kursi tes pemain — hanya di dalam kantor (putra/putri).
+	if (_di_dalam_kantor_putra and not putri) or (_di_dalam_kantor and putri):
+		var tes := SantriNPC._kursi_dari_id("tes_kantor_putra_pemain" if not putri else "tes_kantor_ustadzah_pemain")
+		if not tes.is_empty():
+			var pt: Vector3 = tes["pos"]
+			if Vector2(_player.global_position.x - pt.x, _player.global_position.z - pt.z).length() <= 2.5:
+				return tes
+	return {}
+
+
+## ADEGAN TES DI DALAM KANTOR (Gilang, 20 Nov 2026 — konsep Laras,
+## ACC Mas 00:37 WIB): penguji duduk di kursi penguji HANYA saat
+## langkah 6; di luar langkah 6 kantor kosong. Dipanggil tiap frame
+## dari _process (murah: satu banding langkah + satu bool).
+## - Masuk langkah 6 (termasuk load save di langkah 6): penguji
+##   teleport + duduk_tes di kursi penguji.
+## - Keluar langkah 6 (lulus/gagal): penguji TETAP duduk sampai
+##   pemain keluar kantor (keputusan §10 konsep butir 5) — baru
+##   berdiri + kembali ke lokasi acak save (cari guru berikutnya /
+##   ulangi belajar).
+func _cek_penguji_tes() -> void:
+	if _player == null:
+		return
+	var putri := _pemain_adalah_putri()
+	var penguji: SantriNPC = _fatimah if putri else _sanusi
+	if penguji == null:
+		return
+	var langkah := Onboarding.langkah_saat_ini(_save)
+	if langkah == 6 and not _penguji_tes_duduk:
+		var kursi := SantriNPC._kursi_dari_id("tes_kantor_ustadzah_penguji" if putri else "tes_kantor_putra_penguji")
+		if kursi.is_empty():
+			return
+		penguji.duduk_tes(kursi)
+		_penguji_tes_duduk = true
+	elif _penguji_tes_duduk and langkah != 6 and not _di_dalam_kantor and not _di_dalam_kantor_putra:
+		penguji.berdiri_tes()
+		_penguji_tes_duduk = false
+		# Kembali ke lokasi acak save (misi cari guru berikutnya /
+		# ulangi belajar) — _pindah_guru_ke_lokasi_save dilewati
+		# saat penguji masih duduk (lihat guard di sana).
+		_pindah_guru_ke_lokasi_save()
 
 
 ## Apakah pemain dekat guru yang dicari (Sanusi putra / Fatimah
@@ -3474,13 +3597,11 @@ func _buka_ui_misi_terdekat() -> bool:
 			_mulai_adegan_belajar()
 			_manajer_misi.buka_ruang_belajar(_pengajar_onboarding(), _save)
 			return true
-	# Langkah 6: Tes kenaikan — dekat venue tes (Surau putra /
-	# Kantor Ustadzah putri, menunggu butir 19).
-	if langkah == 6:
-		var venue := Onboarding.venue_tes("putri" if putri else "putra")
-		if _player.global_position.distance_to(venue) <= CHAT_JARAK_INTERAKSI:
-			_manajer_misi.buka_tes(_bagian_tes_berikut())
-			return true
+	# Langkah 6: Tes kenaikan — TIDAK LAGI dibuka ✕ dari luar gedung
+	# (pemicu jarak 3,5 m dari venue MATI, 20 Nov 2026). Pemain
+	# masuk kantor, duduk di kursi pemain (✕ DUDUK) → panel tes
+	# terbuka otomatis (lihat _on_interact). Jadi di sini tidak ada
+	# cabang langkah 6 — ✕ di dekat pintu kantor = MASUK, bukan tes.
 	return false
 
 
@@ -3491,10 +3612,19 @@ func _buka_ui_misi_terdekat() -> bool:
 ## pemain mencari guru di tempat yang salah (temuan Sinta, 18 Nov).
 func _pindah_guru_ke_lokasi_save() -> void:
 	var ob := Onboarding.baca(_save)
+	# ADEGAN TES (Gilang, 20 Nov 2026): penguji yang sedang duduk di
+	# kursi penguji JANGAN dipindah — ia tetap sampai pemain keluar
+	# kantor (keputusan §10 konsep butir 5). _cek_penguji_tes()
+	# memanggil fungsi ini lagi saat penguji berdiri.
 	if _pemain_adalah_putri():
+		if _fatimah != null and _fatimah.sedang_duduk_tes():
+			return
 		if _fatimah != null and LokasiAcak.id_valid_putri(String(ob["fatimah_lokasi"])):
 			NPCFatimah.tempatkan(_fatimah, LokasiAcak.pos_dari_id_putri(String(ob["fatimah_lokasi"])))
-	elif _sanusi != null and LokasiAcak.id_valid(String(ob["sanusi_lokasi"])):
+		return
+	if _sanusi != null and _sanusi.sedang_duduk_tes():
+		return
+	if _sanusi != null and LokasiAcak.id_valid(String(ob["sanusi_lokasi"])):
 		Onboarding.tempatkan_sanusi(_sanusi, LokasiAcak.pos_dari_id(String(ob["sanusi_lokasi"])))
 
 
@@ -4181,11 +4311,11 @@ func _on_aksi(nama: String) -> void:
 			if arah_pm.length() > 0.05:
 				_player.set_facing(atan2(-arah_pm.x, -arah_pm.z))
 			if _salaman_siap():
+				# SALAMAN MP TANPA RPC: pose salaman (pose_id 5) direplikasi
+				# synchronizer Fase 1 ke peer — pose itu sendiri ajakannya;
+				# peer membalas via _salaman_cek_undangan_peer() tiap frame.
 				_salaman_cooldown_sampai = Time.get_ticks_msec() / 1000.0 + SALAMAN_COOLDOWN_PEMAIN
 				salaman_target_ok = true
-				var nm_kirim := _mp_network_manager()
-				if nm_kirim != null and nm_kirim.has_method("kirim_ajak_salaman"):
-					nm_kirim.kirim_ajak_salaman(int(String(target_pemain.name)), String(_player.get("_nama")))
 				_ui.toast("Salaman dengan %s." % _mp_nama_avatar(target_pemain))
 		else:
 			var dekat := _npc_terdekat(6.0)
@@ -4261,7 +4391,13 @@ func _on_aksi(nama: String) -> void:
 	# DI DEPAN kursi (titik "bangun"), BUKAN set_aksi("berdiri") polos
 	# yang membiarkan node tetap di x,z kursi. Toast + return di sini
 	# (logika bangun-tidur di bawah tidak relevan untuk kursi).
-	if nama == "berdiri" and _player.aksi_saat_ini() == "duduk_kursi":
+	# WIRING (Gilang, 20 Nov 2026): berlaku untuk SEMUA duduk di
+	# kursi — duduk_kursi, duduk bersila/kasur dari registry
+	# (kursi_duduk() terisi) — BUKAN hanya duduk_kursi. Tidur dan
+	# duduk-bebas (kursi_duduk kosong) tidak tersentuh: berdiri
+	# dari_kursi() sendiri jatuh ke set_aksi("berdiri") bila kosong,
+	# tapi cabang ini tidak pernah tercapai untuk mereka.
+	if nama == "berdiri" and not _player.kursi_duduk().is_empty():
 		_player.berdiri_dari_kursi()
 		_ui.toast("Berdiri.")
 		return
@@ -4349,30 +4485,48 @@ func _salaman_pemain_lain_terdekat() -> Node3D:
 	return best
 
 
-## Ajakan salaman masuk dari pemain lain (sinyal NetworkManager).
-## Auto-terima v1: bila pengajak masih dekat (<= 3 m, toleransi
-## sinkronisasi) dan pemain sedang senggang (tidak sholat, panel misi
-## tertutup), hadap pengajak + pose salaman. Bila sibuk/jauh: abaikan
-## diam-diam (pengajak tetap pose solo — tidak ada undangan menggantung).
-func _on_salaman_diajak(dari_peer: int, nama: String) -> void:
+## SALAMAN MP TANPA RPC (Raka, 20 Nov 2026 — revisi pasca-tes MP):
+## RPC baru ajak_salaman DIBATALKAN: checksum RPC klien vs server
+## HARUS identik (network_manager.gd) dan server live masih build
+## lama — klien dengan RPC baru langsung di-disconnect server saat
+## handshake ("rpc node checksum failed", terbukti tes MP 20 Nov).
+## Ajakan salaman = pose itu sendiri: pose_id 5 (salaman) SUDAH
+## direplikasi synchronizer Fase 1 tanpa RPC. Watcher ini (tiap frame
+## saat online, dipanggil _mp_proses_frame) membalas salaman pemain
+## lain yang pose-nya jadi salaman di dekat kita (<= 3 m, toleransi
+## sinkronisasi) bila kita senggang (tidak sholat, panel misi
+## tertutup, belum pose salaman, cooldown siap). Bila sibuk/jauh:
+## abaikan diam-diam (pengajak tetap pose solo).
+func _salaman_cek_undangan_peer() -> void:
 	if _players == null or _player == null:
+		return
+	if _mp_status != "online" or _mp_avatar_sendiri == null:
 		return
 	if _pemain_ikut_sholat or _panel_misi_terbuka():
 		return
+	if String(_player.aksi_saat_ini()) == "salaman":
+		return
 	if not _salaman_siap():
 		return
-	var pengajak := _players.get_node_or_null(str(dari_peer)) as Node3D
-	if pengajak == null or not (pengajak is RemotePlayer):
+	var saya := str(multiplayer.get_unique_id())
+	for c in _players.get_children():
+		if not (c is RemotePlayer):
+			continue
+		if String(c.name) == saya:
+			continue
+		if int(c.get("pose_id")) != PoseIds.POSE_SALAMAN:
+			continue
+		var peer := c as Node3D
+		if _player.global_position.distance_to(peer.global_position) > 3.0:
+			continue
+		var arah := peer.global_position - _player.global_position
+		arah.y = 0.0
+		if arah.length() > 0.05:
+			_player.set_facing(atan2(-arah.x, -arah.z))
+		_salaman_cooldown_sampai = Time.get_ticks_msec() / 1000.0 + SALAMAN_COOLDOWN_PEMAIN
+		_player.set_aksi("salaman")
+		_ui.toast("%s mengajak salaman." % _mp_nama_avatar(peer))
 		return
-	if _player.global_position.distance_to(pengajak.global_position) > 3.0:
-		return
-	var arah := pengajak.global_position - _player.global_position
-	arah.y = 0.0
-	if arah.length() > 0.05:
-		_player.set_facing(atan2(-arah.x, -arah.z))
-	_salaman_cooldown_sampai = Time.get_ticks_msec() / 1000.0 + SALAMAN_COOLDOWN_PEMAIN
-	_player.set_aksi("salaman")
-	_ui.toast("%s mengajak salaman." % nama)
 
 
 func _on_ganti_baju_requested() -> void:
@@ -5316,6 +5470,7 @@ func _mp_proses_frame(delta: float) -> void:
 		return
 	if _mp_avatar_sendiri == null:
 		_mp_adopsi_avatar_sendiri()
+	_salaman_cek_undangan_peer()
 	_mp_log_timer += delta
 	if _mp_log_timer >= 2.0:
 		_mp_log_timer = 0.0

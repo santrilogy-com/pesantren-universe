@@ -16,6 +16,29 @@ class_name LokasiAcak
 ##     diimplementasi (6 nama dari §1A). Bila Mas mengubah aturan
 ##     nanti, ubah konstanta di sini saja — pemanggil tidak berubah.
 ##
+## PERBAIKAN 20 Nov 2026 (Raka — temuan tes salaman: guru diacak ke
+## tempat TAK TERJANGKAU, misi "cari guru" §1A langkah 4-5 bisa macet
+## karena pemain tidak bisa mendekati guru (jangkauan interaksi 3,5 m):
+##   - "surau" (0,0.5,-14) -> serambi timur (3.5,0,-2): (0,-14) =
+##     TENGAH cangkang Surau TERTUTUP (dinding + collision, celah
+##     pintu hanya di depan) — pemain di luar paling dekat 8,5 m.
+##   - "masjid_besar" (64,-24) DIHAPUS -> diganti "taman_putra"
+##     (0,0,27): (64,-24) di zona LARANGAN putra (x>14, z<16,
+##     balik tembok x=14, gerbang tertutup).
+##   - "musholla_putri" (134,-24) -> serambi (131,-17.5): tengah
+##     cangkang Musholla — dari pintu selatan masih 5 m.
+##   - "asrama_putri" (152,9) -> exit barat (144.5,9): tengah
+##     cangkang Asrama Putri — dari pintu barat masih 6 m.
+##   - "kantor_ustadzah" (148,-33) -> exit barat (142.5,-33):
+##     tengah cangkang 8x6 — dari luar dinding selatan 3,0 m,
+##     PAS di batas jangkauan (margin 0, rapuh).
+## Aturan audit (skrip/test_lokasi_acak.gd): tiap kandidat HARUS di
+## tanah terbuka (di luar semua tapak + margin 0,5 m), di zona gender
+## yang benar, dan punya segmen bersih (_segmen_bersih) ke titik
+## jangkar terdekat. Jumlah tetap 6 + 6; mekanisme acak
+## (REFRESH_PER_MISI, tanpa marker) TIDAK berubah. Save lama dengan
+## id yang dihapus dibersihkan Onboarding.baca (id tak dikenal -> "").
+##
 ## KOORDINAT: semuanya disalin dari KONSEP-TATA-LETAK.md (masterplan
 ## ACC Mas) — TIDAK ADA koordinat karangan. Kandidat HANYA area
 ## putra + kawasan bersama (Sanusi ustadz putra; varian putri ada
@@ -32,6 +55,10 @@ class_name LokasiAcak
 ##     disebut di §1A; tanyakan ke Mas bila mau ditambah.
 ##   - Lokasi area putri (Musholla, Kelas Putri, dsb.) — Sanusi
 ##     laki-laki; jalur putri diputuskan di butir 22.
+##   - Masjid Besar (64,−24) — DULU kandidat ("masjid_besar"),
+##     DIHAPUS 20 Nov 2026 (Raka): di zona larangan putra (x>14,
+##     z<16, balik tembok x=14) — pemain putra tidak pernah bisa
+##     mendekati Sanusi di sana; diganti Taman Putra (0,27).
 
 ## DIKUNCI §9 butir 18 (Mas, 21:24 WIB): true = diacak tiap misi "cari
 ## Ust. Sanusi" dimulai. false = lokasi bertahan sampai misi
@@ -44,14 +71,19 @@ const KANDIDAT: Array[Dictionary] = [
 	{
 		"id": "surau",
 		"nama": "Surau",
-		# y=0,5 = lantai visual Surau (plinth GLB 0,5 m, tanpa
-		# collider). Sanusi DIAM (tidak pernah _langkah_ke) — y
-		# spawn 0 membuatnya tenggelam separuh badan saat santri
-		# menghampirinya (Sinta, 19 Nov 2026 — tindak lanjut
-		# temuan lantai Surau). Kandidat lain tanah terbuka y=0.
-		"pos": Vector3(0, 0.5, -14),
+		# SERAMBI TIMUR Surau (3.5,-2), BUKAN pusat (0,-14) lagi
+		# (Raka, 20 Nov 2026 — perbaikan lokasi tak terjangkau):
+		# (0,-14) = TENGAH cangkang Surau yang TERTUTUP (dinding
+		# + collision, celah pintu hanya di depan) — pemain di
+		# luar paling dekat 8,5 m, JAUH di luar jangkauan interaksi
+		# 3,5 m, jadi misi "cari Sanusi" bisa macet 1 dari 6 kali.
+		# Posisi baru di rumput timur serambi (cermin rumah Kyai
+		# (-3.5,-2) di barat) — tanah datar y=0, di luar lebar
+		# anak tangga serambi (3,2 m) jadi _lantai_visual_y = 0.
+		# y=0,5 lama HANYA berlaku di dalam plinth Surau.
+		"pos": Vector3(3.5, 0, -2),
 		"status": "live",
-		"sumber": "KONSEP-TATA-LETAK.md §2 — Surau (0,−14), live di game",
+		"sumber": "Serambi timur Surau — pintu (0,-3.8), cangkang x -8..8, z -24..-4 (pesantren_builder.gd)",
 	},
 	{
 		"id": "kelas_putra",
@@ -75,11 +107,18 @@ const KANDIDAT: Array[Dictionary] = [
 		"sumber": "KONSEP-TATA-LETAK.md §2 — Perpustakaan & Taman 12×9 (0,20); di game baru lahan + papan plot (ambang 200 santri)",
 	},
 	{
-		"id": "masjid_besar",
-		"nama": "Masjid Besar",
-		"pos": Vector3(64, 0, -24),
-		"status": "rencana",
-		"sumber": "KONSEP-TATA-LETAK.md tabel gedung baru — Masjid Besar pusat 54×44 (64,−24), DIKUNCI Mas 18:22, pembangunan nanti (ambang 100); papan plot di game masih di lokasi lama (0,−32)",
+		"id": "taman_putra",
+		"nama": "Taman Putra",
+		# PENGGANTI "masjid_besar" (Raka, 20 Nov 2026): (64,-24)
+		# ada di zona LARANGAN putra (x>14, z<16 — balik tembok
+		# x=14, gerbang tertutup) — pemain putra TIDAK PERNAH bisa
+		# mendekati Sanusi di sana. Taman Putra = taman terbuka di
+		# selatan plaza (bangku 1a/1b (-3.4/-2.6, 25.45) + bangku
+		# 2a/2b (3.45, 27.8/28.6); rute NPC (0,24)/(0,27.5) di
+		# npc.gd KURSI_LUAR) — tanah terbuka, bisa didatangi.
+		"pos": Vector3(0, 0, 27),
+		"status": "live",
+		"sumber": "Bangku Taman Putra + rute NPC (0,24)/(0,27.5) — npc.gd KURSI_LUAR",
 	},
 	{
 		"id": "kantin",
@@ -100,9 +139,17 @@ const KANDIDAT_PUTRI: Array[Dictionary] = [
 	{
 		"id": "musholla_putri",
 		"nama": "Musholla Ar-Raudhah",
-		"pos": Vector3(134, 0, -24),
+		# SERAMBI DEPAN Musholla (131,-17.5), BUKAN pusat (134,-24)
+		# lagi (Raka, 20 Nov 2026): (134,-24) = TENGAH cangkang
+		# Musholla (tapak x 128..140, z -29..-19) — pemain di pintu
+		# selatan (134,-19) masih 5 m, di luar jangkauan 3,5 m.
+		# Posisi baru 1,5 m di depan dinding selatan, 3 m di barat
+		# pintu (pintu (134,-19); Mariyah di (134,-17)) — tanah
+		# datar y=0, di luar serambi (x 131,75..136,25) jadi tidak
+		# tenggelam. Fatimah tetap "di Musholla" untuk teka-teki.
+		"pos": Vector3(131, 0, -17.5),
 		"status": "live",
-		"sumber": "KONSEP-TATA-LETAK.md — Musholla Ar-Raudhah (134,−24), live di game",
+		"sumber": "Serambi depan Musholla Ar-Raudhah — pintu selatan (134,-19), kampus_putri.gd",
 	},
 	{
 		"id": "kelas_putri",
@@ -121,16 +168,29 @@ const KANDIDAT_PUTRI: Array[Dictionary] = [
 	{
 		"id": "asrama_putri",
 		"nama": "Asrama Putri",
-		"pos": Vector3(152, 0, 9),
+		# EXIT BARAT Asrama Putri (144.5,9), BUKAN pusat (152,9)
+		# lagi (Raka, 20 Nov 2026): (152,9) = TENGAH cangkang
+		# (tapak x 146..164, z 3..15) — dari pintu barat (146,9)
+		# masih 6 m, di luar jangkauan 3,5 m. Posisi baru =
+		# ASRAMA_EXIT kampus_putri.gd (pintu + 1,5 m ke barat) —
+		# tanah terbuka y=0.
+		"pos": Vector3(144.5, 0, 9),
 		"status": "live",
-		"sumber": "KONSEP-TATA-LETAK.md — Asrama Putri (152,9), live di game",
+		"sumber": "ASRAMA_EXIT (144.5,9) — kampus_putri.gd",
 	},
 	{
 		"id": "kantor_ustadzah",
 		"nama": "Kantor Ustadzah",
-		"pos": Vector3(148, 0, -33),
+		# EXIT BARAT Kantor Ustadzah (142.5,-33), BUKAN pusat
+		# (148,-33) lagi (Raka, 20 Nov 2026): (148,-33) = TENGAH
+		# cangkang 8x6 (x 144..152, z -36..-30) — dari luar dinding
+		# selatan jaraknya 3,0 m, PAS di batas jangkauan 3,5 m
+		# (margin 0 — rapuh, tembok + collider menebalkan jarak).
+		# Posisi baru = KANTOR_EXIT kampus_putri.gd (pintu barat
+		# (144,-33) + 1,5 m) — tanah terbuka y=0, margin aman.
+		"pos": Vector3(142.5, 0, -33),
 		"status": "live",
-		"sumber": "KONSEP-TATA-LETAK.md — Kantor Ustadzah (148,−33), live di game",
+		"sumber": "KANTOR_EXIT (142.5,-33) — kampus_putri.gd",
 	},
 	{
 		"id": "halaman_putri",

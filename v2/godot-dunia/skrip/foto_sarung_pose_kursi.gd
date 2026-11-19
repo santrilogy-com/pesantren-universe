@@ -1,9 +1,10 @@
 extends Node
-## Foto reproduksi 4 bug sarung + pose duduk (Kirana, 20 Nov 2026 —
-## laporan Mas 00:24 WIB, T1 live build 20261119-4).
-## 1) sarung mekar saat berdiri setelah duduk; 2) bersila mekar
-## kayak bunga; 3) duduk di kursi malah bersila; 4) berdiri dari
-## kursi malah berdiri DI ATAS kursi.
+## Foto VERIFIKASI SESUDAH perbaikan 4 bug sarung + pose duduk
+## (Kirana, 20 Nov 2026 — laporan Mas 00:24 WIB, T1 live 20261119-4).
+## Foto "sebelum" sudah diambil dengan kode lama (pose-*-sebelum.png);
+## file ini kini memakai jalur BARU: duduk_kursi (kaki menjuntai),
+## _akhiri_aktivitas step-off ke "bangun", PAKAIAN_DUDUK v2 (gundukan
+## rendah lebar), API pemain duduk_di_kursi/berdiri_dari_kursi.
 ## Memakai SantriNPC + SantriPlayer SUNGGUHAN di scene kosong
 ## (pola foto_sarung_mekar_v2.gd) — bukan build_visual langsung.
 ## Jalankan: Xvfb :NN -screen 0 1280x720x24 & DISPLAY=:NN
@@ -115,58 +116,87 @@ func _tunggu_frame(n: int) -> void:
 
 func _ready() -> void:
 	_siapkan_dunia()
-	# ---------- NPC putra: bersila di lantai ----------
+	# ---------- NPC putra: bersila di lantai (PAKAIAN_DUDUK v2) ----------
 	_npc = SantriNPC.new()
 	_npc.setup("Hasan", Vector3(0, 0, 0), [], MissionData.OUTFIT_DEFAULT, false, {}, true, true)
 	add_child(_npc)
-	# BEKUKAN _process NPC: kalau tidak, mesin keliling/aktivitas
-	# otonom menimpa pose yang dipasang manual (jalan + idle +
-	# _langkah_ke mengembalikan sarung ke DEFAULT) — foto jadi
-	# tidak mereproduksi bug. Pose dipasang langsung di bawah.
+	# BEKUKAN _process NPC: mesin otonom menimpa pose manual — pose
+	# dipasang langsung di bawah (sama seperti foto "sebelum").
 	_npc.set_process(false)
 	await _tunggu_frame(10)
 	_npc._terapkan_duduk_baca(1.0)
 	await _tunggu_frame(90)
 	_angka("NPC-BERSILA", _npc, _npc._visual, _npc._sarung, _npc._leg_l, _npc._knee_l)
-	await _foto("pose-bersila-depan-sebelum.png", Vector3(0, 0, 0), Vector3(0.0, 1.0, 3.2))
-	await _foto("pose-bersila-samping-sebelum.png", Vector3(0, 0, 0), Vector3(3.2, 1.0, 0.0))
-	# ---------- NPC putra: duduk di kursi (jalur KODE saat ini) ----------
-	# Bangku taman putra 1a (posisi asli registry).
+	await _foto("pose-bersila-depan-sesudah.png", Vector3(0, 0, 0), Vector3(0.0, 1.0, 3.2))
+	await _foto("pose-bersila-samping-sesudah.png", Vector3(0, 0, 0), Vector3(3.2, 1.0, 0.0))
+	# ---------- NPC putra: duduk di kursi (jalur BARU) ----------
+	# Bangku taman putra 1a (posisi asli registry) + jalur asli
+	# _proses_aktivitas "duduk" (dispatch jenis kursi -> duduk_kursi).
 	var bangku_pos := Vector3(-3.4, 0.45, 25.45)
 	_bangku(Vector3(-3.4, 0, 25.45), 0.0)
-	# Jalur asli _proses_aktivitas "ke_kursi" -> sampai: position = sp.
-	_npc.position = bangku_pos
-	_npc._visual.rotation.y = 0.0
-	_npc._terapkan_duduk_baca(1.0)
+	var bangku: Dictionary = SantriNPC.KURSI_LUAR[0]
+	_npc.position = Vector3(bangku_pos.x, 0.0, bangku_pos.z)
+	_npc._aktivitas = "duduk"
+	_npc._aktivitas_kursi = bangku
+	_npc._aktivitas_yaw = float(bangku["yaw"])
+	_npc._aktivitas_timer = 60.0
+	for i in 3:
+		_npc._proses_aktivitas(1.0)
 	await _tunggu_frame(90)
-	_angka("NPC-KURSI-BERSILA", _npc, _npc._visual, _npc._sarung, _npc._leg_l, _npc._knee_l)
-	await _foto("pose-kursi-bersila-sebelum.png", bangku_pos, Vector3(0.0, 1.0, 3.2))
-	# ---------- NPC: berdiri dari kursi (jalur KODE saat ini) ----------
-	# _akhiri_aktivitas() lalu idle MANUAL (bukan _process — beku):
-	# badan kembali berdiri (visual y -> 0) tapi node y TETAP 0,45
-	# (bug 4) dan sarung TETAP terhampar (bug 1: _animate_idle tidak
-	# mengembalikan pakaian).
+	_angka("NPC-KURSI", _npc, _npc._visual, _npc._sarung, _npc._leg_l, _npc._knee_l)
+	await _foto("pose-kursi-depan-sesudah.png", bangku_pos, Vector3(0.0, 1.0, 3.2))
+	await _foto("pose-kursi-samping-sesudah.png", bangku_pos, Vector3(3.2, 1.0, 0.0))
+	# ---------- NPC: berdiri dari kursi (jalur BARU) ----------
+	# _akhiri_aktivitas() melangkah ke "bangun" registry + snap
+	# pakaian DEFAULT; idle manual menyelesaikan visual.
 	_npc._akhiri_aktivitas()
 	_npc._pause_timer = 5.0
 	for i in 12:
 		_npc._animate_idle(0.25)
 		await _tunggu_frame(2)
 	_angka("NPC-BERDIRI-DARI-KURSI", _npc, _npc._visual, _npc._sarung, _npc._leg_l, _npc._knee_l)
-	await _foto("pose-berdiri-dari-kursi-sebelum.png", _npc.position, Vector3(0.0, 1.0, 3.2))
-	# ---------- PEMAIN: bersila ----------
+	await _foto("pose-berdiri-dari-kursi-sesudah.png", _npc.position, Vector3(0.0, 1.0, 3.2))
+	_npc.visible = false
+	# ---------- PEMAIN: bersila (PAKAIAN_DUDUK v2) ----------
 	_pemain = SantriPlayer.new()
+	# Kapsul fisik (pola main.gd) — tanpa ini pemain jatuh menembus
+	# lantai di scene kosong (terukur: node_y -1780 di foto sebelum).
+	var bentuk := CollisionShape3D.new()
+	var kapsul := CapsuleShape3D.new()
+	kapsul.radius = 0.35
+	kapsul.height = 1.7
+	bentuk.shape = kapsul
+	bentuk.position = Vector3(0, 0.85, 0)
+	_pemain.add_child(bentuk)
 	_pemain.position = Vector3(6, 0, 0)
 	add_child(_pemain)
 	await _tunggu_frame(10)
 	_pemain.set_aksi("duduk")
 	await _tunggu_frame(90)
 	_angka("PEMAIN-BERSILA", _pemain, _pemain._visual, _pemain._sarung, _pemain._leg_l, _pemain._knee_l)
-	await _foto("pose-pemain-bersila-depan-sebelum.png", Vector3(6, 0, 0), Vector3(0.0, 1.0, 3.2))
-	await _foto("pose-pemain-bersila-samping-sebelum.png", Vector3(6, 0, 0), Vector3(3.2, 1.0, 0.0))
-	# ---------- PEMAIN: berdiri setelah bersila (bug 1 — pemain) ----------
-	_pemain.set_aksi("berdiri")
+	await _foto("pose-pemain-bersila-depan-sesudah.png", Vector3(6, 0, 0), Vector3(0.0, 1.0, 3.2))
+	await _foto("pose-pemain-bersila-samping-sesudah.png", Vector3(6, 0, 0), Vector3(3.2, 1.0, 0.0))
+	# ---------- PEMAIN: duduk di kursi via API baru ----------
+	_pemain.duduk_di_kursi(KursiPemain.dari_id("bangku_taman_putra_1a"))
 	await _tunggu_frame(90)
-	_angka("PEMAIN-BERDIRI-SETELAH-BERSILA", _pemain, _pemain._visual, _pemain._sarung, _pemain._leg_l, _pemain._knee_l)
-	await _foto("pose-pemain-berdiri-setelah-bersila-sebelum.png", Vector3(6, 0, 0), Vector3(0.0, 1.0, 3.2))
+	_angka("PEMAIN-KURSI", _pemain, _pemain._visual, _pemain._sarung, _pemain._leg_l, _pemain._knee_l)
+	await _foto("pose-pemain-kursi-depan-sesudah.png", bangku_pos, Vector3(0.0, 1.0, 3.2))
+	await _foto("pose-pemain-kursi-samping-sesudah.png", bangku_pos, Vector3(3.2, 1.0, 0.0))
+	# ---------- PEMAIN: berdiri dari kursi via API baru ----------
+	_pemain.berdiri_dari_kursi()
+	await _tunggu_frame(90)
+	_angka("PEMAIN-BERDIRI-DARI-KURSI", _pemain, _pemain._visual, _pemain._sarung, _pemain._leg_l, _pemain._knee_l)
+	await _foto("pose-pemain-berdiri-dari-kursi-sesudah.png", _pemain.position, Vector3(0.0, 1.0, 3.2))
+	_pemain.visible = false
+	# ---------- FATIMAH (abaya): bersila (PAKAIAN_ABAYA_DUDUK v2) ----------
+	var fatimah := SantriNPC.new()
+	fatimah.setup("Fatimah", Vector3(12, 0, 0), [], MissionData.OUTFIT_USTADZAH, true)
+	add_child(fatimah)
+	fatimah.set_process(false)
+	await _tunggu_frame(10)
+	fatimah._terapkan_duduk_baca(1.0, true, 0.0)
+	await _tunggu_frame(90)
+	_angka("FATIMAH-BERSILA", fatimah, fatimah._visual, fatimah._sarung, fatimah._leg_l, fatimah._knee_l)
+	await _foto("pose-fatimah-bersila-sesudah.png", Vector3(12, 0, 0), Vector3(0.0, 1.0, 3.2))
 	print("FOTO POSE KURSI SELESAI")
 	get_tree().quit(0)

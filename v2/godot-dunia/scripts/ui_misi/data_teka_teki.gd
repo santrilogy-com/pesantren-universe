@@ -16,14 +16,21 @@ class_name DataTekaTeki
 ## (sanusi_lokasi / fatimah_lokasi) — TIDAK ada kunci save baru
 ## untuk lokasi. Tetap TANPA marker di peta (§9 butir 18).
 
-## 12 teka-teki VERBATIM draf Laras (putra 6 + putri 6).
+## 12 teka-teki (putra 6 + putri 6) — 11 VERBATIM draf Laras +
+## 1 BARU "taman_putra" (Raka, 20 Nov 2026 — pengganti
+## "masjid_besar"; TEKS DRAF, menunggu tashih Mas).
 const TEKA_TEKI: Dictionary = {
 	# --- Putra (LokasiAcak.KANDIDAT) ---
 	"surau": "Tempat sholat berjamaah paling ramai di pesantren — beliau sering duduk di sana menunggu waktu sholat.",
 	"kelas_putra": "Di barat, tempat bangku berderet dan papan tulis menunggu — beliau mungkin sedang menyiapkan pelajaran di sana.",
 	"taman_surau": "Taman di balik Surau, tempat bunga dan pohon rindang — beliau suka duduk tenang di sana.",
 	"perpustakaan_taman": "Tempat buku-buku akan tinggal — lahannya masih berpapan, tapi beliau kadang membaca di sekitar sana.",
-	"masjid_besar": "Di timur, lahan luas yang sudah dipancang untuk bangunan besar — beliau suka melihat-lihat ke sana.",
+	# BARU (Raka, 20 Nov 2026 — pengganti "masjid_besar" yang
+	# DIHAPUS dari LokasiAcak: (64,-24) zona larangan putra).
+	# TEKS DRAF — menunggu tashih Mas (§9 butir 17), bukan verbatim
+	# draf Laras. Aturan draf §4 tetap: tidak menyebut nama lokasi
+	# ("Taman Putra") langsung.
+	"taman_putra": "Tempat duduk santai di antara bunga, tak jauh dari plaza — beliau suka menikmati teduh di sana.",
 	"kantin": "Kalau perut lapar, santri larinya ke mana? Ke sanalah beliau mungkin pergi.",
 	# --- Putri (LokasiAcak.KANDIDAT_PUTRI, semua live) ---
 	"musholla_putri": "Tempat sholat para santriwati — beliau sering duduk di sana.",

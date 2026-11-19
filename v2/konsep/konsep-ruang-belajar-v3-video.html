@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>Konsep Ruang Belajar v3 — Panel Video Episode</title>
+<style>
+  @page { size: 1280px 720px; margin: 0; }
+  @font-face {
+    font-family: 'Baloo 2';
+    src: url('file:///home/hatch/workspace/pesantren-verse/v2/godot-dunia/fonts/Baloo2-Variable.ttf') format('truetype');
+    font-weight: 400 800;
+  }
+  @font-face {
+    font-family: 'Amiri';
+    src: url('file:///home/hatch/workspace/pesantren-verse/v2/godot-dunia/fonts/Amiri-Regular.ttf') format('truetype');
+    font-weight: 400;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1280px; height: 720px; overflow: hidden; }
+  body {
+    font-family: 'Baloo 2', sans-serif;
+    background: #04150f;
+    position: relative;
+  }
+  .latar {
+    position: absolute; inset: 0;
+    background: url('file:///home/hatch/workspace/pesantren-verse/v2/konsep/konsep-panel-misi-v2-latar.png') center / cover no-repeat;
+  }
+  .gelap { position: absolute; inset: 0; background: rgba(4, 21, 15, 0.55); }
+  .tutup {
+    position: absolute; right: 28px; top: 18px; width: 44px; height: 44px;
+    border: 2px solid #f2ead6; border-radius: 10px; color: #f2ead6;
+    font-size: 26px; font-weight: 700; text-align: center; line-height: 40px;
+    z-index: 5;
+  }
+  /* ---- Bingkai video vertikal (kiri) ---- */
+  .video-frame {
+    position: absolute; left: 48px; top: 48px; width: 300px; height: 600px;
+    background: linear-gradient(180deg, #0a7a52 0%, #065f46 45%, #043b2c 100%);
+    border: 3px solid #c9a227; border-radius: 16px; overflow: hidden;
+  }
+  .v-adegan {
+    text-align: center; color: #f2c14e; font-weight: 800; font-size: 15px;
+    letter-spacing: 2px; margin-top: 16px;
+  }
+  .v-arab {
+    font-family: 'Amiri', serif; font-size: 64px; color: #ffffff;
+    text-align: center; line-height: 1.2; margin-top: 26px;
+  }
+  .v-latin { text-align: center; color: #cfe8d8; font-size: 18px; margin-top: 2px; }
+  .v-kartu {
+    margin: 14px 22px 0; border-radius: 10px; padding: 8px 14px;
+    font-size: 19px; font-weight: 700; color: #ffffff;
+  }
+  .v-kartu small { display: block; font-size: 15px; font-weight: 600; opacity: 0.9; }
+  .v-kartu.isim { background: #1d8a4e; }
+  .v-kartu.fiil { background: #2b6cb0; }
+  .v-kartu.huruf { background: #b7791f; }
+  .v-play {
+    width: 72px; height: 72px; border-radius: 50%;
+    background: rgba(242, 193, 78, 0.95); margin: 26px auto 0;
+    position: relative;
+  }
+  .v-play i {
+    position: absolute; left: 28px; top: 20px;
+    width: 0; height: 0;
+    border-left: 26px solid #043b2c;
+    border-top: 16px solid transparent;
+    border-bottom: 16px solid transparent;
+  }
+  .v-kontrol {
+    position: absolute; left: 0; right: 0; bottom: 0; height: 64px;
+    background: rgba(4, 21, 15, 0.75); padding: 10px 16px 0;
+  }
+  .v-bar { height: 7px; background: rgba(255,255,255,0.25); border-radius: 4px; }
+  .v-bar i { display: block; height: 7px; width: 186px; background: #f2c14e; border-radius: 4px; }
+  .v-waktu { color: #f2ead6; font-size: 16px; font-weight: 700; margin-top: 6px; }
+  .v-waktu span { float: right; color: #f2c14e; }
+  /* ---- Panel info (kanan) ---- */
+  .info { position: absolute; left: 384px; top: 44px; width: 848px; }
+  .kicker { color: #c9a227; font-weight: 800; font-size: 17px; letter-spacing: 3px; }
+  .judul { color: #ffffff; font-weight: 800; font-size: 36px; line-height: 1.1; margin-top: 2px; }
+  .guru { margin-top: 8px; color: #f2ead6; font-size: 20px; font-weight: 600; }
+  .ava {
+    display: inline-block; width: 34px; height: 34px; border-radius: 50%;
+    background: #065f46; border: 2px solid #f2c14e; color: #f2c14e;
+    font-weight: 800; font-size: 17px; text-align: center; line-height: 30px;
+    margin-right: 6px; vertical-align: middle;
+  }
+  .daftar-judul { color: #c9a227; font-weight: 800; font-size: 16px; letter-spacing: 2px; margin-top: 18px; }
+  .adegan {
+    margin-top: 7px; font-size: 20px; font-weight: 600; color: #f2ead6;
+  }
+  .adegan .waktu { float: right; color: rgba(242, 234, 214, 0.6); font-size: 17px; }
+  .adegan.aktif {
+    background: #f2c14e; color: #043b2c; border-radius: 10px;
+    padding: 4px 12px; font-weight: 800; margin-left: -12px; margin-right: -12px;
+  }
+  .adegan.aktif .waktu { color: #043b2c; }
+  .centang { display: inline-block; width: 7px; height: 13px; border-right: 3px solid #c9a227; border-bottom: 3px solid #c9a227; transform: rotate(45deg); margin-right: 10px; }
+  .adegan.aktif .centang { border-color: #043b2c; }
+  /* Kotak gate */
+  .gate {
+    margin-top: 16px; border: 2px solid #c9a227; border-radius: 12px;
+    padding: 10px 16px; background: rgba(4, 21, 15, 0.7);
+  }
+  .gate-teks { color: #f2ead6; font-size: 19px; font-weight: 700; }
+  .gate-teks b { color: #f2c14e; }
+  .gate-bar { height: 7px; background: rgba(255,255,255,0.2); border-radius: 4px; margin-top: 7px; }
+  .gate-bar i { display: block; height: 7px; width: 82%; background: #f2c14e; border-radius: 4px; }
+  .gate-note { color: rgba(242, 234, 214, 0.7); font-size: 15px; margin-top: 5px; }
+  /* Tombol */
+  .tombol-row { margin-top: 16px; }
+  .btn-emas {
+    display: inline-block; background: linear-gradient(180deg, #f2c14e, #d9a92c);
+    color: #043b2c; font-weight: 800; font-size: 23px;
+    padding: 10px 30px; border-radius: 12px; margin-right: 14px;
+  }
+  .btn-outline {
+    display: inline-block; background: transparent;
+    border: 2px solid #f2ead6; color: #f2ead6;
+    font-weight: 700; font-size: 23px;
+    padding: 9px 26px; border-radius: 12px;
+  }
+</style>
+</head>
+<body>
+  <div class="latar"></div>
+  <div class="gelap"></div>
+  <div class="tutup">&#215;</div>
+
+  <div class="video-frame">
+    <div class="v-adegan">ADEGAN 5 &#8212; TIGA JENIS KATA</div>
+    <div class="v-arab" dir="rtl">&#1575;&#1604;&#1591;&#1614;&#1617;&#1575;&#1604;&#1616;&#1576;&#1615;</div>
+    <div class="v-latin">ath-thaalib &#8212; siswa itu</div>
+    <div class="v-kartu isim">ISIM &#8212; kata benda <small>tidak terikat waktu</small></div>
+    <div class="v-kartu fiil">FI&#8217;IL &#8212; kata kerja <small>terikat waktu</small></div>
+    <div class="v-kartu huruf">HURUF &#8212; penghubung <small>kata kecil</small></div>
+    <div class="v-play"><i></i></div>
+    <div class="v-kontrol">
+      <div class="v-bar"><i></i></div>
+      <div class="v-waktu">0:56 / 1:30 <span>&#9654; Jeda</span></div>
+    </div>
+  </div>
+
+  <div class="info">
+    <div class="kicker">EPISODE 1 &#183; MODUL 01</div>
+    <div class="judul">Mengenal Ilmu Nahwu</div>
+    <div class="guru"><span class="ava">S</span><span class="ava">F</span> Diajari Ust. Sanusi &amp; Ustzh. Fatimah</div>
+
+    <div class="daftar-judul">YANG DIBAHAS DI EPISODE INI</div>
+    <div class="adegan"><span class="centang"></span>1 &#183; Pembuka <span class="waktu">0:00</span></div>
+    <div class="adegan"><span class="centang"></span>2 &#183; Apa itu Nahwu <span class="waktu">0:12</span></div>
+    <div class="adegan"><span class="centang"></span>3 &#183; Contoh u / a / i <span class="waktu">0:30</span></div>
+    <div class="adegan"><span class="centang"></span>4 &#183; Kalam <span class="waktu">0:38</span></div>
+    <div class="adegan aktif">5 &#183; Tiga Jenis Kata <span class="waktu">0:49</span></div>
+    <div class="adegan">6 &#183; Mabni vs mu&#8217;rob + penutup <span class="waktu">1:10</span></div>
+
+    <div class="gate">
+      <div class="gate-teks">Sudah ditonton <b>82%</b> &#8212; latihan terbuka</div>
+      <div class="gate-bar"><i></i></div>
+      <div class="gate-note">Gate 80% &#8212; dihitung dari detik yang benar-benar diputar (lompat ke akhir tidak dihitung).</div>
+    </div>
+
+    <div class="tombol-row">
+      <span class="btn-emas">Lanjut ke Latihan &#8250;</span>
+      <span class="btn-outline">Baca Ulang Modul</span>
+    </div>
+  </div>
+</body>
+</html>

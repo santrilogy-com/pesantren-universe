@@ -2,9 +2,14 @@ extends Node
 ## AUDIT LANTAI NPC (Sinta, 19 Nov 2026 — tindak lanjut temuan
 ## lantai Surau y=0,5).
 ## Membuktikan tanpa memuat dunia (fungsi statis saja):
-##   1. LokasiAcak "surau" y=0,5 (lantai visual Surau) — Sanusi
-##      DIAM tidak pernah dipanggil _langkah_ke, jadi y spawn ini
-##      yang menentukan ia tenggelam atau tidak.
+##   1. LokasiAcak "surau" di SERAMBI TIMUR (3.5,-2), y=0 (Raka,
+##      20 Nov 2026 — pindah dari pusat cangkang (0,0.5,-14) yang
+##      TAK TERJANGKAU pemain; misi cari guru bisa macet). Serambi
+##      timur = rumput datar di luar lebar anak tangga (3,2 m),
+##      jadi lantai visual 0 — y=0,5 lama hanya berlaku DI DALAM
+##      plinth Surau, bukan untuk kandidat ini lagi. Adegan belajar
+##      tetap menaikkan ustadz via _lantai_visual_y saat Ruang
+##      Belajar dibuka (main.gd _mulai_adegan_belajar).
 ##   2. Semua waypoint 20 NPC (sudut zona implementasi main.gd
 ##      _spawn_npc_sistem_baru + waypoint dokumen RENCANA-20-NPC-v1
 ##      + kursi luar KURSI_LUAR): y jalan (_tinggi_tanah) vs lantai
@@ -66,13 +71,11 @@ func _lantai_visual(pos: Vector3) -> float:
 
 
 func _ready() -> void:
-	# --- 1) LokasiAcak "surau" ---
+	# --- 1) LokasiAcak "surau" (serambi timur, Raka 20 Nov 2026) ---
 	var pos_surau: Vector3 = LokasiAcak.pos_dari_id("surau")
-	_cek("surau y=0,5 (lantai visual)", absf(pos_surau.y - 0.5) < 0.01, str(pos_surau))
-	_cek("surau xz tetap (0,-14)", absf(pos_surau.x) < 0.01 and absf(pos_surau.z + 14.0) < 0.01, str(pos_surau))
+	_cek("surau y=0 (serambi timur, tanah datar)", absf(pos_surau.y) < 0.01, str(pos_surau))
+	_cek("surau xz serambi timur (3.5,-2)", absf(pos_surau.x - 3.5) < 0.01 and absf(pos_surau.z + 2.0) < 0.01, str(pos_surau))
 	for k in LokasiAcak.KANDIDAT:
-		if String(k["id"]) == "surau":
-			continue
 		_cek("kandidat %s y=0 (tanah terbuka)" % String(k["id"]), absf((k["pos"] as Vector3).y) < 0.01, str(k["pos"]))
 	for k in LokasiAcak.KANDIDAT_PUTRI:
 		_cek("kandidat putri %s y=0 (lantai Musholla maks 0,08)" % String(k["id"]), absf((k["pos"] as Vector3).y) < 0.01, str(k["pos"]))
@@ -129,6 +132,9 @@ func _ready() -> void:
 	var tengah_w1 := Vector3(134, 0, -16)
 	_cek("INFO segmen W1 potong anak tangga Musholla <=0,08 m", _lantai_visual(tengah_w1) <= 0.08, "visual=%.2f" % _lantai_visual(tengah_w1))
 	# --- 3) Musholla: Fatimah spawn y=0 vs lantai 0,02 ---
+	# (Raka, 20 Nov 2026: posisi pindah dari tengah cangkang
+	# (134,-24) ke serambi depan (131,-17.5) — di luar serambi
+	# (x 131,75..136,25) jadi lantai visual 0, tetap y=0.)
 	var pos_fatimah: Vector3 = LokasiAcak.pos_dari_id_putri("musholla_putri")
 	_cek("Fatimah Musholla tenggelam maks 0,02 m", _lantai_visual(pos_fatimah) - pos_fatimah.y <= 0.02, "visual=%.2f y=%.2f" % [_lantai_visual(pos_fatimah), pos_fatimah.y])
 	print("AUDIT-LANTAI SELESAI lulus=%d gagal=%d" % [_lulus, _gagal])

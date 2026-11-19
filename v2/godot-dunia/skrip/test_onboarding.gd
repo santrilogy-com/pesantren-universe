@@ -88,9 +88,11 @@ func _ready() -> void:
 	# 19 Nov 2026 (Gilang): target langkah 6 putra PINDAH Surau
 	# (0,-14) -> depan pintu Kantor Putra SEMENTARA; 18:40 WIB
 	# kantor PINDAH lagi ke selatan Asrama (-18,18.5).
-	_cek("Langkah 6 putra target = Kantor Putra (-18,18.5)", (m6["target_pos"] as Vector3).distance_to(Vector3(-18, 0, 18.5)) < 0.01)
+	# 20 Nov 2026 (Gilang, konsep tes-di-dalam-kantor): venue =
+	# PINTU kantor (marker) — tes dibuka setelah duduk di dalam.
+	_cek("Langkah 6 putra target = pintu Kantor Putra (-18,20)", (m6["target_pos"] as Vector3).distance_to(Vector3(-18, 0, 20)) < 0.01)
 	var m6p := Onboarding.misi_aktif(sm, "putri")
-	_cek("Langkah 6 putri target = Kantor Ustadzah (148,-33) SEMENTARA", (m6p["target_pos"] as Vector3).distance_to(Vector3(148, 0, -33)) < 0.01)
+	_cek("Langkah 6 putri target = pintu Kantor Ustadzah (144,-33)", (m6p["target_pos"] as Vector3).distance_to(Vector3(144, 0, -33)) < 0.01)
 
 	# ---------- tes lulus / gagal ----------
 	var st := _save_baru()
@@ -171,9 +173,11 @@ func _ready() -> void:
 	# depan pintu Kantor Putra SEMENTARA; 18:40 WIB kantor PINDAH
 	# lagi ke selatan Asrama Putra (-18,18.5) — venue lama tidak
 	# terjangkau pemain (dinding Surau bercollision, 8 m > 3,5 m).
-	_cek("venue_tes putra = Kantor Putra (-18,18.5)", Onboarding.venue_tes("putra").distance_to(Vector3(-18, 0, 18.5)) < 0.01)
-	_cek("venue_tes putri = Kantor Ustadzah (148,-33)", Onboarding.venue_tes("putri").distance_to(Vector3(148, 0, -33)) < 0.01)
-	_cek("venue_tes gender tak dikenal = putra (default)", Onboarding.venue_tes("").distance_to(Vector3(-18, 0, 18.5)) < 0.01)
+	# 20 Nov 2026 (Gilang, konsep tes-di-dalam-kantor): venue =
+	# PINTU kantor (marker) — tes dibuka setelah duduk di dalam.
+	_cek("venue_tes putra = pintu Kantor Putra (-18,20)", Onboarding.venue_tes("putra").distance_to(Vector3(-18, 0, 20)) < 0.01)
+	_cek("venue_tes putri = pintu Kantor Ustadzah (144,-33)", Onboarding.venue_tes("putri").distance_to(Vector3(144, 0, -33)) < 0.01)
+	_cek("venue_tes gender tak dikenal = putra (default)", Onboarding.venue_tes("").distance_to(Vector3(-18, 0, 20)) < 0.01)
 	_cek("venue_tes_id putri = kantor_ustadzah", Onboarding.venue_tes_id("putri") == "kantor_ustadzah")
 	_cek("venue_tes_id putra = kantor_putra", Onboarding.venue_tes_id("putra") == "kantor_putra")
 

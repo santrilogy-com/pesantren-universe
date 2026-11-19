@@ -55,6 +55,8 @@ var _rig: Dictionary = {}
 var _sarung: MeshInstance3D = null
 var _sarung_hem: MeshInstance3D = null
 var _sarung_trim: MeshInstance3D = null
+var _lutut_l: MeshInstance3D = null
+var _lutut_r: MeshInstance3D = null
 var _torso: MeshInstance3D = null
 var _peci: MeshInstance3D = null
 
@@ -155,6 +157,8 @@ func _pasang_visual(built: Dictionary) -> void:
 	_sarung = built["sarung"]
 	_sarung_hem = built["sarung_hem"]
 	_sarung_trim = built["sarung_trim"]
+	_lutut_l = built["lutut_l"]
+	_lutut_r = built["lutut_r"]
 	_torso = built["torso"]
 	_peci = built["peci"]
 	_rig = AnimasiMixamo.rig_dari_built(built)
@@ -320,6 +324,12 @@ func _lerp_pakaian(delta: float, target: Dictionary) -> void:
 		_sarung_hem.position.y = lerpf(_sarung_hem.position.y, target["hem_y"], k)
 	if _sarung_trim != null:
 		_sarung_trim.position.y = lerpf(_sarung_trim.position.y, target["trim_y"], k)
+	if _lutut_l != null:
+		_lutut_l.scale = _lutut_l.scale.lerp(target["lutut_scale"], k)
+		_lutut_l.visible = _lutut_l.scale.length_squared() > 0.0025
+	if _lutut_r != null:
+		_lutut_r.scale = _lutut_r.scale.lerp(target["lutut_scale"], k)
+		_lutut_r.visible = _lutut_r.scale.length_squared() > 0.0025
 	if _torso != null:
 		_torso.scale = _torso.scale.lerp(target["torso_scale"], k)
 	if _peci != null:

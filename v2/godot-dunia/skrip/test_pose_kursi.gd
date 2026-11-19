@@ -7,6 +7,10 @@ extends Node
 ## Bug 3: duduk di kursi malah bersila di kursi (kaki harus menjuntai).
 ## Bug 4: berdiri dari kursi malah berdiri DI ATAS kursi (harus turun
 ## ke lantai di depan kursi).
+## SUSULAN (Kirana, 20 Nov 2026 — verdict Mas 01:28 WIB "Ketika duduk
+## bersila masih mekar sarungnya"): gundukan v2 masih kerucut mulus
+## dari depan — tonjolan lutut (mesh baru, bukan retune skala):
+## dua bola pipih di posisi lutut, muncul HANYA saat bersila.
 ## Jalankan headless (HOME terisolasi — jangan pakai save VM):
 ##   HOME=/tmp/iso-pose-kursi godot --headless --path . --scene res://skrip/test_pose_kursi.tscn
 ## NPC diuji langsung (set_process(false) — mesin otonom tidak boleh
@@ -63,6 +67,17 @@ func _ready() -> void:
 		SantriPlayer.PAKAIAN_ABAYA_KURSI["sarung_scale"].is_equal_approx(Vector3(1.05, 0.55, 1.05)))
 	_cek("PAKAIAN_ABAYA_DUDUK v2 = (1.85,0.55,1.85)",
 		SantriPlayer.PAKAIAN_ABAYA_DUDUK["sarung_scale"].is_equal_approx(Vector3(1.85, 0.55, 1.85)))
+	_cek("LUTUT_SKALA = (1.15,0.62,1.0)",
+		SantriPlayer.LUTUT_SKALA.is_equal_approx(Vector3(1.15, 0.62, 1.0)))
+	_cek("PAKAIAN_DUDUK lutut_scale = LUTUT_SKALA",
+		SantriPlayer.PAKAIAN_DUDUK["lutut_scale"].is_equal_approx(SantriPlayer.LUTUT_SKALA))
+	_cek("PAKAIAN_ABAYA_DUDUK lutut_scale = LUTUT_SKALA",
+		SantriPlayer.PAKAIAN_ABAYA_DUDUK["lutut_scale"].is_equal_approx(SantriPlayer.LUTUT_SKALA))
+	_cek("PAKAIAN_DEFAULT/KURSI/TIDUR lutut_scale = 0",
+		SantriPlayer.PAKAIAN_DEFAULT["lutut_scale"].is_equal_approx(Vector3.ZERO)
+		and SantriPlayer.PAKAIAN_KURSI["lutut_scale"].is_equal_approx(Vector3.ZERO)
+		and SantriPlayer.PAKAIAN_ABAYA_KURSI["lutut_scale"].is_equal_approx(Vector3.ZERO)
+		and SantriPlayer.PAKAIAN_TIDUR["lutut_scale"].is_equal_approx(Vector3.ZERO))
 	_cek("PoseIds POSE_DUDUK_KURSI = 8", PoseIds.POSE_DUDUK_KURSI == 8)
 	_cek("PoseIds dari_aksi(duduk_kursi) = 8", PoseIds.dari_aksi("duduk_kursi") == 8)
 	_cek("PoseIds ke_aksi(8) = duduk_kursi", PoseIds.ke_aksi(8) == "duduk_kursi")
@@ -84,6 +99,12 @@ func _ready() -> void:
 	_cek("BUG2 bersila: lutut MELEBAR (leg y kanan +0.50)", is_equal_approx(npc._leg_r.rotation.y, 0.50))
 	_cek("BUG2 bersila: paha -0.85, lutut +2.30",
 		is_equal_approx(npc._leg_l.rotation.x, -0.85) and is_equal_approx(npc._knee_l.rotation.x, 2.30))
+	_cek("LUTUT bersila: tonjolan kiri tampil + skala penuh",
+		npc._lutut_l.visible and npc._lutut_l.scale.is_equal_approx(SantriPlayer.LUTUT_SKALA))
+	_cek("LUTUT bersila: tonjolan kanan tampil + skala penuh",
+		npc._lutut_r.visible and npc._lutut_r.scale.is_equal_approx(SantriPlayer.LUTUT_SKALA))
+	_cek("LUTUT bersila: tonjolan di depan-bawah (z>0.2, y~0.52)",
+		npc._lutut_l.position.z > 0.2 and absf(npc._lutut_l.position.y - 0.52) < 0.05)
 
 	# ---------- BUG 3: duduk di KURSI = kaki menjuntai (NPC) ----------
 	npc.position = Vector3(bangku["pos"].x, 0.0, bangku["pos"].z)
@@ -99,6 +120,8 @@ func _ready() -> void:
 	_cek("BUG3 kursi: betis vertikal (lutut +1.45)", is_equal_approx(npc._knee_l.rotation.x, 1.45))
 	_cek("BUG3 kursi: BUKAN bersila (lutut bukan 2.30)", not is_equal_approx(npc._knee_l.rotation.x, 2.30))
 	_cek("BUG3 kursi: sarung = PAKAIAN_KURSI", npc._sarung.scale.is_equal_approx(Vector3(1.10, 0.42, 1.10)))
+	_cek("LUTUT kursi: tonjolan SEMBUNYI (bukan bersila)",
+		not npc._lutut_l.visible and not npc._lutut_r.visible)
 
 	# ---------- BUG 4: berdiri dari kursi = turun ke "bangun" (NPC) ----------
 	npc._akhiri_aktivitas()
@@ -115,6 +138,7 @@ func _ready() -> void:
 	npc._terapkan_duduk_baca(1.0, true, 0.0)
 	npc._animate_idle(1.0)
 	_cek("BUG1 idle: sarung kembali DEFAULT", npc._sarung.scale.is_equal_approx(Vector3.ONE))
+	_cek("LUTUT idle: tonjolan sembunyi", not npc._lutut_l.visible and not npc._lutut_r.visible)
 	# (b) _akhiri_aktivitas langsung snap DEFAULT (tanpa tunggu idle).
 	npc._aktivitas = "duduk"
 	npc._aktivitas_kursi = bersila
@@ -123,11 +147,13 @@ func _ready() -> void:
 	npc._terapkan_duduk_baca(1.0, true, 0.0)
 	npc._akhiri_aktivitas()
 	_cek("BUG1 akhiri: sarung snap DEFAULT", npc._sarung.scale.is_equal_approx(Vector3.ONE))
+	_cek("LUTUT akhiri: tonjolan sembunyi", not npc._lutut_l.visible and not npc._lutut_r.visible)
 	_cek("BUG1 akhiri bersila: berdiri di tempat", npc.position.is_equal_approx(Vector3(bersila["pos"].x, 0.0, bersila["pos"].z)))
 	# (c) duduk_belajar -> berdiri_belajar (adegan belajar).
 	npc._terapkan_duduk_baca(1.0, true, 0.0)
 	npc.berdiri_belajar()
 	_cek("BUG1 belajar: sarung kembali DEFAULT", npc._sarung.scale.is_equal_approx(Vector3.ONE))
+	_cek("LUTUT belajar: tonjolan sembunyi", not npc._lutut_l.visible and not npc._lutut_r.visible)
 
 	# ---------- Kasur: bersila di atas kasur, bangun menjauh ----------
 	npc._aktivitas = "duduk"
@@ -139,17 +165,30 @@ func _ready() -> void:
 		npc._proses_aktivitas(1.0)
 	_cek("KASUR: visual y = +0.09 (pinggul 0.71)", is_equal_approx(npc._visual.position.y, 0.09))
 	_cek("KASUR: kaki bersila (lutut 2.30)", is_equal_approx(npc._knee_l.rotation.x, 2.30))
+	_cek("LUTUT kasur: tonjolan tampil (bersila di kasur)",
+		npc._lutut_l.visible and npc._lutut_l.scale.is_equal_approx(SantriPlayer.LUTUT_SKALA))
 	var kasur_pos: Vector3 = kasur["pos"]
 	npc._akhiri_aktivitas()
 	_cek("KASUR: bangun menjauh dari kasur (>1 m)",
 		Vector2(npc.position.x, npc.position.z).distance_to(Vector2(kasur_pos.x, kasur_pos.z)) > 1.0)
 	_cek("KASUR: sarung DEFAULT setelah bangun", npc._sarung.scale.is_equal_approx(Vector3.ONE))
+	_cek("LUTUT kasur bangun: tonjolan sembunyi", not npc._lutut_l.visible)
 
 	# ---------- Abaya: PAKAIAN_KURSI dipetakan ke ABAYA_KURSI ----------
 	var ustadzah := _npc_baru("Ustadzah Mariyah", Vector3(134, 0, -17), MissionData.OUTFIT_USTADZAH, true)
 	ustadzah._terapkan_pakaian(1.0, SantriPlayer.PAKAIAN_KURSI)
 	_cek("ABAYA kursi: skala = ABAYA_KURSI (1.05,0.55,1.05)",
 		ustadzah._sarung.scale.is_equal_approx(Vector3(1.05, 0.55, 1.05)))
+	_cek("LUTUT abaya kursi: tonjolan SEMBUNYI",
+		not ustadzah._lutut_l.visible and not ustadzah._lutut_r.visible)
+	# ---------- Abaya bersila: tonjolan lutut di gamis ----------
+	ustadzah._terapkan_duduk_baca(1.0, true, 0.0)
+	_cek("LUTUT abaya bersila: tonjolan tampil + skala penuh",
+		ustadzah._lutut_l.visible and ustadzah._lutut_l.scale.is_equal_approx(SantriPlayer.LUTUT_SKALA))
+	_cek("LUTUT abaya bersila: tonjolan kanan tampil",
+		ustadzah._lutut_r.visible and ustadzah._lutut_r.scale.is_equal_approx(SantriPlayer.LUTUT_SKALA))
+	_cek("LUTUT abaya bersila: sarung = ABAYA_DUDUK",
+		ustadzah._sarung.scale.is_equal_approx(Vector3(1.85, 0.55, 1.85)))
 
 	# ---------- "ke_kursi": node tiba di TANAH, bukan di tinggi kursi ----------
 	var npc2 := _npc_baru("Budi", Vector3(-3.4, 0, 24.0), MissionData.OUTFIT_DEFAULT, false)
@@ -191,6 +230,7 @@ func _ready() -> void:
 	_cek("PEMAIN kursi: lutut +1.45 (+-0.1)", absf(pemain._knee_l.rotation.x - 1.45) < 0.1)
 	_cek("PEMAIN kursi: sarung = PAKAIAN_KURSI (+-0.05)",
 		absf(pemain._sarung.scale.x - 1.10) < 0.05 and absf(pemain._sarung.scale.y - 0.42) < 0.05)
+	_cek("PEMAIN kursi: tonjolan sembunyi", not pemain._lutut_l.visible and not pemain._lutut_r.visible)
 	_cek("PEMAIN kursi: collision dimatikan", bentuk.disabled)
 	_cek("PEMAIN kursi: fisika beku (velocity 0)", pemain.velocity.is_equal_approx(Vector3.ZERO))
 	pemain.berdiri_dari_kursi()
@@ -211,6 +251,8 @@ func _ready() -> void:
 	_cek("PEMAIN bersila: aksi = duduk", pemain.aksi_saat_ini() == "duduk")
 	_cek("PEMAIN bersila: visual y = -0.42 (+-0.05)", absf(pemain._visual.position.y - (-0.42)) < 0.05)
 	_cek("PEMAIN bersila: lutut +2.30 (+-0.1)", absf(pemain._knee_l.rotation.x - 2.30) < 0.1)
+	_cek("PEMAIN bersila: tonjolan tampil (+-0.05)",
+		pemain._lutut_l.visible and absf(pemain._lutut_l.scale.x - 1.15) < 0.05 and absf(pemain._lutut_l.scale.y - 0.62) < 0.05)
 	pemain.berdiri_dari_kursi()
 	_cek("PEMAIN bersila bangun: berdiri di tempat",
 		pemain.global_position.is_equal_approx(Vector3(2, 0, 2)))
