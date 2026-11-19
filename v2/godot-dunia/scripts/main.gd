@@ -136,16 +136,22 @@ var _sholat_tanggal: String = ""
 var _sholat_adegan: String = ""
 var _sholat_adegan_t: float = 0.0
 ## RUANG BELAJAR CHAT (Sinta, 19 Nov 2026 — §8): adegan belajar —
-## ustadz DUDUK + papan tulis kecil + kamera membingkai beliau
-## selama dialog belajar terbuka. _dialog_adegan_aktif = adegan
-## sedang berjalan; yaw/pitch kamera lama disimpan untuk kembali
-## ke pemain saat dialog ditutup (rig/spring/FOV di-lerp kembali
-## sendiri oleh kamera.perbarui). Papan hanya ada selama adegan.
+## ustadz DUDUK + papan tulis kecil + MEJA belajar + kamera
+## membingkai beliau selama dialog belajar terbuka. _dialog_adegan_aktif
+## = adegan sedang berjalan; yaw/pitch kamera lama disimpan untuk
+## kembali ke pemain saat dialog ditutup (rig/spring/FOV di-lerp kembali
+## sendiri oleh kamera.perbarui). Papan + meja hanya ada selama adegan.
+## MEJA (Sinta, 19 Nov 2026 — koreksi Mas "kok jelek.. kek tenggelam
+## gitu?"): meja kayu rendah di DEPAN ustadz duduk supaya tubuh
+## bawahnya tersembunyi wajar di balik meja, bukan separuh ditelan
+## lantai; kitab di atas meja. Berlaku untuk Sanusi DAN Fatimah
+## (probe: Fatimah BENAR duduk — visual_y -0.42, kepala 1.66→1.21 m).
 var _dialog_adegan_aktif := false
 var _dialog_cam_yaw := 0.0
 var _dialog_cam_yaw_lama := 0.0
 var _dialog_cam_pitch_lama := -0.35
 var _papan_belajar: Node3D = null
+var _meja_belajar: Node3D = null
 var _papan_judul: Label3D = null
 var _papan_isi: Label3D = null
 const TAKBIR_TAHAN_DETIK := 4.0
@@ -1062,9 +1068,108 @@ func _spawn_npcs() -> void:
 		NPCFatimah.tempatkan(_fatimah, lok_acak_putri["pos"])
 	_fatimah.rute_selesai.connect(_on_npc_rute_selesai)
 
+	# 20 NPC v1 (Raka, 19 Nov 2026): guru yang dihormati — group
+	# untuk _cek_hormat (npc.gd). Kyai + Mariyah + Sanusi + Fatimah;
+	# BUKAN Bilal/Faris, Satpam/Penjaga, pemain (lihat desain §7).
+	for guru in [_kyai, _ustadzah, _sanusi, _fatimah]:
+		if guru != null:
+			guru.add_to_group("guru_hormat")
+	_spawn_npc_sistem_baru()
 
 
-# ---------- login / sesi ----------
+# ---------- 20 NPC sistem baru (Raka, 19 Nov 2026) ----------
+## Desain Laras (v2/konsep/DESAIN-SISTEM-NPC-v1.md, ACC Mas 14:10):
+## 10 putra + 10 putri; nama acak BERSEED dari pool 30/gender
+## (tanpa nama kembar; tanpa nama NPC lama / santri nyata /
+## pimpinan — "Syamsul"/"Huda" diganti "Syarif"/"Hamzah" karena
+## itu nama pimpinan di rekap kehadiran). Zona patroli per
+## sub-zona (waypoint HANYA di dalam sub-zona, segmen divalidasi
+## _segmen_bersih lewat _pick_target); interior hanya lewat
+## teleport (aktivitas BACA_KAMAR); NPC TIDAK PERNAH menyeberang
+## tembok x=14 (zona putra x<14, putri x>115).
+## Wajah v1: kulit (6 tone) x kacamata (2) x peci_model (2, putra)
+## x tinggi (4 langkah) = 96 putra / 48 putri — cukup untuk 10
+## NPC/gender yang semuanya beda. Varian GEOMETRI wajah (1.728
+## kombinasi di desain) adalah tugas TERPISAH untuk build_visual
+## (player.gd tidak punya kunci outfit mata/alis/hidung/senyum/
+## rambut/tinggi). Alis miring "tegas" TIDAK dibangun — alis di
+## kode HANYA untuk muslimah, dan revisi Kirana 21:52 membuatnya
+## DATAR karena alis miring terbaca "marah/jutek"; gantinya kunci
+## outfit "alis" (bool, default false) — sebagian NPC putra dapat
+## alis DATAR.
+## Seed TETAP 20261119: NPC yang sama di setiap sesi (nama, wajah,
+## zona) — deterministik, bukan acak tiap buka game.
+const NPC20_SEED := 20261119
+const NPC20_NAMA_PUTRA: Array[String] = ["Ahmad", "Rizki", "Fajar", "Ilham", "Hasan", "Umar", "Ali", "Abdullah", "Abdul", "Syarif", "Mahmud", "Ridwan", "Fauzi", "Anwar", "Lutfi", "Wahyu", "Zainal", "Fikri", "Hafidz", "Iqbal", "Maulana", "Rafli", "Rendra", "Panji", "Bimo", "Arif", "Dedi", "Thoriq", "Fauzan", "Hamzah"]
+const NPC20_NAMA_PUTRI: Array[String] = ["Aisyah", "Khadijah", "Maryam", "Siti", "Nurul", "Salma", "Hana", "Laila", "Dewi", "Putri", "Sari", "Wulan", "Ratna", "Intan", "Melati", "Kartika", "Ayu", "Rina", "Nisa", "Amira", "Yasmin", "Farah", "Dina", "Lina", "Maya", "Salsabila", "Humaira", "Syifa", "Nabila", "Zahira"]
+const NPC20_KULIT: Array[String] = ["#8a5a33", "#c68e5e", "#e8b98a", "#ffc09f", "#d59e78", "#a06b3f"]
+const NPC20_TINGGI: Array[float] = [0.96, 0.99, 1.02, 1.05]
+
+func _spawn_npc_sistem_baru() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = NPC20_SEED
+	# Zona patroli — persegi keliling di sekitar tapak gedung
+	# (waypoint DI LUAR tapak; segmen antar-waypoint tidak memotong
+	# gedung). P1: Surau (-8..8, -24..-4). P2: AsramaPutra
+	# (-33.25..-14.75, 4..16). W1: Musholla (128..140, -29..-19) —
+	# titik selatan x<=142 (Kantor Ustadzah di (148,-33)).
+	# W2: KelasPutri (125..135, 6..14). W3: AsramaPutri
+	# (146..164, 3..15). W4: Taman Putri (117..127, 28..36) —
+	# sisi barat x=116 (1 m dari tembok x=115, di luar pagar).
+	var zona_putra: Array = [
+		{"titik": [Vector3(-12, 0, 2), Vector3(12, 0, 2), Vector3(12, 0, 16), Vector3(-12, 0, 16)], "jumlah": 4},
+		{"titik": [Vector3(-38, 0, 2), Vector3(-10, 0, 2), Vector3(-10, 0, 20), Vector3(-38, 0, 20)], "jumlah": 3},
+		{"titik": [Vector3(-58, 0, -38), Vector3(-44, 0, -38), Vector3(-44, 0, 6), Vector3(-58, 0, 6)], "jumlah": 3},
+	]
+	var zona_putri: Array = [
+		{"titik": [Vector3(124, 0, -16), Vector3(144, 0, -16), Vector3(142, 0, -32), Vector3(124, 0, -32)], "jumlah": 3},
+		{"titik": [Vector3(122, 0, 2), Vector3(140, 0, 2), Vector3(140, 0, 16), Vector3(122, 0, 16)], "jumlah": 3},
+		{"titik": [Vector3(142, 0, 2), Vector3(168, 0, 2), Vector3(168, 0, 18), Vector3(142, 0, 18)], "jumlah": 2},
+		{"titik": [Vector3(116, 0, 26), Vector3(130, 0, 26), Vector3(130, 0, 38), Vector3(116, 0, 38)], "jumlah": 2},
+	]
+	var pool_putra := NPC20_NAMA_PUTRA.duplicate()
+	var pool_putri := NPC20_NAMA_PUTRI.duplicate()
+	for putri in [false, true]:
+		var zona: Array = zona_putri if putri else zona_putra
+		var pool: Array[String] = pool_putri if putri else pool_putra
+		for z in zona:
+			var titik: Array = z["titik"]
+			var wps: Array[Vector3] = []
+			for t in titik:
+				wps.append(t)
+			for k in range(int(z["jumlah"])):
+				# Nama: ambil acak dari pool lalu HAPUS — tanpa kembar.
+				var idx := rng.randi_range(0, pool.size() - 1)
+				var nama: String = pool[idx]
+				pool.remove_at(idx)
+				var outfit := MissionData.OUTFIT_DEFAULT.duplicate()
+				outfit["kulit"] = NPC20_KULIT[rng.randi_range(0, NPC20_KULIT.size() - 1)]
+				outfit["kacamata"] = rng.randf() < 0.25
+				if putri:
+					# SERAGAM UTAMA v2 putri: tunik biru langit +
+					# sarung batik coklat + jilbab putih (lihat
+					# migrasi save di _terapkan_outfit_awal).
+					outfit["muslimah"] = true
+					outfit["hijab"] = true
+					outfit["tunik"] = true
+					outfit["koko"] = "#87ceeb"
+					outfit["sarung"] = "#4a2c17"
+					outfit["sarung_motif"] = "batik"
+					outfit["hijab_warna"] = "#ffffff"
+				else:
+					outfit["peci_model"] = SantriPlayer.peci_model_untuk(nama)
+					outfit["alis"] = rng.randf() < 0.5
+				var tinggi: float = NPC20_TINGGI[rng.randi_range(0, NPC20_TINGGI.size() - 1)]
+				var npc := SantriNPC.new()
+				# setup(nama, pos, wps, outfit, diam=false,
+				# patroli={} (BUKAN patroli interior Kyai),
+				# ikut_sholat=true, aktivitas=true, tinggi).
+				npc.setup(nama, wps[0], wps, outfit, false, {}, true, true, tinggi)
+				add_child(npc)
+				_npcs.append(npc)
+				_npc_rumah[npc] = wps[0]
+				npc.rute_selesai.connect(_on_npc_rute_selesai)
+				print("[NPC20] spawn %s (%s) zona %s tinggi %.2f" % [nama, "putri" if putri else "putra", str(wps[0]), tinggi])
 # RONDE 6 (Mas 22:17 WIB — sistem SATU jalur): login/daftar TANPA
 # pilihan jalur. Satu kurikulum berurutan untuk semua santri.
 # Integrasi login-gender (17 Nov 2026): login ke server dengan
@@ -3404,6 +3509,7 @@ func _mulai_adegan_belajar() -> void:
 	# Ustadz duduk menghadap pemain (pose baca kitab, tanpa pose baru).
 	guru.duduk_belajar(atan2(ke_pemain.x, ke_pemain.z))
 	_buat_papan_belajar()
+	_buat_meja_belajar()
 	_dialog_adegan_aktif = true
 	_ui.set_hud_visible(false)
 
@@ -3420,6 +3526,7 @@ func _akhiri_adegan_belajar() -> void:
 	if guru != null:
 		guru.berdiri_belajar()
 	_hapus_papan_belajar()
+	_hapus_meja_belajar()
 	_cam_yaw = _dialog_cam_yaw_lama
 	_cam_pitch = _dialog_cam_pitch_lama
 	_ui.set_hud_visible(true)
@@ -3466,6 +3573,114 @@ func _buat_papan_belajar() -> void:
 	pos.y = guru.global_position.y
 	_papan_belajar = _buat_papan_tulis(pos, _dialog_cam_yaw)
 	add_child(_papan_belajar)
+
+
+## Meja belajar kayu rendah di DEPAN ustadz duduk (koreksi Mas
+## 19 Nov 2026 "kek tenggelam"): tubuh bawah tersembunyi wajar
+## di balik meja; kepala + torso + tangan tetap terlihat, tangan
+## terulur ke arah kitab di atas meja (pose duduk memang begitu).
+## Posisi: 0,65 m di depan ustadz searah hadapnya (ke pemain),
+## menghadap yang sama — meja TIDAK menutupi papan (papan di kiri
+## layar, meja di tengah-depan). Kitab zamrud + satu buku kecil.
+func _buat_meja_belajar() -> void:
+	_hapus_meja_belajar()
+	var guru := _pengajar_dialog()
+	if guru == null or _player == null:
+		return
+	var ke_pemain := _player.global_position - guru.global_position
+	ke_pemain.y = 0.0
+	if ke_pemain.length() < 0.1:
+		return
+	var hadap := ke_pemain.normalized()
+	var pos := guru.global_position + hadap * 0.65
+	pos.y = guru.global_position.y
+	_meja_belajar = _buat_meja_tulis(pos, atan2(hadap.x, hadap.z))
+	add_child(_meja_belajar)
+
+
+func _hapus_meja_belajar() -> void:
+	if _meja_belajar != null:
+		_meja_belajar.queue_free()
+	_meja_belajar = null
+
+
+## Meja belajar: papan atas jati 1,15x0,55 m (permukaan y 0,60) +
+## dua panel samping kayu gelap + lis emas di tepi depan (senada
+## bingkai papan) + kitab zamrud + buku kecil coklat di atasnya.
+## Lokal +Z = arah hadap ustadz (ke pemain/kamera).
+func _buat_meja_tulis(pos: Vector3, yaw: float) -> Node3D:
+	var meja := Node3D.new()
+	meja.name = "MejaBelajar"
+	meja.position = pos
+	meja.rotation.y = yaw
+	var mat_jati := StandardMaterial3D.new()
+	mat_jati.albedo_color = Color("#7b4b2a")
+	var atas := MeshInstance3D.new()
+	var akotak := BoxMesh.new()
+	akotak.size = Vector3(1.15, 0.05, 0.55)
+	atas.mesh = akotak
+	atas.material_override = mat_jati
+	atas.position = Vector3(0, 0.58, 0)
+	meja.add_child(atas)
+	var mat_kayu := StandardMaterial3D.new()
+	mat_kayu.albedo_color = Color("#5a3d24")
+	for sx in [-1.0, 1.0]:
+		var panel := MeshInstance3D.new()
+		var pkotak := BoxMesh.new()
+		pkotak.size = Vector3(0.04, 0.56, 0.50)
+		panel.mesh = pkotak
+		panel.material_override = mat_kayu
+		panel.position = Vector3(sx * 0.545, 0.28, 0)
+		meja.add_child(panel)
+	# Panel depan penuh (sisi kamera): meja terbaca PADAT sebagai
+	# meja guru, bukan papan melayang — menutupi pangkuan sepenuhnya.
+	var depan := MeshInstance3D.new()
+	var dkotak := BoxMesh.new()
+	dkotak.size = Vector3(1.07, 0.50, 0.03)
+	depan.mesh = dkotak
+	depan.material_override = mat_kayu
+	depan.position = Vector3(0, 0.30, 0.24)
+	meja.add_child(depan)
+	var mat_emas := StandardMaterial3D.new()
+	mat_emas.albedo_color = Color("#c9a227")
+	var lis := MeshInstance3D.new()
+	var lkotak := BoxMesh.new()
+	lkotak.size = Vector3(1.15, 0.03, 0.02)
+	lis.mesh = lkotak
+	lis.material_override = mat_emas
+	lis.position = Vector3(0, 0.545, 0.27)
+	meja.add_child(lis)
+	# Kitab zamrud (sampul bawah + halaman krem + sampul atas),
+	# sedikit miring supaya hidup, di sisi ustadz (-Z lokal).
+	var mat_zamrud := StandardMaterial3D.new()
+	mat_zamrud.albedo_color = Color("#065f46")
+	var mat_krem := StandardMaterial3D.new()
+	mat_krem.albedo_color = Color("#f2ead6")
+	for bagian in [
+		{"ukuran": Vector3(0.36, 0.015, 0.26), "y": 0.6125, "mat": mat_zamrud},
+		{"ukuran": Vector3(0.33, 0.035, 0.23), "y": 0.6375, "mat": mat_krem},
+		{"ukuran": Vector3(0.36, 0.015, 0.26), "y": 0.6625, "mat": mat_zamrud},
+	]:
+		var lembar := MeshInstance3D.new()
+		var lmkotak := BoxMesh.new()
+		lmkotak.size = bagian["ukuran"]
+		lembar.mesh = lmkotak
+		lembar.material_override = bagian["mat"]
+		lembar.position = Vector3(0.05, float(bagian["y"]), -0.08)
+		lembar.rotation.y = 0.12
+		meja.add_child(lembar)
+	# Buku kecil coklat di sisi kamera (+Z lokal).
+	var mat_coklat := StandardMaterial3D.new()
+	mat_coklat.albedo_color = Color("#6b4226")
+	var buku := MeshInstance3D.new()
+	var bkotak := BoxMesh.new()
+	bkotak.size = Vector3(0.24, 0.04, 0.18)
+	buku.mesh = bkotak
+	buku.material_override = mat_coklat
+	buku.position = Vector3(-0.33, 0.625, 0.10)
+	buku.rotation.y = -0.25
+	meja.add_child(buku)
+	return meja
 
 
 ## Papan tulis kecil: easel kayu + papan putih 1,3x0,8 m +
@@ -4019,8 +4234,19 @@ func _mulai_sholat(s: Dictionary) -> void:
 	# berdiri_tetap()). Ustadzah Mariyah memimpin sisi PUTRI sebagai
 	# imam di Musholla Ar-Raudhah (bukan ke Surau). SATPAM dilewati
 	# total (ikut_sholat()=false — tetap di pos gerbang).
-	var sajadah := ["Sajadah_02", "Sajadah_04"]
+	# 20 NPC v1 (Raka, 19 Nov 2026 — JAWABAN kapasitas sajadah):
+	# Surau 15 sajadah fisik (grid 3x5) + Musholla 15. Sajadah_03
+	# DICADANGKAN untuk pemain (diteleport ke sana saat ikut
+	# sholat) — jadi 14 slot tersisa per interior. Jamaah putra:
+	# Bilal + Faris + 10 NPC baru = 12 <= 14. Jamaah putri: 10
+	# NPC baru <= 14. Urutan putra diawali 02, 04 supaya Bilal
+	# tetap Sajadah_02 dan Faris tetap Sajadah_04 (RONDE 16).
+	# Counter j (putra) dan j_putri TERPISAH — sajadah putri di
+	# Musholla, bukan Surau.
+	var sajadah := ["Sajadah_02", "Sajadah_04", "Sajadah_01", "Sajadah_05", "Sajadah_06", "Sajadah_07", "Sajadah_08", "Sajadah_09", "Sajadah_10", "Sajadah_11", "Sajadah_12", "Sajadah_13"]
+	var sajadah_putri := ["Sajadah_01", "Sajadah_02", "Sajadah_04", "Sajadah_05", "Sajadah_06", "Sajadah_07", "Sajadah_08", "Sajadah_09", "Sajadah_10", "Sajadah_11"]
 	var j := 0
+	var j_putri := 0
 	for i in range(_npcs.size()):
 		var npc := _npcs[i]
 		if not npc.ikut_sholat():
@@ -4065,13 +4291,28 @@ func _mulai_sholat(s: Dictionary) -> void:
 		# RONDE 24 (Raka): "rumah" harus titik luar yang bisa dicapai
 		# jalan kaki — NPC patroli (punya kamus _patroli) tidak
 		# menimpa rumah setup-nya dengan posisi di dalam ruangan.
+		# 20 NPC v1: NPC yang sedang BACA_KAMAR di dalam ruangan
+		# dikeluarkan dulu (teleport ke pintu luar) — rute + "rumah"
+		# dihitung dari luar, bukan dari dalam ruangan (pola yang
+		# sama seperti Kyai/Ustadzah di atas — kalau tidak, rute
+		# pulang menarik garis lurus dari dalam ruangan).
+		npc.keluar_dari_dalam()
 		if npc._patroli.is_empty():
 			_npc_rumah[npc] = npc.global_position
-		_sajadah_npc[npc] = _posisi_sajadah(sajadah[j % sajadah.size()])
-		_npc_sholat_fase[npc] = "ke_pintu"
-		npc.say("Ayo sholat berjamaah di Surau!")
-		npc.mulai_rute(_rute_ke_pintu_surau(npc.global_position))
-		j += 1
+		if npc.adalah_putri():
+			# Jamaah putri -> Musholla (sajadah sendiri, counter
+			# sendiri, rute ke pintu Musholla).
+			_sajadah_npc[npc] = _posisi_sajadah_musholla(sajadah_putri[j_putri % sajadah_putri.size()])
+			_npc_sholat_fase[npc] = "ke_pintu"
+			npc.say("Ayo sholat berjamaah di Musholla!")
+			npc.mulai_rute(_rute_ke_pintu_musholla(npc.global_position))
+			j_putri += 1
+		else:
+			_sajadah_npc[npc] = _posisi_sajadah(sajadah[j % sajadah.size()])
+			_npc_sholat_fase[npc] = "ke_pintu"
+			npc.say("Ayo sholat berjamaah di Surau!")
+			npc.mulai_rute(_rute_ke_pintu_surau(npc.global_position))
+			j += 1
 
 
 ## Akhiri sesi: banner hilang, pemain yang ikut berdiri lagi, NPC
@@ -4323,7 +4564,12 @@ func _rute_pulang(npc: SantriNPC) -> Array[Vector3]:
 	var rumah: Vector3 = _npc_rumah.get(npc, PesantrenBuilder.SPAWN)
 	var rute: Array[Vector3] = []
 	var dari := npc.global_position
-	if npc == _ustadzah:
+	# 20 NPC v1: cabang area putri berlaku untuk SEMUA santriwati
+	# (adalah_putri() mencakup Ustadzah) — sebelumnya hanya
+	# `npc == _ustadzah`; NPC putri baru pulang lewat gerbang
+	# (115,0) + (134,-14) seperti Ustadzah, BUKAN lewat koridor
+	# putra (-28, 2) yang menembus tembok x=14.
+	if npc.adalah_putri():
 		# RONDE 21: Area putri BARU (timur tembok x=14) — satu-satunya
 		# bangunan di jalur pulang adalah musholla baru (134,-24).
 		# Keluar dari utara musholla lewat (134,-14) selatan musholla.
@@ -4403,7 +4649,9 @@ func _on_npc_rute_selesai(npc: SantriNPC) -> void:
 			# dinding). Interior tetap tersembunyi kalau pemain di
 			# luar; NPC sudah "di dalam" saat pemain masuk nanti.
 			# RONDE 20: Ustadzah masuk ke MUSHOLLA (bukan Surau).
-			if npc == _ustadzah:
+			# 20 NPC v1: SEMUA santriwati masuk Musholla (adalah_
+			# putri() mencakup Ustadzah — muslimah dari outfit).
+			if npc.adalah_putri():
 				npc.global_position = _musholla_spawn
 			else:
 				npc.global_position = _interior_spawn
@@ -4416,7 +4664,8 @@ func _on_npc_rute_selesai(npc: SantriNPC) -> void:
 		"pulang_dalam":
 			# Sampai di pintu dalam -> keluar ke plaza luar.
 			# RONDE 20: Ustadzah keluar ke pintu LUAR musholla.
-			if npc == _ustadzah:
+			# 20 NPC v1: semua santriwati keluar ke pintu Musholla.
+			if npc.adalah_putri():
 				npc.global_position = _musholla_exit
 			else:
 				npc.global_position = _outdoor_exit

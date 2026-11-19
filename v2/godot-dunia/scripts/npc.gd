@@ -99,6 +99,35 @@ var _ikut_sholat: bool = true
 # yang sama, tanpa pose baru). yaw = arah hadap saat duduk.
 var _duduk_belajar: bool = false
 var _duduk_belajar_yaw: float = 0.0
+# 20 NPC v1 (Raka, 19 Nov 2026) — MESIN AKTIVITAS santri (duduk/baca/
+# jalan kitab). Hanya untuk NPC sistem baru (`_aktivitas_aktif` dari
+# setup()); Bilal/Faris/Kyai/dll tidak berubah. Prioritas di _process:
+# sholat > duduk_belajar > jeda hormat > patroli > diam > aktivitas >
+# keliling bebas. _aktivitas: "" / "ke_kursi" / "duduk" / "ke_kamar" /
+# "baca_kamar" / "jalan_kitab" / "baca_musholla".
+var _aktivitas_aktif: bool = false
+var _aktivitas: String = ""
+var _aktivitas_timer: float = 0.0
+var _aktivitas_kursi: Dictionary = {}
+var _aktivitas_rute: Array[Vector3] = []
+var _aktivitas_rute_idx: int = 0
+var _aktivitas_tunggu: float = 0.0
+var _aktivitas_yaw: float = 0.0
+var _kitab_tangan: Node3D = null
+# 20 NPC v1 — HORMAT ke guru. _hormat: "" / "a_minggir" / "b_hampiri" /
+# "b_salaman" / "b_cium" / "b_kembali". _hormat_dari_duduk = hormat
+# dimulai saat duduk (kursi DITAHAN, kembali duduk sesudahnya).
+var _hormat: String = ""
+var _hormat_timer: float = 0.0
+var _hormat_guru: Node3D = null
+var _hormat_pos_awal: Vector3 = Vector3.ZERO
+var _hormat_tujuan: Vector3 = Vector3.ZERO
+var _hormat_dari_duduk: bool = false
+var _hormat_aktivitas_tersimpan: Dictionary = {}
+var _hormat_cooldown_npc: float = 0.0
+var _hormat_pasangan: Dictionary = {}
+# 20 NPC v1 — jeda patroli (guru berhenti ±4 dtk saat disalami).
+var _jeda_sampai: float = 0.0
 
 
 ## RONDE 8: sembunyikan label nama saat panel chat terbuka.
@@ -132,12 +161,14 @@ var _menunggu: bool = false
 var _pose_sholat: bool = false
 
 
-func setup(nama_santri: String, pos: Vector3, wps: Array[Vector3], outfit: Dictionary, diam: bool = false, patroli: Dictionary = {}, ikut_sholat: bool = true) -> void:
+func setup(nama_santri: String, pos: Vector3, wps: Array[Vector3], outfit: Dictionary, diam: bool = false, patroli: Dictionary = {}, ikut_sholat: bool = true, aktivitas: bool = false, tinggi_skala: float = 1.0) -> void:
 	_nama = nama_santri
 	_waypoints = wps
 	_diam = diam
 	_patroli = patroli
 	_ikut_sholat = ikut_sholat
+	# 20 NPC v1: mesin aktivitas + variasi tinggi badan (skala visual).
+	_aktivitas_aktif = aktivitas
 	_rng.randomize()
 	_idle_phase = _rng.randf_range(0.0, TAU)
 	position = pos
@@ -145,6 +176,12 @@ func setup(nama_santri: String, pos: Vector3, wps: Array[Vector3], outfit: Dicti
 	# cuma warna sarung — supaya tiap NPC beda sekilas pandang.
 	var built: Dictionary = SantriPlayer.build_visual(nama_santri, outfit)
 	_visual = built["root"]
+	# 20 NPC v1: variasi tinggi badan — skala visual (0.96..1.05).
+	# Anak-anak visual (sarung/hem/pakaian) memakai skala lokal
+	# sendiri, jadi lerp pakaian tidak terganggu; label nama ikut
+	# skala ±5% (diabaikan). Posisi _visual tidak diskala.
+	if tinggi_skala != 1.0:
+		_visual.scale = Vector3(1.0, tinggi_skala, 1.0)
 	_arm_l = built["arm_l"]
 	_arm_r = built["arm_r"]
 	_elbow_l = built["elbow_l"]
@@ -156,6 +193,9 @@ func setup(nama_santri: String, pos: Vector3, wps: Array[Vector3], outfit: Dicti
 	_bubble = built["bubble"]
 	_name_label = built["name_label"]
 	_kitab_pangku = built["kitab_pangku"]
+	# 20 NPC v1: kitab tangan (JALAN_KITAB) — anak arm_r, tersembunyi
+	# sampai aktivitas jalan kitab. built lama tanpa kunci ini -> null.
+	_kitab_tangan = built.get("kitab_tangan")
 	_sarung = built["sarung"]
 	_sarung_hem = built["sarung_hem"]
 	_sarung_trim = built["sarung_trim"]
@@ -191,6 +231,19 @@ func setup(nama_santri: String, pos: Vector3, wps: Array[Vector3], outfit: Dicti
 ## RONDE 20 — apakah NPC ini ikut sholat berjamaah? (Satpam tidak.)
 func ikut_sholat() -> bool:
 	return _ikut_sholat
+
+
+## 20 NPC v1 — apakah NPC ini santriwati? (rute sholat ke Musholla +
+## kursi putri). Dibaca dari outfit (muslimah).
+func adalah_putri() -> bool:
+	return _muslimah
+
+
+## 20 NPC v1 — guru berhenti ±4 dtk saat disalami (varian B).
+## Dicek di _process (di bawah sholat/duduk_belajar, di atas patroli)
+## supaya berlaku untuk guru patroli MAUPUN keliling bebas.
+func jeda_patroli(detik: float) -> void:
+	_jeda_sampai = Time.get_ticks_msec() / 1000.0 + detik
 
 
 ## RONDE 20 — apakah NPC patroli ini sedang di DALAM ruangan
@@ -351,6 +404,11 @@ func _process(delta: float) -> void:
 		_visual.rotation.y = lerpf(_visual.rotation.y, _duduk_belajar_yaw, minf(1.0, delta * 6.0))
 		_terapkan_duduk_baca(delta)
 		return
+	# 20 NPC v1 — jeda hormat: guru yang sedang disalami berhenti
+	# ±4 dtk (di bawah sholat/duduk_belajar, di atas patroli/keliling).
+	if _jeda_sampai > 0.0 and Time.get_ticks_msec() / 1000.0 < _jeda_sampai:
+		_animate_idle(delta)
+		return
 	# RONDE 20: NPC patroli (Kyai/Ustadzah) — duduk baca kitab +
 	# keliling kontrol menggantikan diam/keliling bebas + ngobrol.
 	if not _patroli.is_empty():
@@ -360,6 +418,18 @@ func _process(delta: float) -> void:
 	# idle saja; tidak keliling, tidak mengobrol.
 	if _diam:
 		_animate_idle(delta)
+		return
+	# 20 NPC v1 — hormat ke guru (di atas aktivitas/keliling; mati
+	# saat sholat — sudah return di atas — dan saat panel misi terbuka,
+	# dicek di dalam _cek_hormat).
+	if _aktivitas_aktif and _hormat == "":
+		_cek_hormat(delta)
+	if _hormat != "":
+		_proses_hormat(delta)
+		return
+	# 20 NPC v1 — mesin aktivitas (duduk/baca/jalan kitab).
+	if _aktivitas != "":
+		_proses_aktivitas(delta)
 		return
 	_talk_timer -= delta
 	if _talk_timer <= 0.0:
@@ -374,6 +444,8 @@ func _process(delta: float) -> void:
 	if to.length() < 0.4:
 		_pause_timer = _rng.randf_range(3.0, 8.0)
 		_pick_target()
+		# 20 NPC v1: sampai di waypoint = kesempatan mulai aktivitas.
+		_coba_mulai_aktivitas()
 		return
 	var dir := to.normalized()
 	# RONDE 18: langkah DIJEPIT ke jarak tersisa — tanpa ini, delta
@@ -403,6 +475,12 @@ func _animate_idle(delta: float) -> void:
 ## rute_selesai dipancarkan sekali dan NPC menunggu (idle) sampai
 ## main.gd memberi rute/pose berikutnya.
 func mulai_rute(titik: Array[Vector3]) -> void:
+	# 20 NPC v1: sholat membatalkan hormat + aktivitas (kursi dilepas,
+	# NPC kembali keliling bebas setelah sholat via selesai_sholat).
+	if _hormat != "":
+		_batalkan_hormat()
+	if _aktivitas != "":
+		_akhiri_aktivitas()
 	_mode_sholat = true
 	_pose_sholat = false
 	_menunggu = false
@@ -487,7 +565,10 @@ static func _tinggi_tanah(pos: Vector3) -> float:
 
 ## Satu langkah jalan ke `target` (animasi jalan yang sama seperti
 ## keliling bebas). Mengembalikan true kalau sudah sampai (< 0,4 m).
-func _langkah_ke(target: Vector3, delta: float) -> bool:
+## `laju` (20 NPC v1): pengali kecepatan — JALAN_KITAB jalan 0,5x
+## (fase animasi ikut diperlambat supaya kaki tidak moonwalk).
+## Default 1.0 = semua pemanggil lama tidak berubah.
+func _langkah_ke(target: Vector3, delta: float, laju: float = 1.0) -> bool:
 	# PERBAIKAN 19 Nov 2026 (Kirana — laporan Mas "sarung mekar kek
 	# lagi sila padahal dia jalan"): pulihkan pakaian normal di SETIAP
 	# langkah — satu tempat ini menjangkau semua jalur jalan (patroli
@@ -504,14 +585,14 @@ func _langkah_ke(target: Vector3, delta: float) -> bool:
 	var dir := to.normalized()
 	# RONDE 18: langkah DIJEPIT ke jarak tersisa (alasan sama seperti
 	# jalan bebas di atas) — rute sholat harus sampai walau delta besar.
-	position += dir * minf(SPEED * delta, to.length())
+	position += dir * minf(SPEED * laju * delta, to.length())
 	# EKA 18 Nov 2026 (temuan Rangga): ikuti tinggi medan — NPC yang
 	# berjalan ke pintu Surau naik anak tangga 0,166/0,333/0,5 dan
 	# serambi 0,5; tanpa ini kaki tenggelam sampai 0,5 m ke dalam
 	# anak tangga/serambi. Berlaku dua arah (naik + turun).
 	position.y = _tinggi_tanah(position)
 	_visual.rotation.y = lerp_angle(_visual.rotation.y, atan2(dir.x, dir.z), delta * 6.0)
-	_walk_time += delta * 8.0
+	_walk_time += delta * 8.0 * laju
 	# ANIMASI-MIXAMO: jalan lewat modul (sama seperti jalan bebas).
 	AnimasiMixamo.terapkan_jalan(_rig, _walk_time, 1.0)
 	return false
@@ -610,7 +691,9 @@ func _proses_patroli(delta: float) -> void:
 ## menyilang; tangan terulur ke REHAL (lengan -0.70, siku -0.35),
 ## bukan di dada; kitab di pangkuan DISEMBUNYIKAN — kitabnya kini di
 ## atas rehal di depan Kyai/Ustadzah (interior_surau/musholla).
-func _terapkan_duduk_baca(delta: float) -> void:
+## 20 NPC v1: `kitab_terlihat=true` untuk santri (tidak ada rehal —
+## kitab tetap di pangkuan). Default false = perilaku lama.
+func _terapkan_duduk_baca(delta: float, kitab_terlihat: bool = false) -> void:
 	var k := minf(1.0, delta * 8.0)
 	# Siwak hanya hidup di idle bersiwak — begitu duduk baca,
 	# siwak disembunyikan (jangan menempel di tangan saat duduk).
@@ -649,7 +732,7 @@ func _terapkan_duduk_baca(delta: float) -> void:
 	_elbow_r.rotation.x = lerpf(_elbow_r.rotation.x, -0.35, k_tangan)
 	_terapkan_pakaian(delta, SantriPlayer.PAKAIAN_DUDUK)
 	if _kitab_pangku != null:
-		_kitab_pangku.visible = false
+		_kitab_pangku.visible = kitab_terlihat
 
 
 ## RUANG BELAJAR CHAT (§8): duduk belajar — pakai ulang pose
@@ -700,3 +783,546 @@ func _terapkan_pakaian(delta: float, target: Dictionary) -> void:
 		_sarung_trim.position.y = lerpf(_sarung_trim.position.y, target["trim_y"], k)
 	if _torso != null:
 		_torso.scale = _torso.scale.lerp(target["torso_scale"], k)
+
+# ======================================================================
+# 20 NPC v1 (Raka, 19 Nov 2026) — kursi, aktivitas, hormat
+# ======================================================================
+## Inventaris kursi. Tiap kursi: {id, pos, yaw, gedung, jenis, putri,
+## dalam, rute, pintu_luar, pintu_dalam, spawn_dalam}.
+## - pos: posisi DUDUK (y = tinggi duduk: 0 lantai, 0.45 bangku/kursi,
+##   0.51 kasur Cangkruk — atas kasur, lihat interior_cangkruk.gd).
+## - yaw: hadap saat duduk (0 = +z/selatan, PI = -z/utara).
+## - gedung: untuk batas "maks 4 NPC per gedung".
+## - jenis: "kursi" (bangku/kursi kayu) / "bersila" (lantai) / "kasur".
+## - dalam=true: kursi di interior — NPC jalan ke pintu_luar lalu
+##   TELEPORT ke spawn_dalam, jalan ke kursi (pola GTA patroli Kyai).
+## - rute: titik perantara SEBELUM kursi (y=0) — gerbang taman,
+##   celah pagar timur, titik selatan Musholla. Kosong = langsung.
+## Kursi Kyai (Surau) / Ustadzah (Musholla) / Guru (Madrasah) TIDAK
+## ADA di sini (terlarang — desain §6). Kasur Asrama DITUNDA ke v1.1
+## (perlu probe bed_pos_list dulu; Cangkruk+Kelas+Madrasah cukup).
+const KURSI_LUAR = [
+	# --- Taman Putra: bangku 1 (-3,25.45) sumbu X, hadap selatan.
+	{"id": "bangku_taman_putra_1a", "pos": Vector3(-3.4, 0.45, 25.45), "yaw": 0.0, "gedung": "taman_putra", "jenis": "kursi", "putri": false, "dalam": false, "rute": [Vector3(0, 0, 24.0)]},
+	{"id": "bangku_taman_putra_1b", "pos": Vector3(-2.6, 0.45, 25.45), "yaw": 0.0, "gedung": "taman_putra", "jenis": "kursi", "putri": false, "dalam": false, "rute": [Vector3(0, 0, 24.0)]},
+	# --- Taman Putra: bangku 2 (3.45,28.2) sumbu Z, hadap barat
+	# (ke jalur tengah). Rute lewat selatan zona geser pintu
+	# (z>=27.5) supaya tidak menabrak daun pintu yang terbuka.
+	{"id": "bangku_taman_putra_2a", "pos": Vector3(3.45, 0.45, 27.8), "yaw": -PI / 2.0, "gedung": "taman_putra", "jenis": "kursi", "putri": false, "dalam": false, "rute": [Vector3(0, 0, 24.0), Vector3(0, 0, 27.5)]},
+	{"id": "bangku_taman_putra_2b", "pos": Vector3(3.45, 0.45, 28.6), "yaw": -PI / 2.0, "gedung": "taman_putra", "jenis": "kursi", "putri": false, "dalam": false, "rute": [Vector3(0, 0, 24.0), Vector3(0, 0, 27.5)]},
+	# --- Serambi Surau (BACA_MUSHOLLA putra): bersila di plaza
+	# selatan, menghadap Surau (utara).
+	{"id": "serambi_surau_a", "pos": Vector3(-2, 0, 2), "yaw": PI, "gedung": "serambi_surau", "jenis": "bersila", "putri": false, "dalam": false, "rute": []},
+	{"id": "serambi_surau_b", "pos": Vector3(2, 0, 2), "yaw": PI, "gedung": "serambi_surau", "jenis": "bersila", "putri": false, "dalam": false, "rute": []},
+	# --- Taman Putri: bangku utara (122,30.4) hadap selatan; bangku
+	# selatan (122,33.6) hadap utara. Pagar TANPA collision + celah
+	# timur (127,32) — rute lewat celah supaya tidak menembus bilah.
+	{"id": "bangku_taman_putri_utara_a", "pos": Vector3(121.6, 0.45, 30.4), "yaw": 0.0, "gedung": "taman_putri", "jenis": "kursi", "putri": true, "dalam": false, "rute": [Vector3(127, 0, 32)]},
+	{"id": "bangku_taman_putri_utara_b", "pos": Vector3(122.4, 0.45, 30.4), "yaw": 0.0, "gedung": "taman_putri", "jenis": "kursi", "putri": true, "dalam": false, "rute": [Vector3(127, 0, 32)]},
+	{"id": "bangku_taman_putri_selatan_a", "pos": Vector3(121.6, 0.45, 33.6), "yaw": PI, "gedung": "taman_putri", "jenis": "kursi", "putri": true, "dalam": false, "rute": [Vector3(127, 0, 32)]},
+	{"id": "bangku_taman_putri_selatan_b", "pos": Vector3(122.4, 0.45, 33.6), "yaw": PI, "gedung": "taman_putri", "jenis": "kursi", "putri": true, "dalam": false, "rute": [Vector3(127, 0, 32)]},
+	# --- Bawah pohon Taman Putri (124,29.8): bersila, hadap selatan.
+	{"id": "pohon_taman_putri_a", "pos": Vector3(123.2, 0, 29.8), "yaw": 0.0, "gedung": "taman_putri", "jenis": "bersila", "putri": true, "dalam": false, "rute": [Vector3(127, 0, 32)]},
+	{"id": "pohon_taman_putri_b", "pos": Vector3(124.8, 0, 29.8), "yaw": 0.0, "gedung": "taman_putri", "jenis": "bersila", "putri": true, "dalam": false, "rute": [Vector3(127, 0, 32)]},
+	# --- Teras Musholla (134,-18): bersila, menghadap Musholla
+	# (utara). Rute lewat (134,-14) — titik selatan Musholla yang
+	# sudah dipakai patroli Mariyah (aman dari sudut bangunan).
+	{"id": "teras_musholla_a", "pos": Vector3(132, 0, -18), "yaw": PI, "gedung": "teras_musholla", "jenis": "bersila", "putri": true, "dalam": false, "rute": [Vector3(134, 0, -14)]},
+	{"id": "teras_musholla_b", "pos": Vector3(134, 0, -18), "yaw": PI, "gedung": "teras_musholla", "jenis": "bersila", "putri": true, "dalam": false, "rute": [Vector3(134, 0, -14)]},
+	{"id": "teras_musholla_c", "pos": Vector3(136, 0, -18), "yaw": PI, "gedung": "teras_musholla", "jenis": "bersila", "putri": true, "dalam": false, "rute": [Vector3(134, 0, -14)]},
+]
+
+
+const KURSI_DALAM = [
+	# --- Cangkruk Putra: 5 kasur, kepala utara, duduk menghadap
+	# selatan (ke lorong tengah). y 0.51 = atas kasur.
+	{"id": "cangkruk_kasur_1", "pos": Vector3(-66, 0.51, -303.3), "yaw": 0.0, "gedung": "cangkruk", "jenis": "kasur", "putri": false, "dalam": true, "pintu_luar": Vector3(-22, 0, -14), "pintu_dalam": Vector3(-60, 0, -295), "spawn_dalam": Vector3(-60, 0, -296.5)},
+	{"id": "cangkruk_kasur_2", "pos": Vector3(-66, 0.51, -300.3), "yaw": 0.0, "gedung": "cangkruk", "jenis": "kasur", "putri": false, "dalam": true, "pintu_luar": Vector3(-22, 0, -14), "pintu_dalam": Vector3(-60, 0, -295), "spawn_dalam": Vector3(-60, 0, -296.5)},
+	{"id": "cangkruk_kasur_3", "pos": Vector3(-54, 0.51, -303.3), "yaw": 0.0, "gedung": "cangkruk", "jenis": "kasur", "putri": false, "dalam": true, "pintu_luar": Vector3(-22, 0, -14), "pintu_dalam": Vector3(-60, 0, -295), "spawn_dalam": Vector3(-60, 0, -296.5)},
+	{"id": "cangkruk_kasur_4", "pos": Vector3(-54, 0.51, -300.3), "yaw": 0.0, "gedung": "cangkruk", "jenis": "kasur", "putri": false, "dalam": true, "pintu_luar": Vector3(-22, 0, -14), "pintu_dalam": Vector3(-60, 0, -295), "spawn_dalam": Vector3(-60, 0, -296.5)},
+	{"id": "cangkruk_kasur_5", "pos": Vector3(-60, 0.51, -303.7), "yaw": 0.0, "gedung": "cangkruk", "jenis": "kasur", "putri": false, "dalam": true, "pintu_luar": Vector3(-22, 0, -14), "pintu_dalam": Vector3(-60, 0, -295), "spawn_dalam": Vector3(-60, 0, -296.5)},
+	# --- Kelas Putri: 6 kursi baris BELAKANG (z=-299.0 -> kursi
+	# z=-298.45), menghadap papan tulis (utara). Kursi baris depan/
+	# tengah TIDAK dipakai NPC (untuk pemain + guru).
+	{"id": "kelas_putri_kursi_1", "pos": Vector3(117.0, 0.45, -298.45), "yaw": PI, "gedung": "kelas_putri", "jenis": "kursi", "putri": true, "dalam": true, "pintu_luar": Vector3(130, 0, 14), "pintu_dalam": Vector3(120, 0, -297), "spawn_dalam": Vector3(118.6, 0, -298.5)},
+	{"id": "kelas_putri_kursi_2", "pos": Vector3(117.6, 0.45, -298.45), "yaw": PI, "gedung": "kelas_putri", "jenis": "kursi", "putri": true, "dalam": true, "pintu_luar": Vector3(130, 0, 14), "pintu_dalam": Vector3(120, 0, -297), "spawn_dalam": Vector3(118.6, 0, -298.5)},
+	{"id": "kelas_putri_kursi_3", "pos": Vector3(119.7, 0.45, -298.45), "yaw": PI, "gedung": "kelas_putri", "jenis": "kursi", "putri": true, "dalam": true, "pintu_luar": Vector3(130, 0, 14), "pintu_dalam": Vector3(120, 0, -297), "spawn_dalam": Vector3(118.6, 0, -298.5)},
+	{"id": "kelas_putri_kursi_4", "pos": Vector3(120.3, 0.45, -298.45), "yaw": PI, "gedung": "kelas_putri", "jenis": "kursi", "putri": true, "dalam": true, "pintu_luar": Vector3(130, 0, 14), "pintu_dalam": Vector3(120, 0, -297), "spawn_dalam": Vector3(118.6, 0, -298.5)},
+	{"id": "kelas_putri_kursi_5", "pos": Vector3(122.4, 0.45, -298.45), "yaw": PI, "gedung": "kelas_putri", "jenis": "kursi", "putri": true, "dalam": true, "pintu_luar": Vector3(130, 0, 14), "pintu_dalam": Vector3(120, 0, -297), "spawn_dalam": Vector3(118.6, 0, -298.5)},
+	{"id": "kelas_putri_kursi_6", "pos": Vector3(123.0, 0.45, -298.45), "yaw": PI, "gedung": "kelas_putri", "jenis": "kursi", "putri": true, "dalam": true, "pintu_luar": Vector3(130, 0, 14), "pintu_dalam": Vector3(120, 0, -297), "spawn_dalam": Vector3(118.6, 0, -298.5)},
+	# --- Madrasah Putri: 2 kursi murid, menghadap utara (papan).
+	{"id": "madrasah_kursi_1", "pos": Vector3(-182.0, 0.45, -297.4), "yaw": PI, "gedung": "madrasah", "jenis": "kursi", "putri": true, "dalam": true, "pintu_luar": Vector3(147, 0, -12), "pintu_dalam": Vector3(-185, 0, -300), "spawn_dalam": Vector3(-183.5, 0, -300)},
+	{"id": "madrasah_kursi_2", "pos": Vector3(-178.8, 0.45, -297.4), "yaw": PI, "gedung": "madrasah", "jenis": "kursi", "putri": true, "dalam": true, "pintu_luar": Vector3(147, 0, -12), "pintu_dalam": Vector3(-185, 0, -300), "spawn_dalam": Vector3(-183.5, 0, -300)},
+]
+
+
+## Registry kursi (static — dipakai semua NPC): id kursi -> NPC pemakai.
+## Satu kursi tidak pernah dipakai dua NPC. Lepas saat aktivitas
+## selesai / sholat mulai / hormat TIDAK melepas (ditahan).
+static var _kursi_registry: Dictionary = {}
+## Antrean hormat (static): guru -> jumlah NPC yang sedang varian B.
+static var _hormat_antrean: Dictionary = {}
+
+
+static func _kursi_dari_id(id: String) -> Dictionary:
+	for k in KURSI_LUAR:
+		if String(k["id"]) == id:
+			return k
+	for k in KURSI_DALAM:
+		if String(k["id"]) == id:
+			return k
+	return {}
+
+
+static func _pemakai_gedung(gedung: String) -> int:
+	var n := 0
+	for id in _kursi_registry.keys():
+		var kursi := _kursi_dari_id(String(id))
+		if not kursi.is_empty() and String(kursi["gedung"]) == gedung:
+			n += 1
+	return n
+
+
+## Kursi bebas untuk gender + lokasi + (opsional) jenis.
+static func kursi_bebas(putri: bool, dalam: bool, jenis: String = "") -> Array:
+	var hasil: Array = []
+	var semua: Array = KURSI_DALAM if dalam else KURSI_LUAR
+	for k in semua:
+		if bool(k["putri"]) != putri:
+			continue
+		if jenis != "" and String(k["jenis"]) != jenis:
+			continue
+		if _kursi_registry.has(String(k["id"])):
+			continue
+		if _pemakai_gedung(String(k["gedung"])) >= 4:
+			continue
+		hasil.append(k)
+	return hasil
+
+
+static func klaim_kursi(id: String, npc: SantriNPC) -> bool:
+	if _kursi_registry.has(id):
+		return false
+	_kursi_registry[id] = npc
+	return true
+
+
+static func lepas_kursi(npc: SantriNPC) -> void:
+	for id in _kursi_registry.keys():
+		if _kursi_registry[id] == npc:
+			_kursi_registry.erase(id)
+			return
+
+
+## ---------- mesin aktivitas (20 NPC v1) ----------
+func _coba_mulai_aktivitas() -> void:
+	if not _aktivitas_aktif or _aktivitas != "" or _hormat != "":
+		return
+	# Dadu desain §5: 35% DUDUK_KURSI, 20% BACA_MUSHOLLA, 15%
+	# BACA_KAMAR, 15% JALAN_KITAB, 15% tetap jalan bebas. Bila
+	# sumber daya (kursi) habis, _mulai_* diam-diam gagal dan NPC
+	# tetap jalan — aktivitas itu oportunistik, bukan wajib.
+	var d := _rng.randf()
+	if d < 0.35:
+		_mulai_duduk_kursi()
+	elif d < 0.55:
+		_mulai_baca_musholla()
+	elif d < 0.70:
+		_mulai_baca_kamar()
+	elif d < 0.85:
+		_mulai_jalan_kitab()
+
+
+func _siapkan_rute_kursi(kursi: Dictionary, aktivitas_barikut: String) -> void:
+	_aktivitas_kursi = kursi
+	_aktivitas_yaw = float(kursi["yaw"])
+	_aktivitas_rute = []
+	for p in kursi.get("rute", []):
+		_aktivitas_rute.append(p)
+	var sp: Vector3 = kursi["pos"]
+	_aktivitas_rute.append(Vector3(sp.x, 0.0, sp.z))
+	_aktivitas_rute_idx = 0
+	_aktivitas_tunggu = 0.0
+	_aktivitas = aktivitas_barikut
+
+
+func _mulai_duduk_kursi() -> void:
+	var pilihan: Array = kursi_bebas(_muslimah, false, "kursi")
+	if pilihan.is_empty():
+		return
+	var kursi: Dictionary = pilihan[_rng.randi_range(0, pilihan.size() - 1)]
+	if not klaim_kursi(String(kursi["id"]), self):
+		return
+	_siapkan_rute_kursi(kursi, "ke_kursi")
+
+
+func _mulai_baca_musholla() -> void:
+	var pilihan: Array = kursi_bebas(_muslimah, false, "bersila")
+	if pilihan.is_empty():
+		return
+	var kursi: Dictionary = pilihan[_rng.randi_range(0, pilihan.size() - 1)]
+	if not klaim_kursi(String(kursi["id"]), self):
+		return
+	_siapkan_rute_kursi(kursi, "ke_kursi")
+
+
+func _mulai_baca_kamar() -> void:
+	var pilihan: Array = kursi_bebas(_muslimah, true)
+	if pilihan.is_empty():
+		return
+	var kursi: Dictionary = pilihan[_rng.randi_range(0, pilihan.size() - 1)]
+	if not klaim_kursi(String(kursi["id"]), self):
+		return
+	_aktivitas_kursi = kursi
+	_aktivitas_yaw = float(kursi["yaw"])
+	# Jalan ke pintu luar gedung dulu; teleport masuk di _proses.
+	var pl: Vector3 = kursi["pintu_luar"]
+	_aktivitas_rute = [pl]
+	_aktivitas_rute_idx = 0
+	_aktivitas_tunggu = 0.0
+	_aktivitas = "ke_kamar"
+
+
+func _mulai_jalan_kitab() -> void:
+	_aktivitas = "jalan_kitab"
+	_aktivitas_timer = _rng.randf_range(30.0, 90.0)
+	_pick_target()
+
+
+## Jalan mengikuti _aktivitas_rute kaki demi kaki. Tiap kaki
+## divalidasi _segmen_bersih saat dimulai (pintu taman yang belum
+## terbuka / sudut bangunan = kaki tidak bersih). Mengembalikan
+## "jalan" / "sampai" / "batal" (batal = kursi dilepas di pemanggil
+## via _akhiri_aktivitas).
+func _jalan_rute_aktivitas(delta: float) -> String:
+	if _aktivitas_rute_idx >= _aktivitas_rute.size():
+		return "sampai"
+	if _aktivitas_tunggu > 0.0:
+		_aktivitas_tunggu -= delta
+		_animate_idle(delta)
+		return "jalan"
+	var titik: Vector3 = _aktivitas_rute[_aktivitas_rute_idx]
+	if not _segmen_bersih(position, titik):
+		return "batal"
+	if _langkah_ke(titik, delta):
+		_aktivitas_rute_idx += 1
+		if _aktivitas_rute_idx < _aktivitas_rute.size():
+			# Jeda antar kaki rute — pintu taman sempat terbuka
+			# penuh sebelum kaki berikutnya divalidasi.
+			_aktivitas_tunggu = 1.0
+			return "jalan"
+		return "sampai"
+	return "jalan"
+
+
+func _proses_aktivitas(delta: float) -> void:
+	match _aktivitas:
+		"ke_kursi":
+			match _jalan_rute_aktivitas(delta):
+				"sampai":
+					var sp: Vector3 = _aktivitas_kursi["pos"]
+					position = sp
+					_visual.rotation.y = _aktivitas_yaw
+					_aktivitas = "duduk"
+					_aktivitas_timer = _rng.randf_range(60.0, 180.0)
+				"batal":
+					_akhiri_aktivitas()
+		"duduk":
+			_visual.rotation.y = lerpf(_visual.rotation.y, _aktivitas_yaw, minf(1.0, delta * 6.0))
+			_terapkan_duduk_baca(delta, true)
+			_aktivitas_timer -= delta
+			if _aktivitas_timer <= 0.0:
+				_akhiri_aktivitas()
+		"ke_kamar":
+			match _jalan_rute_aktivitas(delta):
+				"sampai":
+					# Teleport masuk (pola GTA patroli) ke spawn
+					# dalam, lalu jalan ke kursi di dalam ruangan.
+					var sd: Vector3 = _aktivitas_kursi["spawn_dalam"]
+					position = sd
+					var sp: Vector3 = _aktivitas_kursi["pos"]
+					_aktivitas_rute = [Vector3(sp.x, 0.0, sp.z)]
+					_aktivitas_rute_idx = 0
+					_aktivitas_tunggu = 0.0
+					_aktivitas = "ke_kursi_dalam"
+				"batal":
+					_akhiri_aktivitas()
+		"ke_kursi_dalam":
+			match _jalan_rute_aktivitas(delta):
+				"sampai":
+					var sp2: Vector3 = _aktivitas_kursi["pos"]
+					position = sp2
+					_visual.rotation.y = _aktivitas_yaw
+					_aktivitas = "baca_kamar"
+					_aktivitas_timer = _rng.randf_range(60.0, 180.0)
+				"batal":
+					_akhiri_aktivitas()
+		"baca_kamar":
+			_visual.rotation.y = lerpf(_visual.rotation.y, _aktivitas_yaw, minf(1.0, delta * 6.0))
+			_terapkan_duduk_baca(delta, true)
+			_aktivitas_timer -= delta
+			if _aktivitas_timer <= 0.0:
+				# Keluar dulu (teleport ke pintu luar), baru akhiri
+				# — supaya _pick_target berikutnya dihitung dari luar.
+				var pl: Vector3 = _aktivitas_kursi["pintu_luar"]
+				position = pl
+				_akhiri_aktivitas()
+		"jalan_kitab":
+			if _kitab_tangan != null:
+				_kitab_tangan.visible = true
+			# Jalan PELAN (0.5x) ke target waypoint sambil bawa kitab.
+			if _langkah_ke(_target, delta, 0.5):
+				_pick_target()
+			# Pose bawa kitab (cermin player.gd): tangan kanan ke
+			# depan memegang kitab — menimpa ayunan jalan lengan kanan.
+			_arm_r.rotation.x = -0.55 - sin(_walk_time) * 0.1
+			_elbow_r.rotation.x = -0.5
+			_aktivitas_timer -= delta
+			if _aktivitas_timer <= 0.0:
+				_akhiri_aktivitas()
+
+
+## Akhiri aktivitas apa pun: kitab disembunyikan, kursi dilepas,
+## kembali keliling bebas. Aman dipanggil saat tidak ada aktivitas.
+func _akhiri_aktivitas() -> void:
+	if _kitab_pangku != null:
+		_kitab_pangku.visible = false
+	if _kitab_tangan != null:
+		_kitab_tangan.visible = false
+	lepas_kursi(self)
+	_aktivitas = ""
+	_aktivitas_kursi = {}
+	_aktivitas_rute = []
+	_aktivitas_rute_idx = 0
+	_aktivitas_timer = 0.0
+	_aktivitas_tunggu = 0.0
+	_pick_target()
+
+
+## 20 NPC v1 — keluarkan NPC dari interior (BACA_KAMAR) sebelum rute
+## sholat dihitung (pola teleport_ke_pintu_luar untuk patroli).
+## Dipanggil main.gd di _mulai_sholat untuk semua NPC.
+func keluar_dari_dalam() -> void:
+	if _aktivitas == "baca_kamar" and not _aktivitas_kursi.is_empty():
+		var pl: Vector3 = _aktivitas_kursi["pintu_luar"]
+		position = pl
+		_akhiri_aktivitas()
+	elif _aktivitas == "ke_kamar" or _aktivitas == "ke_kursi_dalam":
+		_akhiri_aktivitas()
+
+
+## ---------- hormat ke guru (20 NPC v1) ----------
+## Yang dihormati (group "guru_hormat", dipasang main.gd): Kyai,
+## Ustadzah Mariyah, Ust. Sanusi, Ustzh. Fatimah. BUKAN Bilal/Faris,
+## Satpam/Penjaga, pemain. v1 luar ruangan saja; mati saat sholat
+## dan panel misi terbuka. NPC jalan -> varian A; NPC diam/duduk ->
+## varian B. Antrean varian B maks 3, sisanya varian A.
+const HORMAT_RADIUS := 4.0
+const HORMAT_COOLDOWN_PASANGAN := 60.0
+const HORMAT_COOLDOWN_NPC := 20.0
+const HORMAT_ANTREAN_MAKS := 3
+
+
+func _cek_hormat(delta: float) -> void:
+	if _hormat_cooldown_npc > 0.0:
+		_hormat_cooldown_npc -= delta
+	if _mode_sholat or _duduk_belajar or not _patroli.is_empty() or _diam:
+		return
+	# v1 luar ruangan saja (interior z≈-300 tidak hormat).
+	if global_position.z < -100.0:
+		return
+	if AnimasiMixamo.panel_misi_terbuka(get_tree()):
+		return
+	if _hormat_cooldown_npc > 0.0:
+		return
+	var sekarang := Time.get_ticks_msec() / 1000.0
+	var guru_terdekat: Node3D = null
+	var jarak_min := HORMAT_RADIUS
+	for g in get_tree().get_nodes_in_group("guru_hormat"):
+		var guru := g as Node3D
+		if guru == null or guru == self:
+			continue
+		var j := global_position.distance_to(guru.global_position)
+		if j >= jarak_min:
+			continue
+		var terakhir: float = float(_hormat_pasangan.get(guru, -9999.0))
+		if sekarang - terakhir < HORMAT_COOLDOWN_PASANGAN:
+			continue
+		jarak_min = j
+		guru_terdekat = guru
+	if guru_terdekat == null:
+		return
+	_mulai_hormat(guru_terdekat)
+
+
+func _mulai_hormat(guru: Node3D) -> void:
+	var sedang_duduk := _aktivitas in ["duduk", "baca_kamar"]
+	var sedang_diam := _pause_timer > 0.0
+	# Simpan aktivitas (bila ada) — kursi DITAHAN selama hormat,
+	# dipulihkan sesudahnya (lihat _akhiri_hormat).
+	if _aktivitas != "":
+		_hormat_aktivitas_tersimpan = {
+			"aktivitas": _aktivitas, "timer": _aktivitas_timer,
+			"kursi": _aktivitas_kursi, "rute": _aktivitas_rute,
+			"rute_idx": _aktivitas_rute_idx, "yaw": _aktivitas_yaw,
+		}
+		_aktivitas = ""
+		_aktivitas_rute = []
+		_aktivitas_rute_idx = 0
+		if _kitab_pangku != null:
+			_kitab_pangku.visible = false
+		if _kitab_tangan != null:
+			_kitab_tangan.visible = false
+	_hormat_guru = guru
+	_hormat_pos_awal = global_position
+	var sekarang := Time.get_ticks_msec() / 1000.0
+	_hormat_pasangan[guru] = sekarang
+	_hormat_cooldown_npc = HORMAT_COOLDOWN_NPC
+	if sedang_duduk or sedang_diam:
+		_mulai_hormat_b(guru)
+	else:
+		_mulai_hormat_a(guru)
+
+
+## Varian A (NPC jalan): minggir 1 m + nunduk + tangan menyilang ±3 dtk.
+func _mulai_hormat_a(guru: Node3D) -> void:
+	_hormat = "a_minggir"
+	_hormat_timer = 0.0
+	var ke_guru := guru.global_position - global_position
+	ke_guru.y = 0.0
+	var arah := ke_guru.normalized()
+	var tegak := Vector3(-arah.z, 0.0, arah.x)
+	var calon := global_position + tegak * 1.0
+	if not _segmen_bersih(global_position, calon):
+		calon = global_position - tegak * 1.0
+	_hormat_tujuan = calon
+
+
+## Varian B (NPC diam/duduk): berdiri, hampiri 1 m, salaman 2 dtk,
+## cium tangan 1,5 dtk, kembali; guru berhenti ±4 dtk.
+func _mulai_hormat_b(guru: Node3D) -> void:
+	var antrean := int(_hormat_antrean.get(guru, 0))
+	if antrean >= HORMAT_ANTREAN_MAKS:
+		# Antrean penuh — jatuh ke varian A (minggir + nunduk).
+		_mulai_hormat_a(guru)
+		return
+	_hormat_antrean[guru] = antrean + 1
+	if guru is SantriNPC:
+		(guru as SantriNPC).jeda_patroli(4.0)
+	_hormat = "b_hampiri"
+	_hormat_timer = 0.0
+
+
+func _proses_hormat(delta: float) -> void:
+	var k := minf(1.0, delta * 8.0)
+	match _hormat:
+		"a_minggir":
+			if _langkah_ke(_hormat_tujuan, delta):
+				_hormat = "a_tunduk"
+				_hormat_timer = 3.0
+		"a_tunduk":
+			# Nunduk (kepala ikut jilbab — pivot kepala) + tangan menyilang.
+			var kepala := _rig.get("kepala") as Node3D
+			if kepala != null:
+				kepala.rotation.x = lerpf(kepala.rotation.x, 0.35, k)
+			_arm_l.rotation.x = lerpf(_arm_l.rotation.x, -0.5, k)
+			_arm_r.rotation.x = lerpf(_arm_r.rotation.x, -0.5, k)
+			_arm_l.rotation.z = lerpf(_arm_l.rotation.z, 0.45, k)
+			_arm_r.rotation.z = lerpf(_arm_r.rotation.z, -0.45, k)
+			_elbow_l.rotation.x = lerpf(_elbow_l.rotation.x, -1.3, k)
+			_elbow_r.rotation.x = lerpf(_elbow_r.rotation.x, -1.3, k)
+			_terapkan_pakaian(delta, SantriPlayer.PAKAIAN_DEFAULT)
+			_hormat_timer -= delta
+			if _hormat_timer <= 0.0:
+				_akhiri_hormat()
+		"b_hampiri":
+			if _hormat_guru == null or not is_instance_valid(_hormat_guru):
+				_batalkan_hormat()
+				return
+			# Target 1 m dari guru, di sisi NPC (guru diam karena jeda).
+			var ke_npc := global_position - _hormat_guru.global_position
+			ke_npc.y = 0.0
+			var tujuan := _hormat_guru.global_position + ke_npc.normalized() * 1.0
+			if _langkah_ke(tujuan, delta):
+				# Hadap guru, mulai salaman.
+				var ke_guru := _hormat_guru.global_position - global_position
+				_visual.rotation.y = atan2(ke_guru.x, ke_guru.z)
+				_hormat = "b_salaman"
+				_hormat_timer = 2.0
+		"b_salaman":
+			# Salaman (cermin player.gd "salaman"): tangan kanan terulur.
+			_visual.rotation.x = lerpf(_visual.rotation.x, 0.08, k)
+			_arm_l.rotation.x = lerpf(_arm_l.rotation.x, 0.0, k)
+			_arm_r.rotation.x = lerpf(_arm_r.rotation.x, -1.45, k)
+			_arm_l.rotation.z = lerpf(_arm_l.rotation.z, 0.05, k)
+			_arm_r.rotation.z = lerpf(_arm_r.rotation.z, -0.05, k)
+			_elbow_l.rotation.x = lerpf(_elbow_l.rotation.x, 0.0, k)
+			_elbow_r.rotation.x = lerpf(_elbow_r.rotation.x, -0.1, k)
+			_hormat_timer -= delta
+			if _hormat_timer <= 0.0:
+				_hormat = "b_cium"
+				_hormat_timer = 1.5
+		"b_cium":
+			# Cium tangan: nunduk + tangan kanan ke wajah.
+			var kepala2 := _rig.get("kepala") as Node3D
+			if kepala2 != null:
+				kepala2.rotation.x = lerpf(kepala2.rotation.x, 0.4, k)
+			_visual.rotation.x = lerpf(_visual.rotation.x, 0.12, k)
+			_arm_r.rotation.x = lerpf(_arm_r.rotation.x, -1.0, k)
+			_elbow_r.rotation.x = lerpf(_elbow_r.rotation.x, -1.4, k)
+			_hormat_timer -= delta
+			if _hormat_timer <= 0.0:
+				# Antrean dibebaskan saat meninggalkan guru.
+				if _hormat_guru != null and _hormat_antrean.has(_hormat_guru):
+					_hormat_antrean[_hormat_guru] = maxi(0, int(_hormat_antrean[_hormat_guru]) - 1)
+				_hormat = "b_kembali"
+		"b_kembali":
+			if _langkah_ke(_hormat_pos_awal, delta):
+				_akhiri_hormat()
+
+
+## Hormat selesai normal: pulihkan aktivitas yang disimpan.
+func _akhiri_hormat() -> void:
+	# Kepala kembali tegak (bow tidak direset modul idle/jalan).
+	var kepala := _rig.get("kepala") as Node3D
+	if kepala != null:
+		kepala.rotation.x = 0.0
+	_visual.rotation.x = 0.0
+	_hormat = ""
+	_hormat_guru = null
+	_hormat_timer = 0.0
+	if not _hormat_aktivitas_tersimpan.is_empty():
+		var s: Dictionary = _hormat_aktivitas_tersimpan
+		_aktivitas = String(s.get("aktivitas", ""))
+		_aktivitas_timer = float(s.get("timer", 0.0))
+		_aktivitas_kursi = s.get("kursi", {})
+		_aktivitas_rute = []
+		for p in s.get("rute", []):
+			_aktivitas_rute.append(p)
+		_aktivitas_rute_idx = int(s.get("rute_idx", 0))
+		_aktivitas_yaw = float(s.get("yaw", 0.0))
+		_hormat_aktivitas_tersimpan = {}
+		if _aktivitas in ["duduk", "baca_kamar"] and not _aktivitas_kursi.is_empty():
+			# Kembali ke posisi kursi (b_kembali sudah jalan ke sana).
+			var sp: Vector3 = _aktivitas_kursi["pos"]
+			position = sp
+			_visual.rotation.y = _aktivitas_yaw
+		elif _aktivitas == "jalan_kitab" and _kitab_tangan != null:
+			_kitab_tangan.visible = true
+
+
+## Hormat dibatalkan paksa (mis. sholat mulai): bebaskan antrean,
+## buang simpanan aktivitas (kursi tetap dilepas _akhiri_aktivitas
+## oleh pemanggil — di sini hanya state hormat yang dibersihkan).
+func _batalkan_hormat() -> void:
+	if _hormat in ["b_hampiri", "b_salaman", "b_cium"]:
+		if _hormat_guru != null and _hormat_antrean.has(_hormat_guru):
+			_hormat_antrean[_hormat_guru] = maxi(0, int(_hormat_antrean[_hormat_guru]) - 1)
+	var kepala := _rig.get("kepala") as Node3D
+	if kepala != null:
+		kepala.rotation.x = 0.0
+	_visual.rotation.x = 0.0
+	_hormat = ""
+	_hormat_guru = null
+	_hormat_timer = 0.0
+	_hormat_aktivitas_tersimpan = {}

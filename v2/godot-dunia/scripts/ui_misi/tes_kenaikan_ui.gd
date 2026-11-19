@@ -92,14 +92,41 @@ func _ready() -> void:
 	_label_kaki.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	kaki.add_child(_label_kaki)
 	var keluar := Button.new()
-	keluar.text = "✕ Keluar"
+	keluar.text = ""
 	keluar.flat = true
 	keluar.focus_mode = Control.FOCUS_NONE
-	keluar.add_theme_font_size_override("font_size", 16)
-	keluar.add_theme_color_override("font_color", GayaMisi.KREM)
+	keluar.custom_minimum_size = Vector2(0, 32)
 	keluar.pressed.connect(_on_tutup_ditekan)
+	# IKON PANEL (Tara, 19 Nov 2026): "✕ Keluar" teks tofu di web
+	# — ikon "x" digambar IkonHUD di dalam tombol (pola baris aktif
+	# Panel Misi: isi HBox full-rect + mouse IGNORE).
+	var isi_keluar := HBoxContainer.new()
+	isi_keluar.set_anchors_preset(Control.PRESET_FULL_RECT)
+	isi_keluar.add_theme_constant_override("separation", 6)
+	isi_keluar.alignment = BoxContainer.ALIGNMENT_CENTER
+	keluar.add_child(isi_keluar)
+	var ikon_keluar := IkonHUD.new()
+	ikon_keluar.jenis = "x"
+	ikon_keluar.warna = GayaMisi.KREM
+	ikon_keluar.bayangan = false
+	ikon_keluar.custom_minimum_size = Vector2(18, 18)
+	isi_keluar.add_child(ikon_keluar)
+	isi_keluar.add_child(GayaMisi.buat_label("Keluar", 16, GayaMisi.KREM))
+	_abaikan_mouse(isi_keluar)
 	kaki.add_child(keluar)
-	kaki.add_child(GayaMisi.buat_label("□ Chat", 16, GayaMisi.KREM_REDUP))
+	var chat_chip := HBoxContainer.new()
+	chat_chip.add_theme_constant_override("separation", 6)
+	chat_chip.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var ikon_chat := IkonHUD.new()
+	ikon_chat.jenis = "kotak"
+	ikon_chat.warna = GayaMisi.KREM_REDUP
+	ikon_chat.bayangan = false
+	ikon_chat.custom_minimum_size = Vector2(16, 16)
+	chat_chip.add_child(ikon_chat)
+	var label_chat := GayaMisi.buat_label("Chat", 16, GayaMisi.KREM_REDUP)
+	label_chat.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	chat_chip.add_child(label_chat)
+	kaki.add_child(chat_chip)
 
 
 ## Tampilkan tes untuk satu Bagian ("N1".."N4"). N1 memakai
@@ -211,6 +238,16 @@ func _render() -> void:
 	_tambah_kartu_soal(soal, nomor)
 	_tambah_tombol_kunci()
 	_tambah_riwayat()
+	# PERBAIKAN (Tara, 19 Nov 2026 — foto tes-umpan-web): tombol
+	# "Soal Berikutnya" terpotong setengah di tepi bawah viewport
+	# saat umpan tampil — isi lebih tinggi dari viewport dan scroll
+	# tidak bergerak. Gulir ke bawah (tertunda: setelah layout) +
+	# spasi bawah supaya tombol tidak menempel tepi.
+	var spasi := Control.new()
+	spasi.custom_minimum_size = Vector2(0, 16)
+	_konten.add_child(spasi)
+	if _terkunci:
+		call_deferred("_gulung_ke_bawah")
 
 
 func _tambah_header() -> void:
@@ -272,7 +309,11 @@ func _tambah_kartu_progres(nomor: int) -> void:
 func _tambah_kartu_soal(soal: Dictionary, nomor: int) -> void:
 	var v := _buat_kartu()
 	v.add_child(GayaMisi.buat_label("SOAL %d" % nomor, 16, GayaMisi.EMAS_TERANG))
-	v.add_child(GayaMisi.buat_label(String(soal.get("pertanyaan", "")), 20, GayaMisi.KREM, true))
+	# LABEL CAMPUR (Tara, 19 Nov 2026): pertanyaan Q4/Q5/Q9
+	# mengandung kata Arab — Baloo 2 tidak punya glif Arab (tofu
+	# di web). Kata Arab dirender Amiri, kata Latin tetap Baloo 2;
+	# isi soal TIDAK diubah.
+	v.add_child(GayaMisi.buat_label_campur(String(soal.get("pertanyaan", "")), 20, GayaMisi.KREM))
 	var petunjuk := String(soal.get("petunjuk", "")).strip_edges()
 	if petunjuk != "":
 		v.add_child(GayaMisi.buat_label("Petunjuk: " + petunjuk, 16, GayaMisi.KREM_REDUP, true))
@@ -290,14 +331,30 @@ func _tambah_kartu_soal(soal: Dictionary, nomor: int) -> void:
 		v.add_child(b)
 	if _terkunci:
 		var umpan := ""
+		var ikon_umpan := "centang"
 		if _jawaban_benar:
-			umpan = "Benar ✓"
+			umpan = "Benar"
 		elif _jawaban_benar_teks != "":
-			umpan = "Salah ✗ — jawaban benar: %s" % _jawaban_benar_teks
+			umpan = "Salah — jawaban benar: %s" % _jawaban_benar_teks
+			ikon_umpan = "silang"
 		else:
-			umpan = "Salah ✗"
+			umpan = "Salah"
+			ikon_umpan = "silang"
 		var warna := GayaMisi.EMAS_TERANG if _jawaban_benar else GayaMisi.KREM
-		v.add_child(GayaMisi.buat_label(umpan, 18, warna, true))
+		# IKON PANEL (Tara, 19 Nov 2026): "Benar ✓" / "Salah ✗" teks
+		# tofu di web — centang/silang digambar IkonHUD.
+		var baris_umpan := HBoxContainer.new()
+		baris_umpan.add_theme_constant_override("separation", 8)
+		var ikon := IkonHUD.new()
+		ikon.jenis = ikon_umpan
+		ikon.warna = warna
+		ikon.bayangan = false
+		ikon.custom_minimum_size = Vector2(20, 20)
+		baris_umpan.add_child(ikon)
+		var label_umpan := GayaMisi.buat_label(umpan, 18, warna, true)
+		label_umpan.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		baris_umpan.add_child(label_umpan)
+		v.add_child(baris_umpan)
 
 
 func _tambah_tombol_kunci() -> void:
@@ -321,11 +378,13 @@ func _tambah_riwayat() -> void:
 	_konten.add_child(alir)
 	for i in range(_riwayat.size()):
 		var teks := ""
+		var ikon := "centang"
 		if _riwayat[i]:
-			teks = "Soal %d ✓ Benar" % (i + 1)
+			teks = "Soal %d Benar" % (i + 1)
 		else:
-			teks = "Soal %d ✗ Salah" % (i + 1)
-		alir.add_child(GayaMisi.buat_chip(teks))
+			teks = "Soal %d Salah" % (i + 1)
+			ikon = "silang"
+		alir.add_child(GayaMisi.buat_chip_ikon(ikon, teks))
 
 
 func _tambah_kartu_hasil() -> void:
@@ -393,6 +452,30 @@ func _buat_kartu() -> VBoxContainer:
 	p.add_child(v)
 	_konten.add_child(p)
 	return v
+
+
+## Gulir ScrollContainer ke bawah (dipanggil tertunda dari
+## _render — setelah layout, supaya "Soal Berikutnya" terlihat
+## penuh saat umpan tampil).
+func _gulung_ke_bawah() -> void:
+	if _gulung == null:
+		return
+	await get_tree().process_frame
+	await get_tree().process_frame
+	if _gulung == null:
+		return
+	var bilah := _gulung.get_v_scroll_bar()
+	if bilah != null:
+		_gulung.scroll_vertical = int(bilah.max_value)
+
+
+## Isi tombol (HBox + anak-anaknya) tidak boleh menahan klik —
+## klik harus sampai ke Button induknya (pola Panel Misi).
+func _abaikan_mouse(kontrol: Control) -> void:
+	kontrol.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	for anak in kontrol.get_children():
+		if anak is Control:
+			_abaikan_mouse(anak)
 
 
 func _sorot_emas(b: Button) -> void:

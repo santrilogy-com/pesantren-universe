@@ -140,16 +140,24 @@ func _ready() -> void:
 	btn_riwayat.pressed.connect(_buka_riwayat)
 	kepala.add_child(btn_riwayat)
 	var btn_tutup := Button.new()
-	btn_tutup.text = "✕"
+	btn_tutup.text = ""
 	btn_tutup.focus_mode = Control.FOCUS_NONE
-	btn_tutup.add_theme_font_size_override("font_size", 22)
-	btn_tutup.add_theme_color_override("font_color", GayaMisi.KREM)
-	btn_tutup.add_theme_color_override("font_hover_color", GayaMisi.EMAS_TERANG)
+	btn_tutup.custom_minimum_size = Vector2(40, 40)
 	btn_tutup.add_theme_stylebox_override("normal", StyleBoxEmpty.new())
 	btn_tutup.add_theme_stylebox_override("hover", StyleBoxEmpty.new())
 	btn_tutup.add_theme_stylebox_override("pressed", StyleBoxEmpty.new())
 	btn_tutup.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
 	btn_tutup.pressed.connect(_tutup)
+	# IKON PANEL (Tara, 19 Nov 2026): "✕" teks tofu di web
+	# (Baloo 2 tidak punya U+2715) — ikon "x" digambar IkonHUD.
+	var ikon_tutup := IkonHUD.new()
+	ikon_tutup.jenis = "x"
+	ikon_tutup.warna = GayaMisi.KREM
+	ikon_tutup.bayangan = false
+	ikon_tutup.position = Vector2(8, 8)
+	ikon_tutup.size = Vector2(24, 24)
+	ikon_tutup.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	btn_tutup.add_child(ikon_tutup)
 	kepala.add_child(btn_tutup)
 	isi.add_child(kepala)
 	_pesan_label = RichTextLabel.new()

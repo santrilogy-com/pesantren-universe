@@ -71,14 +71,41 @@ func _ready() -> void:
 	label_kaki.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	kaki.add_child(label_kaki)
 	var tutup := Button.new()
-	tutup.text = "✕ Tutup"
+	tutup.text = ""
 	tutup.flat = true
 	tutup.focus_mode = Control.FOCUS_NONE
-	tutup.add_theme_font_size_override("font_size", 16)
-	tutup.add_theme_color_override("font_color", GayaMisi.KREM)
+	tutup.custom_minimum_size = Vector2(0, 32)
 	tutup.pressed.connect(_on_tutup_ditekan)
+	# IKON PANEL (Tara, 19 Nov 2026): "✕ Tutup" teks tofu di web —
+	# ikon "x" digambar IkonHUD di dalam tombol (pola baris aktif:
+	# isi HBox full-rect + mouse IGNORE).
+	var isi_tutup := HBoxContainer.new()
+	isi_tutup.set_anchors_preset(Control.PRESET_FULL_RECT)
+	isi_tutup.add_theme_constant_override("separation", 6)
+	isi_tutup.alignment = BoxContainer.ALIGNMENT_CENTER
+	tutup.add_child(isi_tutup)
+	var ikon_tutup := IkonHUD.new()
+	ikon_tutup.jenis = "x"
+	ikon_tutup.warna = GayaMisi.KREM
+	ikon_tutup.bayangan = false
+	ikon_tutup.custom_minimum_size = Vector2(18, 18)
+	isi_tutup.add_child(ikon_tutup)
+	isi_tutup.add_child(GayaMisi.buat_label("Tutup", 16, GayaMisi.KREM))
+	_abaikan_mouse(isi_tutup)
 	kaki.add_child(tutup)
-	kaki.add_child(GayaMisi.buat_label("□ Chat", 16, GayaMisi.KREM_REDUP))
+	var chat_chip := HBoxContainer.new()
+	chat_chip.add_theme_constant_override("separation", 6)
+	chat_chip.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var ikon_chat := IkonHUD.new()
+	ikon_chat.jenis = "kotak"
+	ikon_chat.warna = GayaMisi.KREM_REDUP
+	ikon_chat.bayangan = false
+	ikon_chat.custom_minimum_size = Vector2(16, 16)
+	chat_chip.add_child(ikon_chat)
+	var label_chat := GayaMisi.buat_label("Chat", 16, GayaMisi.KREM_REDUP)
+	label_chat.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	chat_chip.add_child(label_chat)
+	kaki.add_child(chat_chip)
 
 
 ## Tampilkan (atau refresh) panel dari save. Panel hidden sebelum
@@ -137,18 +164,29 @@ func _tambah_kartu_gelar() -> void:
 		bagian_sub.append("Divisi " + divisi)
 	if not bagian_sub.is_empty():
 		v.add_child(GayaMisi.buat_label(" • ".join(bagian_sub), 16, GayaMisi.KREM))
-	var bintang_teks := ""
+	# IKON PANEL (Tara, 19 Nov 2026): bintang "★"/"☆" teks tofu di
+	# web — bintang isi/kosong digambar IkonHUD.
+	var baris_bintang := HBoxContainer.new()
+	baris_bintang.add_theme_constant_override("separation", 4)
 	if bintang_butuh > 0:
 		for i in range(bintang_butuh):
-			if i < bintang_divisi:
-				bintang_teks += "★"
-			else:
-				bintang_teks += "☆"
-		bintang_teks += " %d/%d bintang" % [bintang_divisi, bintang_butuh]
+			var ikon := IkonHUD.new()
+			ikon.jenis = "bintang" if i < bintang_divisi else "bintang_kosong"
+			ikon.warna = GayaMisi.EMAS_TERANG
+			ikon.bayangan = false
+			ikon.custom_minimum_size = Vector2(20, 20)
+			baris_bintang.add_child(ikon)
+		baris_bintang.add_child(GayaMisi.buat_label(" %d/%d bintang" % [bintang_divisi, bintang_butuh], 18, GayaMisi.EMAS_TERANG))
 	else:
 		# Tier 8 'Santri Senior: tanpa divisi — tampilkan total.
-		bintang_teks = "★ %d bintang" % total_bintang
-	v.add_child(GayaMisi.buat_label(bintang_teks, 18, GayaMisi.EMAS_TERANG))
+		var ikon := IkonHUD.new()
+		ikon.jenis = "bintang"
+		ikon.warna = GayaMisi.EMAS_TERANG
+		ikon.bayangan = false
+		ikon.custom_minimum_size = Vector2(20, 20)
+		baris_bintang.add_child(ikon)
+		baris_bintang.add_child(GayaMisi.buat_label(" %d bintang" % total_bintang, 18, GayaMisi.EMAS_TERANG))
+	v.add_child(baris_bintang)
 	var fraksi := 0.0
 	if bintang_butuh > 0:
 		fraksi = float(bintang_divisi) / float(bintang_butuh)
@@ -227,16 +265,22 @@ func _tambah_baris_misi(b: Dictionary) -> void:
 
 func _isi_baris_misi(b: Dictionary) -> HBoxContainer:
 	var status := String(b.get("status", "terkunci"))
-	var ikon := "🔒"
+	# IKON PANEL (Tara, 19 Nov 2026): "🔒"/"✓"/"▶" teks tofu di web
+	# — gembok/centang/segitiga-isi digambar IkonHUD.
+	var jenis_ikon := "gembok"
 	if status == "selesai":
-		ikon = "✓"
+		jenis_ikon = "centang"
 	elif status == "aktif":
-		ikon = "▶"
+		jenis_ikon = "segitiga_isi"
 	var baris := HBoxContainer.new()
 	baris.add_theme_constant_override("separation", 10)
-	var l_ikon := GayaMisi.buat_label(ikon, 18, GayaMisi.EMAS_TERANG)
-	l_ikon.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	baris.add_child(l_ikon)
+	var ikon := IkonHUD.new()
+	ikon.jenis = jenis_ikon
+	ikon.warna = GayaMisi.EMAS_TERANG
+	ikon.bayangan = false
+	ikon.custom_minimum_size = Vector2(22, 22)
+	ikon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	baris.add_child(ikon)
 	var l_id := GayaMisi.buat_label(String(b.get("id", "")), 18, GayaMisi.EMAS_TERANG)
 	l_id.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	baris.add_child(l_id)
@@ -285,15 +329,25 @@ func _tambah_strip_tugas() -> void:
 	var v := _buat_kartu()
 	v.add_child(GayaMisi.buat_label(String(tugas.get("label", "Tugas dari Ustadz")), 18, GayaMisi.EMAS_TERANG))
 	var poin := int(tugas.get("poin", 0))
-	var status := ""
-	if DataMisiBagian.tugas_selesai(_save):
-		status = "Selesai ✓ • +%d poin" % poin
-	else:
-		status = "Belum selesai • +%d poin" % poin
 	v.add_child(GayaMisi.buat_label(
-		"%s — %s" % [String(tugas.get("teks", "")), status],
+		String(tugas.get("teks", "")),
 		16, GayaMisi.KREM, true
 	))
+	# IKON PANEL (Tara, 19 Nov 2026): "Selesai ✓" teks tofu di web —
+	# centang digambar IkonHUD.
+	if DataMisiBagian.tugas_selesai(_save):
+		var baris_status := HBoxContainer.new()
+		baris_status.add_theme_constant_override("separation", 8)
+		var ikon := IkonHUD.new()
+		ikon.jenis = "centang"
+		ikon.warna = GayaMisi.EMAS_TERANG
+		ikon.bayangan = false
+		ikon.custom_minimum_size = Vector2(18, 18)
+		baris_status.add_child(ikon)
+		baris_status.add_child(GayaMisi.buat_label("Selesai • +%d poin" % poin, 16, GayaMisi.KREM))
+		v.add_child(baris_status)
+	else:
+		v.add_child(GayaMisi.buat_label("Belum selesai • +%d poin" % poin, 16, GayaMisi.KREM))
 	_konten.add_child(GayaMisi.buat_label(
 		"Pola misi: cari Ustadz → belajar → tugas dari Ustadz",
 		14, GayaMisi.KREM_REDUP
@@ -302,7 +356,18 @@ func _tambah_strip_tugas() -> void:
 
 func _tambah_kartu_bagian_berikut() -> void:
 	var v := _buat_kartu()
-	v.add_child(GayaMisi.buat_label("🔒 " + DataMisiBagian.BAGIAN_BERIKUT_NAMA, 18, GayaMisi.KREM_REDUP))
+	# IKON PANEL (Tara, 19 Nov 2026): "🔒" teks tofu di web —
+	# gembok digambar IkonHUD.
+	var baris_berikut := HBoxContainer.new()
+	baris_berikut.add_theme_constant_override("separation", 8)
+	var ikon_berikut := IkonHUD.new()
+	ikon_berikut.jenis = "gembok"
+	ikon_berikut.warna = GayaMisi.KREM_REDUP
+	ikon_berikut.bayangan = false
+	ikon_berikut.custom_minimum_size = Vector2(20, 20)
+	baris_berikut.add_child(ikon_berikut)
+	baris_berikut.add_child(GayaMisi.buat_label(DataMisiBagian.BAGIAN_BERIKUT_NAMA, 18, GayaMisi.KREM_REDUP))
+	v.add_child(baris_berikut)
 	v.add_child(GayaMisi.buat_label(DataMisiBagian.BAGIAN_BERIKUT_SYARAT, 16, GayaMisi.KREM_REDUP))
 
 

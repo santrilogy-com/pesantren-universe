@@ -870,6 +870,10 @@ static func build_visual(nama: String, outfit: Dictionary) -> Dictionary:
 	# Ustadzah Mariyah / Penjaga Pos Jaga (muslimah tanpa tunik).
 	var muslimah: bool = bool(outfit.get("muslimah", false))
 	var tunik: bool = bool(outfit.get("tunik", false))
+	# 20 NPC v1 (Raka, 19 Nov 2026): kunci "alis" — NPC putra boleh
+	# punya alis DATAR (varian wajah; default false = pemain + NPC
+	# lama tidak berubah). Muslimah selalu beralis (aturan lama).
+	var pakai_alis: bool = bool(outfit.get("alis", false))
 	var pakai_abaya: bool = muslimah and not tunik
 	var warna_abaya: Color = Color(String(outfit.get("abaya", "#065f46")))
 	# KIRANA 17 Nov 2026 (Mas: abaya bisa dikostum): untuk muslimah,
@@ -1207,7 +1211,10 @@ static func build_visual(nama: String, outfit: Dictionary) -> Dictionary:
 	# topeng coklat datar. Dua kapsul tipis di atas mata
 	# (±0.085, 1.735, 0.222 — tepat di permukaan kepala, di
 	# depan tepi kubah 0.209) memberi wajah ekspresi.
-	if muslimah:
+	# 20 NPC v1 (Raka): + NPC putra dengan kunci outfit "alis".
+	# Alis SELALU DATAR (PI/2) — alis miring pernah dicoba Kirana
+	# (21:52) dan terbaca "marah/jutek", jangan dimiringkan lagi.
+	if muslimah or pakai_alis:
 		for sx in [-1.0, 1.0]:
 			var alis := Palette.capsule(0.008, 0.07, Vector3(sx * 0.085, 1.735, 0.222), Color("#2a2018"))
 			# KIRANA revisi 21:52 WIB: alis miring (PI/2 ± 0.10)

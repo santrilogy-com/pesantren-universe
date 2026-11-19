@@ -97,18 +97,18 @@ func _ready() -> void:
 	# m1 sedang bicara (teks progresif + kursor, tanpa pilihan).
 	await _tunggu(1.5)
 	print("FOTO-CEK m1: node='%s' bicara=%s" % [rb.node_saat_ini(), str(rb.sedang_bicara())])
-	await _foto(awalan + "-m1-bicara.png")
+	await _foto(awalan + "-m1-bicara-meja.png")
 	# m2 sedang bicara (papan KALAM): selesaikan m1, tekan Lanjut.
 	rb._selesaikan_bicara()
 	rb._lanjut_pesan()
 	await _tunggu(1.2)
 	print("FOTO-CEK m2: node='%s' bicara=%s" % [rb.node_saat_ini(), str(rb.sedang_bicara())])
-	await _foto(awalan + "-m2-bicara.png")
+	await _foto(awalan + "-m2-bicara-meja.png")
 	# m2 selesai -> pilihan Paham/Belum tampil aktif penuh.
 	rb._selesaikan_bicara()
 	await _tunggu(0.5)
 	print("FOTO-CEK m2 pilihan: node='%s' bicara=%s" % [rb.node_saat_ini(), str(rb.sedang_bicara())])
-	await _foto(awalan + "-m2-pilihan.png")
+	await _foto(awalan + "-m2-pilihan-meja.png")
 	# Jalan ke l1 (manual, auto OFF): Paham di m2, lanjut m3-m6,
 	# Paham di m7, lalu soal l1.
 	rb._on_opsi_ditekan((DataChatModul01.cari("m2").get("opsi", []) as Array)[0])
@@ -121,7 +121,7 @@ func _ready() -> void:
 	print("FOTO-CEK l1: node='%s' bicara=%s" % [rb.node_saat_ini(), str(rb.sedang_bicara())])
 	rb._selesaikan_bicara()
 	await _tunggu(0.5)
-	await _foto(awalan + "-l1-soal.png")
+	await _foto(awalan + "-l1-soal-meja.png")
 	_main._manajer_misi.tutup_semua()
 
 	# Pulihkan save asli sebelum quit.

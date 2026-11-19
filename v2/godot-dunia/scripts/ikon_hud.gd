@@ -7,6 +7,8 @@ class_name IkonHUD
 ## Jenis: amplop (chat), peta, kartu (Kartu Santri), speaker (suara),
 ## kamera, expand (layar penuh), aksi (pose), bintang (interaksi),
 ## reset (reset posisi). Varian: speaker nyala/senyap, expand/ciut.
+## IKON PANEL (19 Nov 2026): centang, silang, gembok, segitiga_isi,
+## bintang_kosong — pengganti glif teks ✓ ✗ 🔒 ▶ ☆ yang tofu di web.
 ## Digambar dalam kotak desain -20..20 (skala ikut ukuran kontrol).
 ## V2 (Tara, 18 Nov 2026 — arahan Mas 15:10 WIB: jangan primitif,
 ## tiru MLBB): garis TEBAL (4.5, bukan 3.0), tiap icon digambar dua
@@ -106,13 +108,23 @@ func _titik(x: float, y: float, r: float) -> void:
 	draw_circle(_p(x, y), r * _s(), _c)
 
 
-func _bintang() -> void:
+func _bintang_poin() -> PackedVector2Array:
 	var titik: PackedVector2Array = []
 	for i in 10:
 		var r := 15.0 if i % 2 == 0 else 6.5
 		var a := -PI * 0.5 + float(i) * PI / 5.0
 		titik.append(_p(cos(a) * r, sin(a) * r))
-	draw_colored_polygon(titik, _c)
+	return titik
+
+
+func _bintang() -> void:
+	draw_colored_polygon(_bintang_poin(), _c)
+
+
+func _bintang_kosong() -> void:
+	var titik := _bintang_poin()
+	titik.append(titik[0])
+	draw_polyline(titik, _c, TEBAL, true)
 
 
 func _gambar() -> void:
@@ -180,6 +192,34 @@ func _gambar() -> void:
 			draw_arc(_p(0, 15), 11.0 * _s(), PI, TAU, 24, _c, TEBAL, true)
 		"bintang":
 			_bintang()
+		# IKON PANEL (Tara, 19 Nov 2026 — Baloo 2 tidak punya glif
+		# ✓ ✗ ★☆ 🔒 ▶ □ ✕, semuanya tofu di web; digambar kode di
+		# sini, pola yang sama seperti icon HUD/strip atas).
+		"bintang_kosong":
+			_bintang_kosong()
+		"centang":
+			# Centang TEBAL (umpan benar / pilihan aktif).
+			_garis(Vector2(-13, 1), Vector2(-4, 10))
+			_garis(Vector2(-4, 10), Vector2(14, -11))
+		"silang":
+			# Silang TEBAL (umpan salah) — beda dari "x" tipis gamepad.
+			_garis(Vector2(-11, -11), Vector2(11, 11))
+			_garis(Vector2(11, -11), Vector2(-11, 11))
+		"gembok":
+			# Gembok: belenggu busur + badan isi + lubang kunci.
+			draw_arc(_p(0, 2), 8.0 * _s(), PI, TAU, 16, _c, TEBAL, true)
+			_garis(Vector2(-8, 2), Vector2(-8, 6))
+			_garis(Vector2(8, 2), Vector2(8, 6))
+			_isi_kotak(-11, 4, 22, 13, 0.0)
+			_kotak(-11, 4, 22, 13)
+			var c_lama := _c
+			_c = _c.darkened(0.55)
+			_titik(0, 9, 2.2)
+			_c = c_lama
+		"segitiga_isi":
+			# Segitiga isi menghadap kanan (main / baris aktif).
+			var seg := PackedVector2Array([_p(-9, -13), _p(-9, 13), _p(13, 0)])
+			draw_colored_polygon(seg, _c)
 		"reset":
 			var a := 5.9
 			draw_arc(_p(0, 0), 12.0 * _s(), 0.7, a, 40, _c, TEBAL, true)

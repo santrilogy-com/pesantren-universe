@@ -77,10 +77,21 @@ func _ready() -> void:
 	atas.add_child(spasi)
 
 	var tombol_tutup := Button.new()
-	tombol_tutup.text = "✕"
+	tombol_tutup.text = ""
 	tombol_tutup.tooltip_text = "Tutup"
 	tombol_tutup.flat = true
+	tombol_tutup.custom_minimum_size = Vector2(40, 40)
 	tombol_tutup.pressed.connect(_on_tutup_ditekan)
+	# IKON PANEL (Tara, 19 Nov 2026): "✕" teks tofu di web
+	# (Baloo 2 tidak punya U+2715) — ikon "x" digambar IkonHUD.
+	var ikon_tutup := IkonHUD.new()
+	ikon_tutup.jenis = "x"
+	ikon_tutup.warna = GayaMisi.KREM
+	ikon_tutup.bayangan = false
+	ikon_tutup.position = Vector2(8, 8)
+	ikon_tutup.size = Vector2(24, 24)
+	ikon_tutup.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	tombol_tutup.add_child(ikon_tutup)
 	atas.add_child(tombol_tutup)
 
 	# v2 — Kepala: avatar di kiri, subjudul kapital + salam Arab di
@@ -165,8 +176,8 @@ func _ready() -> void:
 	spasi_footer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	footer.add_child(spasi_footer)
 
-	footer.add_child(GayaMisi.buat_chip_kunci("✕ Lanjut"))
-	footer.add_child(GayaMisi.buat_chip_kunci("□ Chat"))
+	footer.add_child(GayaMisi.buat_chip_kunci_ikon("x", "Lanjut"))
+	footer.add_child(GayaMisi.buat_chip_kunci_ikon("kotak", "Chat"))
 
 
 ## Tampilkan dialog dari babak 1. Pembicara tak dikenal -> "putra".

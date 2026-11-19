@@ -9,11 +9,9 @@ extends Node
 
 
 func _ready() -> void:
-	var ts := TextServerManager.get_primary_interface()
-	var sys: PackedStringArray = ts.get_system_fonts()
-	print("PROBE system_fonts_jumlah=%d" % sys.size())
-	for i in mini(5, sys.size()):
-		print("PROBE system_font[%d]=%s" % [i, sys[i]])
+	# TextServer 4.7 TIDAK punya get_system_fonts() — jumlah font sistem
+	# tidak bisa ditanya dari engine; ketiadaan fallback dibuktikan
+	# lewat foto namespace (tofu muncul) bukan lewat probe ini.
 	var fonts := {
 		"Baloo2-SemiBold.tres": load("res://fonts/Baloo2-SemiBold.tres") as Font,
 		"Baloo2-Bold.tres": load("res://fonts/Baloo2-Bold.tres") as Font,
@@ -40,7 +38,7 @@ func _ready() -> void:
 				ada.append(k)
 			else:
 				tidak.append(k)
-		print("PROBE %s ADA=[%s] TIDAK=[%s]" % [nama, ",".join(ada), ",".join(tidak)])
+		print("PROBE %s ADA=%s TIDAK=%s" % [nama, ada, tidak])
 	var amiri_rt := load("res://fonts/Amiri-Bold.ttf")
 	print("PROBE load_runtime_Amiri_Bold=%s" % str(amiri_rt != null))
 	print("PROBE SELESAI")

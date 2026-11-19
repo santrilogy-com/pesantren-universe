@@ -177,9 +177,12 @@ static func buat_dot_progres(jumlah: int, aktif: int) -> HBoxContainer:
 	return h
 
 
-## Chip keycap footer ("✕ Lanjut" / "□ Chat"): kotak gelap
-## berbingkai krem tipis, radius 6, padding 8/4.
-static func buat_chip_kunci(teks: String) -> PanelContainer:
+## Chip keycap dengan IKON gambar-kode di kiri teks (Tara, 19 Nov
+## 2026): "✕ Lanjut" / "□ Chat" memakai glif ✕/□ yang TIDAK ADA
+## di Baloo 2 — tofu di web. Ikon digambar IkonHUD ("x" / "kotak"),
+## teks tetap Label. (Versi teks buat_chip_kunci() DIHAPUS — tidak
+## ada pemanggil lagi; jangan pasang glif ✕/□ sebagai teks.)
+static func buat_chip_kunci_ikon(jenis_ikon: String, teks: String) -> PanelContainer:
 	var p := PanelContainer.new()
 	var s := StyleBoxFlat.new()
 	s.bg_color = ZAMRUD_KARTU
@@ -193,9 +196,18 @@ static func buat_chip_kunci(teks: String) -> PanelContainer:
 	p.add_theme_constant_override("margin_right", 8)
 	p.add_theme_constant_override("margin_top", 4)
 	p.add_theme_constant_override("margin_bottom", 4)
+	var h := HBoxContainer.new()
+	h.add_theme_constant_override("separation", 6)
+	h.alignment = BoxContainer.ALIGNMENT_CENTER
+	p.add_child(h)
+	var ikon := IkonHUD.new()
+	ikon.jenis = jenis_ikon
+	ikon.warna = KREM
+	ikon.bayangan = false
+	ikon.custom_minimum_size = Vector2(16, 16)
+	h.add_child(ikon)
 	var l := buat_label(teks, 14, KREM)
-	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	p.add_child(l)
+	h.add_child(l)
 	return p
 
 
@@ -352,6 +364,58 @@ static func buat_label_arab(teks: String, ukuran: int) -> Label:
 	return l
 
 
+## Label CAMPURAN Latin + Arab (Tara, 19 Nov 2026): kata Latin
+## pakai Baloo 2 (font default proyek), kata Arab pakai Amiri —
+## Baloo 2 tidak punya glif Arab, jadi kata Arab di Label biasa
+## tampil kotak-kotak di web. Teks dipecah per kata (spasi); tiap
+## run kata Arab dibalik urutannya supaya tampil benar (teks Arab
+## dibaca kanan-ke-kiri di dalam run-nya). Mengembalikan
+## HFlowContainer (membungkus kata per kata) — pakai sebagai
+## pengganti Label untuk teks yang mengandung Arab (pertanyaan
+## Tes Kenaikan Q4/Q5/Q9). Isi soal TIDAK diubah, hanya font
+## per katanya.
+static func buat_label_campur(teks: String, ukuran: int, warna: Color) -> HFlowContainer:
+	var alir := HFlowContainer.new()
+	alir.add_theme_constant_override("h_separation", 7)
+	alir.add_theme_constant_override("v_separation", 2)
+	alir.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var kata := teks.split(" ", false)
+	var i := 0
+	while i < kata.size():
+		if _mengandung_arab(String(kata[i])):
+			var run: Array[String] = []
+			while i < kata.size() and _mengandung_arab(String(kata[i])):
+				run.append(String(kata[i]))
+				i += 1
+			run.reverse()
+			for k in run:
+				alir.add_child(_label_arab_sepotong(k, ukuran, warna))
+		else:
+			alir.add_child(buat_label(String(kata[i]), ukuran, warna))
+			i += 1
+	return alir
+
+
+## True bila kata mengandung satu pun karakter blok Arab
+## (huruf + harakat + tanda baca Arab).
+static func _mengandung_arab(kata: String) -> bool:
+	for j in kata.length():
+		var k := kata.unicode_at(j)
+		if (k >= 0x0600 and k <= 0x06FF) or (k >= 0x0750 and k <= 0x077F) or (k >= 0x08A0 and k <= 0x08FF) or (k >= 0xFB50 and k <= 0xFDFF) or (k >= 0xFE70 and k <= 0xFEFF):
+			return true
+	return false
+
+
+## Satu kata Arab dengan font Amiri (tanpa rata tengah — ikut
+## alur HFlowContainer).
+static func _label_arab_sepotong(teks: String, ukuran: int, warna: Color) -> Label:
+	var l := buat_label(teks, ukuran, warna)
+	var font := load(FONT_ARAB) as Font
+	if font != null:
+		l.add_theme_font_override("font", font)
+	return l
+
+
 ## Tombol emas: font 20, teks zamrud gelap, tanpa focus.
 ## v2 (19 Nov 2026): gradien emas + umpan tekan 0.97.
 static func buat_tombol_emas(teks: String) -> Button:
@@ -400,6 +464,32 @@ static func buat_chip(teks: String) -> PanelContainer:
 	var l := buat_label(teks, 14, EMAS_TERANG)
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	p.add_child(l)
+	return p
+
+
+## Chip kecil dengan IKON gambar-kode di kiri teks (Tara, 19 Nov
+## 2026): riwayat tes "Soal N ✓ Benar / ✗ Salah" memakai glif
+## ✓/✗ yang tofu di web. Ikon digambar IkonHUD ("centang" /
+## "silang"), teks tetap Label. Gaya pill sama seperti buat_chip.
+static func buat_chip_ikon(jenis_ikon: String, teks: String) -> PanelContainer:
+	var p := PanelContainer.new()
+	p.add_theme_stylebox_override("panel", gaya_chip())
+	p.add_theme_constant_override("margin_left", 14)
+	p.add_theme_constant_override("margin_right", 14)
+	p.add_theme_constant_override("margin_top", 7)
+	p.add_theme_constant_override("margin_bottom", 7)
+	var h := HBoxContainer.new()
+	h.add_theme_constant_override("separation", 6)
+	h.alignment = BoxContainer.ALIGNMENT_CENTER
+	p.add_child(h)
+	var ikon := IkonHUD.new()
+	ikon.jenis = jenis_ikon
+	ikon.warna = EMAS_TERANG
+	ikon.bayangan = false
+	ikon.custom_minimum_size = Vector2(16, 16)
+	h.add_child(ikon)
+	var l := buat_label(teks, 14, EMAS_TERANG)
+	h.add_child(l)
 	return p
 
 

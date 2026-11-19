@@ -67,12 +67,36 @@ func _ready() -> void:
 	_main._manajer_misi.tutup_semua()
 	await _tunggu(5)
 
-	# 2 — Ruang Belajar latihan soal 1 (مَدْرَسَةٌ).
+	# 2 — Ruang Belajar CHAT (v1 Sinta, 19 Nov 16:30): alur chat 14 node,
+	# teks transliterasi Latin semua (0 karakter Arab di data chat) —
+	# foto node soal l1 untuk membuktikan tidak ada Arab di chat.
+	# PERBAIKAN HARNESS (Tara, 19 Nov 2026 — "kotak besar + lingkaran
+	# samar" di header chat): skrip ini dulu memanggil
+	# buka_ruang_belajar() LANGSUNG tanpa _mulai_adegan_belajar() —
+	# HUD tidak disembunyikan, tombol gamepad □/○ menembus kotak
+	# dialog 92%-opaque sebagai hantu kotak+lingkaran. Alur game
+	# asli selalu memanggil _mulai_adegan_belajar() dulu (main.gd).
+	_main._mulai_adegan_belajar()
 	_main._manajer_misi.buka_ruang_belajar("Ust. Sanusi")
 	await _tunggu(10)
-	_main._manajer_misi._ruang_belajar._ke_langkah(2)
-	await _tunggu(10)
-	await _foto("panel-arab-latihan-%s.png" % _tag)
+	var rb: RuangBelajarUI = _main._manajer_misi._ruang_belajar
+	for i in 16:
+		if rb.node_saat_ini() == "l1":
+			break
+		var nod: Dictionary = rb._node_saat_ini
+		rb._selesaikan_bicara()
+		await _tunggu(2)
+		if String(nod.get("tipe", "")) == "cek":
+			var opsi: Array = nod.get("opsi", [])
+			if opsi.size() > 0:
+				rb._on_opsi_ditekan(opsi[0])
+		else:
+			rb._lanjut_pesan()
+		await _tunggu(3)
+	rb._selesaikan_bicara()
+	await _tunggu(4)
+	print("FOTO-CEK chat node=%s (harap l1)" % rb.node_saat_ini())
+	await _foto("panel-arab-chat-l1-%s.png" % _tag)
 	_main._manajer_misi.tutup_semua()
 	await _tunggu(5)
 
@@ -88,7 +112,6 @@ func _ready() -> void:
 		await _tunggu(3)
 		tes._on_kunci_ditekan()
 		await _tunggu(5)
-	print("FOTO-CEK tes nomor tampil=%d (harap 4)" % tes._nomor_tampil)
 	await _foto("panel-arab-tes-q4-%s.png" % _tag)
 
 	# 4 — Umpan "Benar ✓" setelah jawab Q4 benar (jawaban 1).
@@ -96,7 +119,14 @@ func _ready() -> void:
 	await _tunggu(3)
 	tes._on_kunci_ditekan()
 	await _tunggu(10)
+	print("FOTO-CEK tes nomor tampil=%d (harap 4)" % tes._nomor_tampil)
 	await _foto("panel-arab-tes-umpan-%s.png" % _tag)
+
+	# 4b — Riwayat + tombol "Soal Berikutnya" PENUH (perbaikan Tara,
+	# 19 Nov 2026): _render() menggulir ke bawah secara tertunda
+	# saat umpan tampil — tunggu scroll jalan, lalu foto.
+	await _tunggu(12)
+	await _foto("panel-ikon-tes-riwayat-%s.png" % _tag)
 	_main._manajer_misi.tutup_semua()
 	await _tunggu(5)
 
@@ -113,6 +143,63 @@ func _ready() -> void:
 	_main._ui.set_kualitas_mode(_main._kualitas.mode_saat_ini())
 	await _tunggu(10)
 	await _foto("panel-arab-kualitas-%s.png" % _tag)
+	_main._ui._toggle_panel_kualitas()
+	await _tunggu(3)
+
+	# 7 — Panel outfit: centang ikon di swatch terpilih.
+	_main._ui.open_outfit(_main._save.get("outfit", {}))
+	await _tunggu(10)
+	await _foto("panel-ikon-outfit-%s.png" % _tag)
+	_main._ui.close_outfit()
+	await _tunggu(3)
+
+	# 8 — Panel peta: tombol zoom "+" ASCII.
+	_main._on_open_peta()
+	await _tunggu(10)
+	await _foto("panel-ikon-peta-%s.png" % _tag)
+	_main._ui.close_peta()
+	await _tunggu(3)
+
+	# 9 — Dashboard Kartu Santri: daftar khataman ("• SEDANG
+	# BERLANGSUNG" hanya bila ada sesi aktif saat foto diambil —
+	# glif • sendiri sudah terbukti render di foto tes "Benar 4 •
+	# Salah 0"; foto ini bukti panel tidak rusak).
+	_main._on_open_dashboard()
+	await _tunggu(10)
+	await _foto("panel-ikon-dashboard-%s.png" % _tag)
+	_main._ui.close_dashboard()
+	await _tunggu(3)
+
+	# 10 — Reader buku: tombol "‹ Sebelumnya" / "Berikutnya ›" +
+	# zona tap ‹ › (buku lokal "puisi-chairil-anwar-pilihan",
+	# pola foto_baca_buku.gd; server boleh gagal — buku lokal
+	# tetap ada di daftar).
+	_main._ui.open_baca_buku()
+	var status_baca := ""
+	for i in 30:
+		status_baca = _main._ui.baca_status_server()
+		if status_baca == "ok" or status_baca == "gagal":
+			break
+		await get_tree().create_timer(0.5).timeout
+	if status_baca == "gagal":
+		_main._ui.open_baca_buku()
+		for i in 30:
+			status_baca = _main._ui.baca_status_server()
+			if status_baca == "ok" or status_baca == "gagal":
+				break
+			await get_tree().create_timer(0.5).timeout
+	print("FOTO-CEK baca status=%s judul=%s" % [status_baca, str(_main._ui.baca_daftar_judul())])
+	# baca_daftar_judul() mengembalikan judul latin, BUKAN id —
+	# pakai nilai balik baca_buka_buku_id() (bool) sebagai penanda.
+	if _main._ui.baca_buka_buku_id("puisi-chairil-anwar-pilihan"):
+		await _tunggu(5)
+		_main._ui.baca_buka_bagian(1)
+		await _tunggu(8)
+		await _foto("panel-ikon-baca-%s.png" % _tag)
+	else:
+		print("FOTO-CEK baca: buku lokal tidak ada di daftar — foto reader DILEWAT")
+	_main._ui.close_baca_buku()
+	await _tunggu(3)
 
 	_main._save["nama"] = _nama_asli
 	_main._save["jenis_kelamin"] = _jk_asli

@@ -741,7 +741,7 @@ func _build_login() -> void:
 	_reg_ig_input.gui_input.connect(_on_field_gui_input.bind(_reg_ig_input))
 	_register_box.add_child(_reg_ig_input)
 	# Pemilih gender: label + dua tombol besar berdampingan (gampang
-	# ditekan di HP). Yang terpilih beraksen emas + tanda "✓".
+	# ditekan di HP). Yang terpilih beraksen emas + ikon centang.
 	_reg_gender_label = _make_label("Saya daftar sebagai:", 20, Color("#4a6b5c"))
 	_reg_gender_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_reg_gender_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -985,7 +985,36 @@ func _on_gender_dipilih(jk: String) -> void:
 	_perbarui_tombol_gender()
 
 
-## Yang terpilih: emas + "✓" (jelas di HP); yang tidak: krem gelap.
+## Tanda centang pilihan-aktif sebagai IKON gambar-kode di kiri
+## tombol (Tara, 19 Nov 2026): "✓ " di depan teks tombol tofu di
+## web (Baloo 2 tidak punya U+2713). Ikon IkonHUD "centang"
+## dibuat sekali per tombol (disimpan di meta "ikon_centang"),
+## warnanya ikut font_color tombol, posisinya di tepi kiri
+## (teks tombol tetap di tengah — tidak bertabrakan). Dipakai
+## tombol gender daftar, panel kualitas, dan swatch outfit.
+func _set_centang_tombol(b: Button, aktif: bool) -> void:
+	if b == null:
+		return
+	var ikon := b.get_meta("ikon_centang") as IkonHUD
+	if ikon == null:
+		ikon = IkonHUD.new()
+		ikon.jenis = "centang"
+		ikon.warna = b.get_theme_color("font_color")
+		ikon.bayangan = false
+		ikon.anchor_top = 0.5
+		ikon.anchor_bottom = 0.5
+		ikon.offset_left = 12.0
+		ikon.offset_top = -11.0
+		ikon.offset_right = 34.0
+		ikon.offset_bottom = 11.0
+		ikon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		b.add_child(ikon)
+		b.set_meta("ikon_centang", ikon)
+	ikon.visible = aktif
+
+
+## Yang terpilih: emas + ikon centang (jelas di HP); yang tidak:
+## krem gelap.
 func _perbarui_tombol_gender() -> void:
 	_gaya_tombol_gender(_reg_putra_btn, _reg_gender == "putra", "Santri (Putra)")
 	_gaya_tombol_gender(_reg_putri_btn, _reg_gender == "putri", "Santriwati (Putri)")
@@ -995,12 +1024,13 @@ func _gaya_tombol_gender(b: Button, terpilih: bool, teks: String) -> void:
 	if b == null:
 		return
 	var bg := EMAS if terpilih else Color("#e8e0d0")
-	b.text = ("✓ " + teks) if terpilih else teks
+	b.text = teks
 	b.add_theme_stylebox_override("normal", _btn_style(bg))
 	b.add_theme_stylebox_override("hover", _btn_style(bg.lightened(0.15)))
 	b.add_theme_stylebox_override("pressed", _btn_style(bg.darkened(0.15)))
 	b.add_theme_stylebox_override("disabled", _btn_style(Color("#888888")))
 	b.add_theme_color_override("font_color", GELAP)
+	_set_centang_tombol(b, terpilih)
 
 
 ## Dipanggil main.gd saat register server menjawab / gagal: tampilkan
@@ -1467,7 +1497,7 @@ func _build_hud() -> void:
 ## KUALITAS ADAPTIF (Rangga, 19 Nov 2026 — perintah Mas 13:11 WIB):
 ## panel pilihan kualitas di strip atas (tombol ke-6, ikon 3 batang).
 ## Minimal: 4 pilihan (Otomatis/Ringan/Sedang/Tinggi) + tombol tutup.
-## Pilihan aktif ditandai "✓" di depan teks (lihat set_kualitas_mode).
+## Pilihan aktif ditandai ikon centang di kiri teks (lihat set_kualitas_mode).
 ## Panel ini HANYA memilih mode — logika deteksi/probe/pantau tinggal
 ## di KualitasAdaptif; main menghubungkan sinyal kualitas_dipilih.
 func _build_panel_kualitas() -> void:
@@ -1522,16 +1552,16 @@ func _toggle_panel_kualitas() -> void:
 
 
 ## Dipanggil main setelah menerapkan mode — menandai pilihan aktif.
+## IKON PANEL (Tara, 19 Nov 2026): "✓ " di depan teks tofu di web —
+## centang digambar IkonHUD (lihat _set_centang_tombol).
 func set_kualitas_mode(mode: String) -> void:
 	for m in _kualitas_tombol.keys():
 		var b := _kualitas_tombol[m] as Button
 		if b == null:
 			continue
 		var teks := String(b.text).trim_prefix("✓ ")
-		if String(m) == mode:
-			b.text = "✓ " + teks
-		else:
-			b.text = teks
+		b.text = teks
+		_set_centang_tombol(b, String(m) == mode)
 
 
 func _build_petunjuk_popup() -> void:
@@ -2148,14 +2178,17 @@ func is_outfit_visible() -> bool:
 	return _outfit_panel != null and _outfit_panel.visible
 
 
-## Tandai pilihan aktif dengan "✓ " di depan nama swatch.
+## Tandai pilihan aktif dengan ikon centang di kiri nama swatch.
+## IKON PANEL (Tara, 19 Nov 2026): "✓ " di depan teks tofu di web —
+## centang digambar IkonHUD (lihat _set_centang_tombol).
 func set_outfit_terpilih(jenis: String, warna_hex: String) -> void:
 	for key in _outfit_buttons.keys():
 		var b: Button = _outfit_buttons[key]
 		if not String(key).begins_with(jenis + ":"):
 			continue
 		var nama := b.text.trim_prefix("✓ ")
-		b.text = ("✓ " + nama) if String(key) == jenis + ":" + warna_hex.to_lower() else nama
+		b.text = nama
+		_set_centang_tombol(b, String(key) == jenis + ":" + warna_hex.to_lower())
 
 
 func _on_chat_submit(_text: String) -> void:
@@ -2666,7 +2699,7 @@ func _build_peta_panel() -> void:
 	_zoom_out_btn = zoom_out_btn
 	_zoom_label = _make_label("1.0x", 16, Color("#666666"))
 	header.add_child(_zoom_label)
-	var zoom_in_btn := _make_button("＋", Color("#888888"))
+	var zoom_in_btn := _make_button("+", Color("#888888"))
 	zoom_in_btn.custom_minimum_size = Vector2(48, 48)
 	zoom_in_btn.pressed.connect(_peta_zoom_masuk)
 	zoom_in_btn.action_mode = BaseButton.ACTION_MODE_BUTTON_PRESS
@@ -3474,11 +3507,11 @@ func _build_smartboard_panel() -> void:
 	var nav := HBoxContainer.new()
 	nav.add_theme_constant_override("separation", 8)
 	isi.add_child(nav)
-	_slide_prev_btn = _make_button("◀ Sebelumnya", HIJAU_TERANG)
+	_slide_prev_btn = _make_button("‹ Sebelumnya", HIJAU_TERANG)
 	_slide_prev_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_slide_prev_btn.pressed.connect(_slide_sebelumnya)
 	nav.add_child(_slide_prev_btn)
-	_slide_next_btn = _make_button("Berikutnya ▶", HIJAU_TERANG)
+	_slide_next_btn = _make_button("Berikutnya ›", HIJAU_TERANG)
 	_slide_next_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_slide_next_btn.pressed.connect(_slide_berikutnya)
 	nav.add_child(_slide_next_btn)
@@ -3688,9 +3721,9 @@ func _build_baca_buku_panel() -> void:
 	_baca_isi_teks.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_baca_isi_teks.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	teks_margin.add_child(_baca_isi_teks)
-	_baca_tap_kiri = _baca_tombol_tap("◀", true)
+	_baca_tap_kiri = _baca_tombol_tap("‹", true)
 	_baca_teks_wrap.add_child(_baca_tap_kiri)
-	_baca_tap_kanan = _baca_tombol_tap("▶", false)
+	_baca_tap_kanan = _baca_tombol_tap("›", false)
 	_baca_teks_wrap.add_child(_baca_tap_kanan)
 	# Gambar: TextureRect + keterangan di dalam ScrollContainer (pan
 	# + zoom; keterangan ikut scroll supaya tidak makan baris tetap).
@@ -3726,11 +3759,11 @@ func _build_baca_buku_panel() -> void:
 	var nav := HBoxContainer.new()
 	nav.add_theme_constant_override("separation", 8)
 	_baca_baca_view.add_child(nav)
-	_baca_prev_btn = _make_button("◀ Sebelumnya", HIJAU_TERANG)
+	_baca_prev_btn = _make_button("‹ Sebelumnya", HIJAU_TERANG)
 	_baca_prev_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_baca_prev_btn.pressed.connect(_baca_sebelumnya)
 	nav.add_child(_baca_prev_btn)
-	_baca_next_btn = _make_button("Berikutnya ▶", HIJAU_TERANG)
+	_baca_next_btn = _make_button("Berikutnya ›", HIJAU_TERANG)
 	_baca_next_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_baca_next_btn.pressed.connect(_baca_berikutnya)
 	nav.add_child(_baca_next_btn)
@@ -3750,7 +3783,7 @@ func _build_baca_buku_panel() -> void:
 	_baca_zoom_besar.custom_minimum_size = Vector2(56, 48)
 	_baca_zoom_besar.pressed.connect(_baca_zoom_masuk)
 	_baca_zoom_row.add_child(_baca_zoom_besar)
-	var kembali := _make_button("◀ Daftar Bab", Color("#888888"))
+	var kembali := _make_button("‹ Daftar Bab", Color("#888888"))
 	kembali.pressed.connect(_baca_ke_daftar_bab)
 	_baca_baca_view.add_child(kembali)
 	var tutup := _make_button("TUTUP", HIJAU)
@@ -3760,7 +3793,7 @@ func _build_baca_buku_panel() -> void:
 	_baca_baca_view.add_child(tutup)
 
 
-## Tombol tap transparan di pinggir area baca (64 px): "◀"/"▶" zamrud
+## Tombol tap transparan di pinggir area baca (64 px): "‹"/"›" zamrud
 ## samar — ketuk untuk pindah bab/halaman tanpa tombol bawah.
 func _baca_tombol_tap(teks: String, kiri: bool) -> Button:
 	var b := Button.new()
@@ -4414,7 +4447,7 @@ func open_dashboard(data: Dictionary, today_done: Array, khataman_hadir: bool, s
 	for j in MissionData.KHATAMAN_JADWAL:
 		var teks := String(j["jam"]) + " " + String(j["nama"]) + " — " + String(j["kitab"])
 		if not sesi_aktif.is_empty() and String(sesi_aktif["jam"]) == String(j["jam"]):
-			teks += "  ● SEDANG BERLANGSUNG"
+			teks += "  • SEDANG BERLANGSUNG"
 		_dash_content.add_child(_make_label(teks, 18, GELAP))
 	_khataman_btn = _make_button("Hadir Khataman Hari Ini", HIJAU_TERANG)
 	_khataman_btn.pressed.connect(func() -> void: khataman_joined.emit())
