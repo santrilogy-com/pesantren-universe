@@ -388,7 +388,32 @@ var _pos_jaga_interior_door: Vector3 = Vector3(178.5, 0, -300)
 var _pos_jaga_interior_spawn: Vector3 = Vector3(179.6, 0, -299.6)
 
 
+## PERBAIKAN PERFORMA 19 Nov 2026 (Rangga): nyalakan lagi bayangan
+## untuk mesh LUAR yang besar (sisi AABB terpanjang >= 2 m — dinding,
+## atap, tembok, gerbang, tiang lampu). Palette default OFF; tanpa ini
+## gedung kehilangan bayangan matahari. LangitDinamis dilewati total
+## (matahari/bulan/awan tidak boleh melempar bayangan). Interior tidak
+## ada di root ini (root terpisah di Main) jadi aman.
+static func _nyalakan_bayangan_gedung(root: Node) -> void:
+	var tumpuk: Array[Node] = [root]
+	while not tumpuk.is_empty():
+		var n: Node = tumpuk.pop_back()
+		if n.name == "LangitDinamis":
+			continue
+		if n is MeshInstance3D:
+			var mi := n as MeshInstance3D
+			var s: Vector3 = mi.get_aabb().size * mi.scale
+			if maxf(maxf(s.x, s.y), s.z) >= 2.0:
+				mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+		for ch in n.get_children():
+			tumpuk.append(ch)
+
+
 func _ready() -> void:
+	# PERBAIKAN PERFORMA 19 Nov 2026 (Rangga — laporan Mas "game berat
+	# di beberapa HP"): kunci 60 fps — layar 120 Hz tanpa cap = 2x
+	# kerja GPU. Lihat juga scaling_3d 0,75 di project.godot.
+	Engine.max_fps = 60
 	_save = SantriSave.load_data()
 	# GELOMBANG 2 FASE A: gelar awal dari save (A5) — disimpan di
 	# _gelar_saat_ini untuk label/Kartu Santri NANTI; JANGAN
@@ -399,6 +424,11 @@ func _ready() -> void:
 	# Bangun pesantren 3D (surau kecil + plot pertumbuhan).
 	_pesantren = PesantrenBuilder.build()
 	add_child(_pesantren["root"])
+	# PERBAIKAN PERFORMA 19 Nov 2026 (Rangga): Palette default
+	# cast_shadow OFF — nyalakan lagi hanya untuk mesh LUAR yang
+	# besar (>= 2 m: dinding/atap/tembok/tiang lampu). Interior
+	# (root terpisah, z=-300) dan dekor kecil tetap tanpa bayangan.
+	_nyalakan_bayangan_gedung(_pesantren["root"])
 	_markers = _pesantren["markers"]
 	_chest_lid = _pesantren["chest_lid"]
 	# RONDE 4: posisi pintu luar (dari builder) + interior baru (Dewa).
@@ -602,6 +632,13 @@ func _ready() -> void:
 	var cam := Camera3D.new()
 	cam.current = true
 	cam.fov = 60.0
+	# PERBAIKAN PERFORMA 19 Nov 2026 (Rangga): far 4000 -> 300.
+	# Dulu interior z=-300 ikut ter-render dari luar. Gunung di
+	# ±210 m (~250 m dari spawn) masih di dalam 300 m — verifikasi
+	# lewat foto. PERHATIAN: matahari/bulan/bintang di
+	# langit_dinamis.gd berada di 360-380 m — TERPOTONG oleh far ini
+	# (lihat laporan Rangga 19 Nov); perlu ditindaklanjuti terpisah.
+	cam.far = 300.0
 	_spring.add_child(cam)
 	_cam = cam
 	_kamera = KameraPesantren.new()
@@ -4387,15 +4424,13 @@ func _mp_set_status(status: String) -> void:
 	_mp_perbarui_ui_pemain()
 
 
+# Daftar nama pemain online DIHAPUS 19 Nov 2026 (keputusan Mas 12:32 WIB
+# — "list nama player online ga perlu"). Fungsi ini kini hanya
+# memperbarui indikator status koneksi ("Online (N pemain)").
 func _mp_perbarui_ui_pemain() -> void:
 	if _ui == null:
 		return
 	_ui.set_mp_status(_mp_status, _mp_jumlah_pemain())
-	var nama: Array = []
-	if _players != null:
-		for c in _players.get_children():
-			nama.append(_mp_nama_avatar(c))
-	_ui.set_mp_pemain(nama)
 
 
 func _mp_daftar_pemain_log() -> String:

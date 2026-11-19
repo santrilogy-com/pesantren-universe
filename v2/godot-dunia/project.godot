@@ -46,6 +46,12 @@ pointing/emulate_mouse_from_touch=false
 
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
+# PERBAIKAN PERFORMA 19 Nov 2026 (Rangga — laporan Mas "game berat di
+# beberapa HP"): render 3D di 0,75x lalu upscale bilinear — layar HP
+# 1080x2340 tidak perlu raster penuh. mode=1 adalah Bilinear
+# (Viewport SCALING_3D_MODE_BILINEAR); UI/canvas tidak ikut mengecil.
+rendering/scaling_3d/mode=1
+rendering/scaling_3d/scale=0.75
 
 [autoload]
 

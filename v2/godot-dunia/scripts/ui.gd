@@ -140,10 +140,10 @@ var _sinkron_layar_penuh_timer := 0.0
 var _poin_label: Label
 var _misi_label: Label
 # MULTIPLAYER FASE 1 (Wira, 18 Nov 2026 — langkah 10 prep §1.6, MINIMAL,
-# tanpa chat): indikator status koneksi + daftar nama pemain online.
+# tanpa chat): indikator status koneksi saja. Daftar nama pemain online
+# DIHAPUS 19 Nov 2026 (keputusan Mas 12:32 WIB — "ga perlu").
 # Feed chat MLBB TIDAK disentuh (itu Fase 2).
 var _mp_status_label: Label
-var _mp_pemain_label: Label
 # MULTIPLAYER FASE 1 (Dimas, 18 Nov 2026): tombol "Main Bersama" di
 # HUD (di bawah label status) — jalan masuk multiplayer yang terlihat.
 var _mp_gabung_btn: Button
@@ -1260,15 +1260,6 @@ func _build_hud() -> void:
 	_minimap.size = Vector2(190, 190)
 	_minimap.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_hud.add_child(_minimap)
-	# MULTIPLAYER FASE 1 (Wira): daftar nama pemain online, di bawah
-	# minimap (minimap 16,96 ukuran 190x190 -> bawah 286; daftar di
-	# y=296). Kosong saat offline — diisi main.gd lewat set_mp_pemain.
-	# ROMBAKAN HUD v3: tanpa bayangan.
-	_mp_pemain_label = _make_label("", 16, Color.WHITE)
-	_mp_pemain_label.position = Vector2(16, 296)
-	_mp_pemain_label.size = Vector2(220, 120)
-	_mp_pemain_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_hud.add_child(_mp_pemain_label)
 	# Joystick kiri bawah — berjangkar ke sudut kiri bawah (15 Nov ~12:00 WIB:
 	# dulu koordinat tetap 720, di HP portrait/landscape posisinya melayang).
 	_joystick = SantriJoystick.new()
@@ -1902,9 +1893,9 @@ func set_hud(poin: int, misi_text: String) -> void:
 
 
 # MULTIPLAYER FASE 1 (Wira): status koneksi (Offline / Menghubungkan /
-# Online + jumlah pemain) + daftar nama pemain online. Dipanggil
-# main.gd. Tanpa chat (Fase 2). Teks ASCII saja (font HUD tidak punya
-# glif emoji/lingkaran — pelajaran ronde 7).
+# Online + jumlah pemain). Daftar nama pemain online DIHAPUS 19 Nov 2026
+# (keputusan Mas). Dipanggil main.gd. Tanpa chat (Fase 2). Teks ASCII
+# saja (font HUD tidak punya glif emoji/lingkaran — pelajaran ronde 7).
 func set_mp_status(status: String, jumlah: int) -> void:
 	if _mp_status_label == null:
 		return
@@ -1933,18 +1924,6 @@ func set_mp_status(status: String, jumlah: int) -> void:
 				_mp_gabung_btn.visible = true
 				_mp_gabung_btn.disabled = false
 				_mp_gabung_btn.text = "Main Bersama"
-
-
-func set_mp_pemain(nama_list: Array) -> void:
-	if _mp_pemain_label == null:
-		return
-	if nama_list.is_empty():
-		_mp_pemain_label.text = ""
-		return
-	var baris: Array[String] = ["Online:"]
-	for n in nama_list:
-		baris.append("- " + String(n))
-	_mp_pemain_label.text = "\n".join(baris)
 
 
 # ROMBAKAN HUD v3: teks kontekstual hanya di .text (font tombol

@@ -1,0 +1,9 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="PackedScene" path="res://main.tscn" id="1_main"]
+[ext_resource type="Script" path="res://skrip/test_hapus_daftar_pemain.gd" id="2_test"]
+
+[node name="Main" instance=ExtResource("1_main")]
+
+[node name="TestDriver" type="Node" parent="."]
+script = ExtResource("2_test")

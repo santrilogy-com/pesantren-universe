@@ -573,7 +573,12 @@ func _terapkan(jam: float) -> void:
 		var omni := cahaya as OmniLight3D
 		if omni != null:
 			var dasar: float = float(omni.get_meta("energi_siang", 0.7))
-			omni.light_energy = dasar * lerpf(1.0, 2.0, lampu_f)
+			# PERBAIKAN PERFORMA 19 Nov 2026 (Rangga): lampu MATI di
+			# siang hari — grup ini mencakup 72 lampu kamar asrama
+			# (12 kamar x 3 lantai x 2 asrama) + cangkruk/gedung/
+			# kelas/surau/musholla. Dulu siang tetap 1,0x dasar.
+			# (CahayaJendela di bawah sengaja KEBALIKAN — biarkan.)
+			omni.light_energy = dasar * lerpf(0.0, 2.0, lampu_f)
 	for jendela_cahaya in _cahaya_jendela:
 		var omni_j := jendela_cahaya as OmniLight3D
 		if omni_j != null:

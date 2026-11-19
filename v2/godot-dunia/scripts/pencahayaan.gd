@@ -109,7 +109,10 @@ func _process(_delta: float) -> void:
 	for d in _lampu:
 		var omni := d["node"] as OmniLight3D
 		if omni != null:
-			omni.light_energy = float(d["dasar"]) * lerpf(1.0, 2.0, f)
+			# PERBAIKAN PERFORMA 19 Nov 2026 (Rangga): lampu MATI di
+			# siang hari (dulu energi = dasar x 1,0..2,0 — 82 lampu
+			# omni nyala 24 jam, siang tetap 0,8-1,3). Malam tetap 2x.
+			omni.light_energy = float(d["dasar"]) * lerpf(0.0, 2.0, f)
 
 
 ## Jumlah lampu baru modul ini (untuk tes).
@@ -159,7 +162,12 @@ func _bola(pos: Vector3, radius: float) -> MeshInstance3D:
 	var sm := SphereMesh.new()
 	sm.radius = radius
 	sm.height = radius * 2.0
+	# PERBAIKAN PERFORMA 19 Nov 2026 (Rangga): 12x6, bukan default
+	# 64x32 — bola lampu 0,16 m tidak butuh 4.224 tris; tanpa bayangan.
+	sm.radial_segments = 12
+	sm.rings = 6
 	bola.mesh = sm
+	bola.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	bola.position = pos
 	var mat := StandardMaterial3D.new()
 	mat.albedo_color = WARNA_BOLA
@@ -176,7 +184,10 @@ func _tiang(dasar: Vector3, tinggi: float) -> MeshInstance3D:
 	cm.top_radius = 0.05
 	cm.bottom_radius = 0.07
 	cm.height = tinggi
+	# PERBAIKAN PERFORMA 19 Nov 2026 (Rangga): 10 segmen, tanpa bayangan.
+	cm.radial_segments = 10
 	tiang.mesh = cm
+	tiang.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	tiang.position = dasar + Vector3(0, tinggi * 0.5, 0)
 	var mat := StandardMaterial3D.new()
 	mat.albedo_color = WARNA_TIANG
@@ -193,6 +204,8 @@ func _braket(pos: Vector3, offset: Vector3, ukuran: Vector3) -> MeshInstance3D:
 	var bm := BoxMesh.new()
 	bm.size = ukuran
 	braket.mesh = bm
+	# PERBAIKAN PERFORMA 19 Nov 2026 (Rangga): braket kecil tanpa bayangan.
+	braket.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	braket.position = pos + offset
 	var mat := StandardMaterial3D.new()
 	mat.albedo_color = WARNA_TIANG

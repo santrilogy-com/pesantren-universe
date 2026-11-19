@@ -48,51 +48,70 @@ static func mat(color: Color, metallic: float = 0.0, roughness: float = 0.9) -> 
 	return m
 
 
-static func box(size: Vector3, pos: Vector3, color: Color, metallic: float = 0.0) -> MeshInstance3D:
+## PERBAIKAN PERFORMA 19 Nov 2026 (Rangga — laporan Mas "game berat di
+## beberapa HP"): primitif default Godot TERLALU HALUS untuk dekor kecil
+## (bola lampu 4.224 tris/buah x 357 = 1,5 jt tris, 63% total dunia).
+## Segmen dipangkas (sphere 64x32 -> 12x6, cylinder 64 -> 10, capsule
+## 24x12 -> 12x6) — total segitiga dunia ~2,38 jt -> ~0,35 jt.
+## Bayangan: default OFF (dulu semua mesh melempar bayangan, 5.917
+## caster termasuk interior z=-300). Yang BOLEH melempar bayangan
+## dinyalakan eksplisit: karakter (player.gd build_visual, ambang
+## 0,15 m) + gedung besar (main.gd _nyalakan_bayangan_gedung, ambang
+## 2 m) + pohon GLB (default impor, tidak disentuh).
+## Label3D: cull jarak 40 m (visibility_range_end) — label jauh tidak
+## di-render; nama karakter di Drone (~<33 m) tetap terlihat.
+static func box(size: Vector3, pos: Vector3, color: Color, metallic: float = 0.0, bayangan: bool = false) -> MeshInstance3D:
 	var mi := MeshInstance3D.new()
 	var mesh := BoxMesh.new()
 	mesh.size = size
 	mi.mesh = mesh
 	mi.position = pos
 	mi.material_override = mat(color, metallic)
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON if bayangan else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	return mi
 
 
-static func cylinder(top_r: float, bottom_r: float, height: float, pos: Vector3, color: Color, metallic: float = 0.0) -> MeshInstance3D:
+static func cylinder(top_r: float, bottom_r: float, height: float, pos: Vector3, color: Color, metallic: float = 0.0, bayangan: bool = false) -> MeshInstance3D:
 	var mi := MeshInstance3D.new()
 	var mesh := CylinderMesh.new()
 	mesh.top_radius = top_r
 	mesh.bottom_radius = bottom_r
 	mesh.height = height
+	mesh.radial_segments = 10
 	mi.mesh = mesh
 	mi.position = pos
 	mi.material_override = mat(color, metallic)
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON if bayangan else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	return mi
 
 
-static func capsule(radius: float, height: float, pos: Vector3, color: Color, metallic: float = 0.0) -> MeshInstance3D:
+static func capsule(radius: float, height: float, pos: Vector3, color: Color, metallic: float = 0.0, bayangan: bool = false) -> MeshInstance3D:
 	# Kapsul (silinder berujung setengah bola) — untuk lengan/kaki karakter
 	# supaya tidak balok. height adalah tinggi total termasuk kedua ujung.
 	var mi := MeshInstance3D.new()
 	var mesh := CapsuleMesh.new()
 	mesh.radius = radius
 	mesh.height = height
-	mesh.radial_segments = 24
-	mesh.rings = 12
+	mesh.radial_segments = 12
+	mesh.rings = 6
 	mi.mesh = mesh
 	mi.position = pos
 	mi.material_override = mat(color, metallic)
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON if bayangan else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	return mi
 
 
-static func sphere(radius: float, pos: Vector3, color: Color, metallic: float = 0.0) -> MeshInstance3D:
+static func sphere(radius: float, pos: Vector3, color: Color, metallic: float = 0.0, bayangan: bool = false) -> MeshInstance3D:
 	var mi := MeshInstance3D.new()
 	var mesh := SphereMesh.new()
 	mesh.radius = radius
 	mesh.height = radius * 2.0
+	mesh.radial_segments = 12
+	mesh.rings = 6
 	mi.mesh = mesh
 	mi.position = pos
 	mi.material_override = mat(color, metallic)
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON if bayangan else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	return mi
 
 
@@ -127,6 +146,10 @@ static func label3d(text: String, pos: Vector3, font_size: int, color: Color, bi
 	l.text = text
 	l.position = pos
 	l.font_size = font_size
+	# PERBAIKAN PERFORMA 19 Nov 2026 (Rangga): cull label di atas 40 m —
+	# 144 Label3D di-render dari jarak berapa pun; label gedung yang
+	# jauh tidak terbaca juga. Nama karakter di Drone (~<33 m) aman.
+	l.visibility_range_end = 40.0
 	# RONDE 6: font game (Baloo 2 Bold) untuk SEMUA Label3D — bukan
 	# lagi font default yang terasa seperti Arial.
 	l.font = FONT_GAME

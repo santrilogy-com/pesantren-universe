@@ -1330,6 +1330,23 @@ static func build_visual(nama: String, outfit: Dictionary) -> Dictionary:
 		pivot_kepala.add_child(hijab_node)
 		hijab_node.position -= pivot_kepala.position
 
+	# PERBAIKAN PERFORMA 19 Nov 2026 (Rangga): Palette default
+	# cast_shadow OFF — nyalakan lagi untuk bagian karakter yang
+	# besar (>= 0,15 m: koko/sarung/kepala/lengan/kaki/jilbab).
+	# Mata/hidung/senyum/alis/kancing tetap tanpa bayangan.
+	# Semua karakter (pemain + NPC + remote MP) lewat build_visual
+	# ini, jadi satu tempat cukup.
+	var tumpuk: Array[Node] = [root]
+	while not tumpuk.is_empty():
+		var n: Node = tumpuk.pop_back()
+		if n is MeshInstance3D:
+			var mi := n as MeshInstance3D
+			var s: Vector3 = mi.get_aabb().size * mi.scale
+			if maxf(maxf(s.x, s.y), s.z) >= 0.15:
+				mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+		for ch in n.get_children():
+			tumpuk.append(ch)
+
 	return {
 		"root": root,
 		"arm_l": arm_l,
