@@ -1,486 +1,593 @@
 class_name RuangBelajarUI
 extends PanelContainer
-## Panel Ruang Belajar Modul 01 — Fase A, A1/A8 (Sinta, 18 Nov 2026).
-## Mockup ACC Mas: ruang-belajar-v1.png (panel zamrud gelap + rim
-## emas + tab emas "Ruang Belajar" + 3 pill langkah
-## + footer "Materi 1 dari 3" / "✕ Lanjut □ Chat").
+## Ruang Belajar — chat gaya Genshin (Sinta, 19 Nov 2026).
+## Konsep v2/konsep/KONSEP-RUANG-BELAJAR-CHAT-v1.md §7+§8 (ACC Mas
+## 19 Nov 15:18 — versi DUDUK): ustadz DUDUK di dunia (adegan di
+## main.gd), kotak dialog bawah gelap tembus pandang + garis emas
+## tepi atas, nama emas, gelembung kecil player, pilihan melayang,
+## Auto (chip milik manajer, kiri atas layar), Riwayat, bilah emas
+## tipis TANPA teks penghitung (koreksi Mas 15:09).
 ##
-## Panel ini TIDAK membuat dim sendiri dan TIDAK mengatur anchor
-## sendiri — Manajer (Raka) yang menaruhnya di tengah + memberi
-## dim. Panel hidden saat dibuat; tampilkan() memunculkan.
+## KONTRAK (tetap — manajer/main tidak berubah): class_name,
+## sinyal langkah_selesai(jenis, poin) / selesai(poin_total) /
+## ditutup, tampilkan(pengajar, save). Sinyal BARU: papan_berubah
+## (judul, baris) untuk papan tulis di dunia + kemajuan_disimpan
+## (pos_id, modul) untuk resume.
 ##
-## 3 langkah: 1 Materi -> 2 Latihan (5 soal, boleh ulang sampai
-## benar) -> 3 Kuis (1 soal, boleh ulang tanpa penalti).
-## Poin: materi 10 + latihan 15 + kuis 10 = 35 (konstanta
-## DataModul01). Soal + mesin dari kontrak Dita/Wulan (MesinKuis
-## sudah ada; DataModul01 + GayaMisi dibuat paralel).
+## BICARA, bukan mengetik (§8): TIDAK ADA teks "sedang mengetik"
+## di mana pun; huruf muncul satu-satu ±40 ms/huruf sebagai EFEK
+## BICARA (kursor blok emas yang digambar — "[bgcolor]" di
+## RichTextLabel, BUKAN glif font); tap kotak dialog = tampil
+## penuh; pilihan TIDAK TAMPIL selama ustadz bicara, muncul
+## langsung AKTIF penuh begitu kalimat selesai.
 ##
-## Catatan mesin: MesinKuis.jawab() selalu maju ke soal berikut,
-## jadi jawaban SALAH TIDAK diteruskan ke mesin — soal yang sama
-## tetap tampil sampai pemain memilih jawaban benar, baru
-## jawab() dipanggil. Dengan begitu skor mesin tetap akurat
-## (latihan 5/5, kuis 1/1) dan "coba lagi" sungguh mengulang
-## soal yang sama.
+## Aturan pilihan (§8): tombol jawaban TIDAK PERNAH redup/
+## terkunci. Opsi soal yang sudah dijawab salah DIHILANGKAN dari
+## pilihan saat soal diulang (bukan di-disabled) — "dimatikan"
+## §2 tanpa pernah menampilkan tombol redup.
+##
+## Alur: DataChatModul01 (14 pesan + cabang Belum maks 2x).
+## Poin: materi +10 / latihan +15 / kuis +10 = 35 (sinyal
+## langkah_selesai per langkah + selesai(35) di penutup).
+## Resume: rb_chat_pos = id node BERIKUTNYA yang akan tampil
+## (bukan indeks — cabang b1/b2 membuat indeks linear tidak
+## stabil; disimpan tiap node mulai, dibersihkan saat tuntas).
+## Buka ulang setelah tuntas = mode baca ulang (tanpa poin).
+## PERBAIKAN dari UI lama: mode baca ulang dulu memakai cek
+## string pada rb_selesai (Array) sehingga selesai SEBAGIAN
+## (mis. baru materi) sudah dianggap tuntas — kini ketiga
+## langkah dicek satu-satu.
+## MesinKuis TIDAK dipakai: graf node DataChatModul01 SUDAH
+## menjadi mesin keadaan (pengulangan soal + cabang) — data
+## soal/opsi/jawaban benar tetap dipakai ulang dari DataModul01
+## lewat DataChatModul01.opsi_soal()/benar_soal().
 
 signal langkah_selesai(jenis: String, poin: int)
 signal selesai(poin_total: int)
-signal ditutup  ## pemain menutup di tengah
+signal ditutup
+signal papan_berubah(judul: String, baris: PackedStringArray)
+signal kemajuan_disimpan(pos_id: String, modul: int)
 
-## LEBAR (Wulan, 19 Nov 2026 — permintaan Mas 12:48 WIB: Ruang
-## Belajar nyaris full screen landscape). Panel dipusatkan manajer
-## dengan lebar desain 1480 (fraksi 0.96); min ini hanya jaga-jaga.
-const _LEBAR_MIN := 1000.0
-const _NAMA_LANGKAH := ["Materi", "Latihan", "Kuis"]
-const _FOOTER := ["Materi 1 dari 3", "Latihan 2 dari 3", "Kuis 3 dari 3"]
+const BICARA_MS_PER_HURUF := 40
+const JEDA_OTOMATIS_DETIK := 0.8
 
-var _pengajar := ""
-var _langkah := 1
-var _poin_total := 0
-var _selesai_semua := false
+var _pengajar := "Ust. Sanusi"
+var _modul := 1
+var _node_saat_ini: Dictionary = {}
+var _teks_penuh := ""
+var _huruf_tampil := 0
+var _sedang_bicara := false
+var _kursor_nyala := true
+var _auto := true
+var _baca_ulang := false
+var _materi_selesai := false
+var _latihan_selesai := false
+var _kuis_selesai := false
+var _ulang_materi := false
+var _opsi_salah: Array = []
+var _riwayat: Array = []
+var _lanjut_tampil := false
 
-var _judul: Label
-var _subjudul: Label
-var _label_pengajar: Label
-var _pill_panel: Array[PanelContainer] = []
-var _pill_label: Array[Label] = []
-var _gulung: ScrollContainer
-var _isi: VBoxContainer
-var _footer_kiri: Label
-
-# Status kuis (langkah 2 dan 3).
-var _mesin: MesinKuis
-var _mode := ""  ## "latihan" | "kuis"
-var _nama_langkah_soal := "Latihan"
-var _soal_aktif := {}
-var _jawaban_benar := -1
-var _menunggu_lanjut := false
-var _label_soal: Label
-var _bilah: ProgressBar
-var _teks_soal: Label
-var _opsi_box: VBoxContainer
-var _tombol_opsi: Array[Button] = []
-var _umpan: Label
-var _petunjuk: Label
-var _tombol_lanjut: Button
+var _avatar: AvatarMisi
+var _nama_label: Label
+var _gelembung_box: PanelContainer
+var _gelembung_label: Label
+var _pilihan_box: VBoxContainer
+var _kotak_dialog: PanelContainer
+var _pesan_label: RichTextLabel
+var _bilah_progres: ProgressBar
+var _log_overlay: PanelContainer
+var _log_list: VBoxContainer
+var _timer_bicara: Timer
+var _timer_kedip: Timer
+var _timer_otomatis: Timer
 
 
 func _ready() -> void:
-	visible = false
-	custom_minimum_size = Vector2(_LEBAR_MIN, 0)
-	add_theme_stylebox_override("panel", GayaMisi.gaya_panel())
-
-	var margin := MarginContainer.new()
-	margin.add_theme_constant_override("margin_left", 28)
-	margin.add_theme_constant_override("margin_right", 28)
-	margin.add_theme_constant_override("margin_top", 18)
-	margin.add_theme_constant_override("margin_bottom", 18)
-	add_child(margin)
-
-	var v := VBoxContainer.new()
-	v.add_theme_constant_override("separation", 16)
-	margin.add_child(v)
-
-	# Baris atas: tab emas + tombol ✕.
-	# (Chip "TEKS DRAF" DIHAPUS atas keputusan Mas, 19 Nov 2026
-	# 13:05 WIB — jangan dipasang lagi di sini.)
-	var atas := HBoxContainer.new()
-	atas.add_theme_constant_override("separation", 8)
-	v.add_child(atas)
-	atas.add_child(GayaMisi.buat_tab_judul("Ruang Belajar"))
+	add_theme_stylebox_override("panel", StyleBoxEmpty.new())
+	var induk := VBoxContainer.new()
+	induk.add_theme_constant_override("separation", 10)
+	add_child(induk)
+	# Gelembung kecil player (kanan, di atas pilihan) — sembunyi
+	# sampai player memilih jawaban.
+	var baris_gelembung := HBoxContainer.new()
+	baris_gelembung.alignment = BoxContainer.ALIGNMENT_END
+	_gelembung_box = PanelContainer.new()
+	_gelembung_box.add_theme_stylebox_override("panel", GayaMisi.gaya_gelembung_pemain())
+	_gelembung_label = GayaMisi.buat_label("", 18, GayaMisi.ZAMRUD_GELAP)
+	_gelembung_box.add_child(_gelembung_label)
+	_gelembung_box.visible = false
+	baris_gelembung.add_child(_gelembung_box)
+	induk.add_child(baris_gelembung)
+	# Pilihan melayang (kosong selama ustadz bicara).
+	_pilihan_box = VBoxContainer.new()
+	_pilihan_box.add_theme_constant_override("separation", 8)
+	induk.add_child(_pilihan_box)
+	# Kotak dialog bawah.
+	_kotak_dialog = PanelContainer.new()
+	_kotak_dialog.add_theme_stylebox_override("panel", GayaMisi.gaya_kotak_dialog_genshin())
+	_kotak_dialog.gui_input.connect(_on_kotak_gui_input)
+	var isi := VBoxContainer.new()
+	isi.add_theme_constant_override("separation", 6)
+	_kotak_dialog.add_child(isi)
+	var kepala := HBoxContainer.new()
+	kepala.add_theme_constant_override("separation", 12)
+	_avatar = AvatarMisi.new()
+	_avatar.custom_minimum_size = Vector2(56, 56)
+	_avatar.atur_tipe("sanusi")
+	kepala.add_child(_avatar)
+	var kolom_nama := VBoxContainer.new()
+	kolom_nama.add_theme_constant_override("separation", 2)
+	_nama_label = GayaMisi.buat_label_tebal(_pengajar, 22, GayaMisi.EMAS)
+	kolom_nama.add_child(_nama_label)
+	var garis_nama := ColorRect.new()
+	garis_nama.color = GayaMisi.EMAS
+	garis_nama.custom_minimum_size = Vector2(110, 2)
+	kolom_nama.add_child(garis_nama)
+	kepala.add_child(kolom_nama)
 	var spasi := Control.new()
 	spasi.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	atas.add_child(spasi)
-	var tombol_tutup := Button.new()
-	tombol_tutup.text = "✕"
-	tombol_tutup.tooltip_text = "Tutup"
-	tombol_tutup.flat = true
-	tombol_tutup.add_theme_font_size_override("font_size", 26)
-	tombol_tutup.pressed.connect(_on_tutup_ditekan)
-	atas.add_child(tombol_tutup)
-
-	# Header modul.
-	_judul = GayaMisi.buat_label(DataModul01.JUDUL, 28, GayaMisi.EMAS)
-	v.add_child(_judul)
-	_subjudul = GayaMisi.buat_label(DataModul01.SUBJUDUL, 18, GayaMisi.KREM)
-	v.add_child(_subjudul)
-	_label_pengajar = GayaMisi.buat_label("", 17, GayaMisi.KREM_REDUP)
-	v.add_child(_label_pengajar)
-
-	# 3 pill langkah.
-	var pill := HBoxContainer.new()
-	pill.add_theme_constant_override("separation", 8)
-	v.add_child(pill)
-	for i in range(3):
-		var panel := PanelContainer.new()
-		panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		var lab := GayaMisi.buat_label("%d %s" % [i + 1, _NAMA_LANGKAH[i]], 18, GayaMisi.KREM_REDUP)
-		lab.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		lab.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		panel.add_child(lab)
-		pill.add_child(panel)
-		_pill_panel.append(panel)
-		_pill_label.append(lab)
-
-	# Isi langkah (bisa digulung — materi panjang). Min 340 supaya
-	# header + footer tetap muat dalam panel 691 px di landscape
-	# 720p (min 420 mendorong footer keluar panel — cacat foto
-	# sesudah v1, 19 Nov 2026).
-	_gulung = ScrollContainer.new()
-	_gulung.custom_minimum_size = Vector2(0, 340)
-	_gulung.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_gulung.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_gulung.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	v.add_child(_gulung)
-
-	_isi = VBoxContainer.new()
-	_isi.add_theme_constant_override("separation", 16)
-	_isi.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_gulung.add_child(_isi)
-
-	# Footer: kiri "Materi 1 dari 3" dst, kanan petunjuk tombol.
-	var footer := HBoxContainer.new()
-	footer.add_theme_constant_override("separation", 10)
-	v.add_child(footer)
-	_footer_kiri = GayaMisi.buat_label(_FOOTER[0], 16, GayaMisi.KREM_REDUP)
-	footer.add_child(_footer_kiri)
-	var spasi_footer := Control.new()
-	spasi_footer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	footer.add_child(spasi_footer)
-	footer.add_child(GayaMisi.buat_label("✕ Lanjut    □ Chat", 16, GayaMisi.KREM_REDUP))
-
-
-## Tampilkan dari langkah 1. Pengajar mis. "Ust. Sanusi" / "Ustzh. Fatimah".
-func tampilkan(pengajar: String) -> void:
-	_pengajar = pengajar
-	_poin_total = 0
-	_selesai_semua = false
-	_label_pengajar.text = "Pengajar: " + pengajar
-	_ke_langkah(1)
-	visible = true
-
-
-## Sembunyikan tanpa sinyal.
-func tutup() -> void:
+	kepala.add_child(spasi)
+	var btn_riwayat := GayaMisi.buat_tombol_outline("Riwayat")
+	btn_riwayat.pressed.connect(_buka_riwayat)
+	kepala.add_child(btn_riwayat)
+	var btn_tutup := Button.new()
+	btn_tutup.text = "✕"
+	btn_tutup.focus_mode = Control.FOCUS_NONE
+	btn_tutup.add_theme_font_size_override("font_size", 22)
+	btn_tutup.add_theme_color_override("font_color", GayaMisi.KREM)
+	btn_tutup.add_theme_color_override("font_hover_color", GayaMisi.EMAS_TERANG)
+	btn_tutup.add_theme_stylebox_override("normal", StyleBoxEmpty.new())
+	btn_tutup.add_theme_stylebox_override("hover", StyleBoxEmpty.new())
+	btn_tutup.add_theme_stylebox_override("pressed", StyleBoxEmpty.new())
+	btn_tutup.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+	btn_tutup.pressed.connect(_tutup)
+	kepala.add_child(btn_tutup)
+	isi.add_child(kepala)
+	_pesan_label = RichTextLabel.new()
+	_pesan_label.bbcode_enabled = true
+	_pesan_label.fit_content = false
+	_pesan_label.scroll_active = true
+	_pesan_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_pesan_label.custom_minimum_size = Vector2(0, 96)
+	_pesan_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_pesan_label.add_theme_font_size_override("normal_font_size", 21)
+	_pesan_label.add_theme_color_override("default_color", GayaMisi.KREM)
+	_pesan_label.add_theme_constant_override("line_separation", 6)
+	_pesan_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	isi.add_child(_pesan_label)
+	_bilah_progres = GayaMisi.buat_bilah_progres()
+	_bilah_progres.custom_minimum_size = Vector2(0, 6)
+	isi.add_child(_bilah_progres)
+	induk.add_child(_kotak_dialog)
+	# Overlay Riwayat (menutupi panel, dibuka dari tombol Riwayat).
+	_log_overlay = PanelContainer.new()
+	_log_overlay.add_theme_stylebox_override("panel", GayaMisi.gaya_kotak_dialog_genshin())
+	_log_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_log_overlay.visible = false
+	var log_v := VBoxContainer.new()
+	log_v.add_theme_constant_override("separation", 10)
+	var log_kepala := HBoxContainer.new()
+	log_kepala.add_child(GayaMisi.buat_label_tebal("Riwayat Percakapan", 20, GayaMisi.EMAS))
+	var spasi_log := Control.new()
+	spasi_log.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	log_kepala.add_child(spasi_log)
+	var btn_tutup_log := GayaMisi.buat_tombol_outline("Tutup")
+	btn_tutup_log.pressed.connect(_tutup_riwayat)
+	log_kepala.add_child(btn_tutup_log)
+	log_v.add_child(log_kepala)
+	var gulir := ScrollContainer.new()
+	gulir.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_log_list = VBoxContainer.new()
+	_log_list.add_theme_constant_override("separation", 8)
+	gulir.add_child(_log_list)
+	log_v.add_child(gulir)
+	_log_overlay.add_child(log_v)
+	add_child(_log_overlay)
+	# Timer: bicara (per huruf), kedip kursor, jeda otomatis.
+	_timer_bicara = Timer.new()
+	_timer_bicara.wait_time = float(BICARA_MS_PER_HURUF) / 1000.0
+	_timer_bicara.timeout.connect(_on_timer_bicara)
+	add_child(_timer_bicara)
+	_timer_kedip = Timer.new()
+	_timer_kedip.wait_time = 0.5
+	_timer_kedip.timeout.connect(_on_timer_kedip)
+	add_child(_timer_kedip)
+	_timer_otomatis = Timer.new()
+	_timer_otomatis.wait_time = JEDA_OTOMATIS_DETIK
+	_timer_otomatis.one_shot = true
+	_timer_otomatis.timeout.connect(_on_timer_otomatis)
+	add_child(_timer_otomatis)
 	visible = false
 
 
-func _ke_langkah(nomor: int) -> void:
-	_langkah = nomor
-	_perbarui_pill()
-	_footer_kiri.text = _FOOTER[nomor - 1]
-	_bersihkan_isi()
-	match nomor:
-		1:
-			_bangun_materi()
-		2:
-			_bangun_latihan()
-		3:
-			_bangun_kuis()
-
-
-func _bersihkan_isi() -> void:
-	for anak in _isi.get_children():
-		anak.queue_free()
-	_tombol_opsi.clear()
-	_soal_aktif = {}
-	_jawaban_benar = -1
-	_menunggu_lanjut = false
-
-
-func _perbarui_pill() -> void:
-	for i in range(3):
-		var panel := _pill_panel[i]
-		var lab := _pill_label[i]
-		if _selesai_semua or i + 1 < _langkah:
-			panel.add_theme_stylebox_override("panel", GayaMisi.gaya_tombol_emas())
-			lab.add_theme_color_override("font_color", GayaMisi.ZAMRUD_GELAP)
-		elif i + 1 == _langkah:
-			panel.add_theme_stylebox_override("panel", GayaMisi.gaya_tab())
-			lab.add_theme_color_override("font_color", GayaMisi.ZAMRUD_GELAP)
-		else:
-			panel.add_theme_stylebox_override("panel", GayaMisi.gaya_chip())
-			lab.add_theme_color_override("font_color", GayaMisi.KREM_REDUP)
-
-
-## Kartu zamrud di dalam _isi; kembalikan VBox isinya (judul sudah terisi).
-func _buat_kartu(judul: String) -> VBoxContainer:
-	var panel := PanelContainer.new()
-	panel.add_theme_stylebox_override("panel", GayaMisi.gaya_kartu())
-	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var margin := MarginContainer.new()
-	margin.add_theme_constant_override("margin_left", 18)
-	margin.add_theme_constant_override("margin_right", 18)
-	margin.add_theme_constant_override("margin_top", 14)
-	margin.add_theme_constant_override("margin_bottom", 14)
-	panel.add_child(margin)
-	var v := VBoxContainer.new()
-	v.add_theme_constant_override("separation", 10)
-	margin.add_child(v)
-	v.add_child(GayaMisi.buat_label(judul, 21, GayaMisi.EMAS))
-	_isi.add_child(panel)
-	return v
-
-
-func _buat_label_isi(teks: String, ukuran: int, warna: Color) -> Label:
-	var lab := GayaMisi.buat_label(teks, ukuran, warna)
-	lab.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	lab.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	return lab
-
-
-# ---------------------------------------------------------------- langkah 1
-
-func _bangun_materi() -> void:
-	# Kartu "Apa itu kalam?".
-	var kartu := _buat_kartu(DataModul01.MATERI_JUDUL)
-	kartu.add_child(_buat_label_isi(DataModul01.MATERI_TEKS, 19, GayaMisi.KREM))
-	var arab := GayaMisi.buat_label_arab(DataModul01.MATERI_ARAB, 36)
-	arab.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	arab.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	kartu.add_child(arab)
-	var trans := _buat_label_isi(DataModul01.MATERI_TRANSLITERASI, 17, GayaMisi.KREM_REDUP)
-	trans.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	kartu.add_child(trans)
-	var catatan := _buat_label_isi(DataModul01.MATERI_CATATAN, 16, GayaMisi.KREM_REDUP)
-	catatan.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	kartu.add_child(catatan)
-
-	# 3 kartu kata berdampingan.
-	var baris := HBoxContainer.new()
-	baris.add_theme_constant_override("separation", 12)
-	_isi.add_child(baris)
-	for k in DataModul01.KARTU_KATA:
-		var kata: Dictionary = k
-		var panel := PanelContainer.new()
-		panel.add_theme_stylebox_override("panel", GayaMisi.gaya_kartu())
-		panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		var margin := MarginContainer.new()
-		margin.add_theme_constant_override("margin_left", 10)
-		margin.add_theme_constant_override("margin_right", 10)
-		margin.add_theme_constant_override("margin_top", 10)
-		margin.add_theme_constant_override("margin_bottom", 10)
-		panel.add_child(margin)
-		var v := VBoxContainer.new()
-		v.add_theme_constant_override("separation", 4)
-		margin.add_child(v)
-		var nama := _buat_label_isi(String(kata.get("nama", "")), 20, GayaMisi.EMAS)
-		nama.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		v.add_child(nama)
-		var ciri := _buat_label_isi(String(kata.get("ciri", "")), 16, GayaMisi.KREM)
-		ciri.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		v.add_child(ciri)
-		var arti := _buat_label_isi(String(kata.get("arti", "")), 15, GayaMisi.KREM_REDUP)
-		arti.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		v.add_child(arti)
-		baris.add_child(panel)
-
-	# Kartu "Rumus 10 detik".
-	var rumus := _buat_kartu("Rumus 10 detik")
-	var baris_rumus: Array[String] = []
-	for i in range(DataModul01.RUMUS.size()):
-		baris_rumus.append("%d. %s" % [i + 1, String(DataModul01.RUMUS[i])])
-	rumus.add_child(_buat_label_isi("\n".join(baris_rumus), 19, GayaMisi.KREM))
-
-	# Kartu "Bait hafalan".
-	var bait := _buat_kartu("Bait hafalan")
-	var teks_bait := String(DataModul01.BAIT)
-	if not teks_bait.begins_with("“") and not teks_bait.begins_with("\""):
-		teks_bait = "“" + teks_bait + "”"
-	var lab_bait := _buat_label_isi(teks_bait, 19, GayaMisi.KREM)
-	lab_bait.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	bait.add_child(lab_bait)
-
-	# Alur + chip poin.
-	var alur := _buat_label_isi("Selesai materi → latihan 5 soal → kuis 1 soal", 16, GayaMisi.KREM_REDUP)
-	alur.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_isi.add_child(alur)
-	var chip := HBoxContainer.new()
-	chip.alignment = BoxContainer.ALIGNMENT_CENTER
-	chip.add_theme_constant_override("separation", 8)
-	chip.add_child(GayaMisi.buat_chip("+%d poin materi" % DataModul01.POIN_MATERI))
-	chip.add_child(GayaMisi.buat_chip("+%d latihan" % DataModul01.POIN_LATIHAN))
-	chip.add_child(GayaMisi.buat_chip("+%d hafalan" % DataModul01.POIN_HAFALAN))
-	_isi.add_child(chip)
-
-	var lanjut := GayaMisi.buat_tombol_emas("Lanjut ke Latihan")
-	lanjut.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	lanjut.pressed.connect(_on_lanjut_latihan)
-	_isi.add_child(lanjut)
-
-
-func _on_lanjut_latihan() -> void:
-	langkah_selesai.emit("materi", DataModul01.POIN_MATERI)
-	_ke_langkah(2)
-
-
-# ---------------------------------------------------------------- langkah 2 & 3
-
-func _bangun_latihan() -> void:
-	_mode = "latihan"
-	_mesin = MesinKuis.new()
-	if not _mesin.mulai(DataModul01.latihan_soal(), "latihan"):
-		_bangun_error()
-		return
-	_bangun_soal("Latihan")
-
-
-func _bangun_kuis() -> void:
-	_mode = "kuis"
-	_mesin = MesinKuis.new()
-	var daftar: Array = DataModul01.kuis_soal()
-	if daftar.is_empty() or not _mesin.mulai([daftar[0]], "materi"):
-		_bangun_error()
-		return
-	_bangun_soal("Kuis")
-
-
-## Kerangka soal dipakai latihan (5 soal) maupun kuis (1 soal).
-func _bangun_soal(nama_langkah: String) -> void:
-	_label_soal = GayaMisi.buat_label("", 19, GayaMisi.EMAS)
-	_isi.add_child(_label_soal)
-
-	_bilah = GayaMisi.buat_bilah_progres()
-	_bilah.max_value = _mesin.jumlah_soal()
-	_bilah.value = 0
-	_bilah.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_isi.add_child(_bilah)
-
-	var kartu := _buat_kartu("Soal")
-	_teks_soal = _buat_label_isi("", 20, GayaMisi.KREM)
-	kartu.add_child(_teks_soal)
-
-	_opsi_box = VBoxContainer.new()
-	_opsi_box.add_theme_constant_override("separation", 8)
-	_isi.add_child(_opsi_box)
-
-	_umpan = _buat_label_isi("", 19, GayaMisi.EMAS)
-	_umpan.visible = false
-	_isi.add_child(_umpan)
-
-	_petunjuk = _buat_label_isi("", 16, GayaMisi.KREM_REDUP)
-	_petunjuk.visible = false
-	_isi.add_child(_petunjuk)
-
-	_tombol_lanjut = GayaMisi.buat_tombol_emas("Soal berikut")
-	_tombol_lanjut.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_tombol_lanjut.visible = false
-	_tombol_lanjut.pressed.connect(_on_lanjut_soal)
-	_isi.add_child(_tombol_lanjut)
-
-	_nama_langkah_soal = nama_langkah
-	_tampilkan_soal()
-
-
-func _tampilkan_soal() -> void:
-	_soal_aktif = _mesin.soal_saat_ini()
-	if _soal_aktif.is_empty():
-		_bangun_error()
-		return
-	_label_soal.text = "%s — Soal %d dari %d" % [_nama_langkah_soal, _mesin.nomor_soal(), _mesin.jumlah_soal()]
-	_bilah.value = _mesin.nomor_soal() - 1
-	_teks_soal.text = String(_soal_aktif.get("pertanyaan", ""))
-	_gulung.scroll_vertical = 0
-
-	for anak in _opsi_box.get_children():
-		anak.queue_free()
-	_tombol_opsi.clear()
-	var huruf := ["A", "B", "C", "D"]
-	var opsi: Array = _soal_aktif.get("opsi", [])
-	for i in range(opsi.size()):
-		var tombol := GayaMisi.buat_tombol_outline("%s. %s" % [huruf[i], String(opsi[i])])
-		tombol.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		tombol.pressed.connect(_on_opsi_ditekan.bind(i))
-		_opsi_box.add_child(tombol)
-		_tombol_opsi.append(tombol)
-
-	_umpan.visible = false
-	_petunjuk.visible = false
-	_tombol_lanjut.visible = false
-	_jawaban_benar = -1
-	_menunggu_lanjut = false
-
-
-func _on_opsi_ditekan(i: int) -> void:
-	if _menunggu_lanjut or _soal_aktif.is_empty():
-		return
-	var benar_idx := int(_soal_aktif.get("jawaban", -1))
-
-	# Petunjuk tampil SETELAH menjawab (bila soal menyediakannya).
-	if _soal_aktif.has("petunjuk"):
-		var petunjuk := String(_soal_aktif.get("petunjuk", "")).strip_edges()
-		if not petunjuk.is_empty():
-			_petunjuk.text = "Petunjuk: " + petunjuk
-			_petunjuk.visible = true
-
-	if i == benar_idx:
-		_umpan.text = "Benar!"
-		_umpan.add_theme_color_override("font_color", GayaMisi.EMAS)
-		_umpan.visible = true
-		_jawaban_benar = i
-		_menunggu_lanjut = true
-		for tombol in _tombol_opsi:
-			tombol.disabled = true
-		_tombol_lanjut.text = _teks_tombol_lanjut()
-		_tombol_lanjut.visible = true
+## Buka percakapan. save = kamus save pemain (untuk resume +
+## mode baca ulang); {} = mulai dari awal.
+func tampilkan(pengajar: String, save: Dictionary = {}) -> void:
+	_pengajar = pengajar
+	_modul = int(Onboarding.baca(save).get("modul", 1))
+	_nama_label.text = pengajar
+	_avatar.atur_tipe("ustadzah" if pengajar.contains("Fatimah") else "sanusi")
+	var sudah: Array = save.get("rb_selesai", [])
+	var m := str(_modul)
+	_baca_ulang = sudah.has(m + ":materi") and sudah.has(m + ":latihan") and sudah.has(m + ":kuis")
+	_materi_selesai = false
+	_latihan_selesai = false
+	_kuis_selesai = false
+	_ulang_materi = false
+	_opsi_salah.clear()
+	_riwayat.clear()
+	_hentikan_timer()
+	_tutup_riwayat()
+	visible = true
+	var pos := String(save.get("rb_chat_pos", ""))
+	if _baca_ulang:
+		_bangun_log_baca_ulang()
+		_tampilkan_node(DataChatModul01.cari(DataChatModul01.id_pertama()))
+	elif pos != "" and not DataChatModul01.cari(pos).is_empty():
+		_bangun_log_resume(pos)
+		_tampilkan_node(DataChatModul01.cari(pos))
 	else:
-		_umpan.text = "Belum tepat — coba lagi."
-		_umpan.add_theme_color_override("font_color", GayaMisi.KREM)
-		_umpan.visible = true
-		# Opsi yang salah dimatikan saja; soal yang sama tetap bisa
-		# dijawab ulang dari opsi yang tersisa.
-		if i >= 0 and i < _tombol_opsi.size():
-			_tombol_opsi[i].disabled = true
+		_tampilkan_node(DataChatModul01.cari(DataChatModul01.id_pertama()))
 
 
-func _teks_tombol_lanjut() -> String:
-	if _mesin.nomor_soal() >= _mesin.jumlah_soal():
-		return "Lihat hasil" if _mode == "kuis" else "Selesai"
-	return "Soal berikut"
+## Auto ON/OFF (chip milik manajer). Bila dinyalakan saat sedang
+## menunggu tombol Lanjut, lanjut otomatis sekarang.
+func set_auto(v: bool) -> void:
+	_auto = v
+	if _auto and not _sedang_bicara and _lanjut_tampil and not _baca_ulang:
+		_timer_otomatis.start()
 
 
-func _on_lanjut_soal() -> void:
-	if _jawaban_benar < 0:
+func auto_aktif() -> bool:
+	return _auto
+
+
+## Id node yang sedang tampil (untuk tes + foto).
+func node_saat_ini() -> String:
+	return String(_node_saat_ini.get("id", ""))
+
+
+## Apakah ustadz sedang bicara (efek huruf berjalan)?
+func sedang_bicara() -> bool:
+	return _sedang_bicara
+
+
+## Jumlah baris di Riwayat (untuk tes).
+func jumlah_riwayat() -> int:
+	return _riwayat.size()
+
+
+## Teks pesan yang sedang tampil (tanpa kursor) — untuk tes.
+func teks_tampil() -> String:
+	return _teks_penuh.substr(0, _huruf_tampil)
+
+
+## Apakah ada tombol dalam keadaan disabled? (harus selalu false)
+func ada_tombol_terkunci() -> bool:
+	for b in _semua_tombol(_pilihan_box):
+		if b.disabled:
+			return true
+	return false
+
+
+func _semua_tombol(n: Node) -> Array[Button]:
+	var out: Array[Button] = []
+	for c in n.get_children():
+		if c is Button:
+			out.append(c)
+		out.append_array(_semua_tombol(c))
+	return out
+
+
+func _bangun_log_resume(resume_id: String) -> void:
+	_riwayat.clear()
+	for id in DataChatModul01.jalur_log(resume_id):
+		var n := DataChatModul01.cari(id)
+		if not n.is_empty():
+			_riwayat.append({"dari": "ustadz", "teks": String(n.get("teks", ""))})
+
+
+func _bangun_log_baca_ulang() -> void:
+	_riwayat.clear()
+	for id in DataChatModul01.SPINE:
+		var n := DataChatModul01.cari(id)
+		if not n.is_empty():
+			_riwayat.append({"dari": "ustadz", "teks": String(n.get("teks", ""))})
+
+
+func _tampilkan_node(nod: Dictionary, jawaban_player: String = "") -> void:
+	if nod.is_empty():
 		return
-	_mesin.jawab(_jawaban_benar)
-	_menunggu_lanjut = false
-	if _mesin.selesai():
-		if _mode == "latihan":
-			langkah_selesai.emit("latihan", DataModul01.POIN_LATIHAN)
-			_ke_langkah(3)
+	_node_saat_ini = nod
+	_bersihkan_pilihan()
+	if jawaban_player != "":
+		_gelembung_label.text = jawaban_player
+		_gelembung_box.visible = true
+	else:
+		_gelembung_box.visible = false
+	var papan: Dictionary = nod.get("papan", {})
+	if not papan.is_empty():
+		var baris := PackedStringArray()
+		for b in papan.get("baris", []):
+			baris.append(String(b))
+		papan_berubah.emit(String(papan.get("judul", "")), baris)
+	var pid := String(nod.get("id", ""))
+	if DataChatModul01.SPINE.has(pid) or pid == "b1" or pid == "b2":
+		_bilah_progres.value = float(DataChatModul01.indeks_progres(pid)) / float(DataChatModul01.jumlah_pesan())
+	_simpan_kemajuan(pid)
+	_teks_penuh = String(nod.get("teks", ""))
+	if _baca_ulang:
+		# Baca ulang: tampil penuh tanpa efek bicara.
+		_huruf_tampil = _teks_penuh.length()
+		_sedang_bicara = false
+		_render_teks()
+		_tampilkan_pilihan()
+		return
+	_huruf_tampil = 0
+	_sedang_bicara = true
+	_kursor_nyala = true
+	_render_teks()
+	_timer_bicara.start()
+	_timer_kedip.start()
+
+
+func _simpan_kemajuan(id: String) -> void:
+	# Hanya node nyata yang disimpan sebagai titik resume
+	# (node sementara "_benar"/"_salah" tidak — titik resume
+	# tetap di soal yang sedang dijawab).
+	if id == "" or DataChatModul01.SPINE.has(id) or id == "b1" or id == "b2":
+		kemajuan_disimpan.emit(id, _modul)
+
+
+func _render_teks() -> void:
+	var tampil := _teks_penuh.substr(0, _huruf_tampil).replace("[", "\\[")
+	if _sedang_bicara and _kursor_nyala:
+		tampil += "[bgcolor=#c9a227]  [/bgcolor]"
+	_pesan_label.text = tampil
+
+
+func _on_timer_bicara() -> void:
+	if not _sedang_bicara:
+		return
+	_huruf_tampil += 1
+	if _huruf_tampil >= _teks_penuh.length():
+		_bicara_selesai()
+	else:
+		_render_teks()
+
+
+func _on_timer_kedip() -> void:
+	if not _sedang_bicara:
+		return
+	_kursor_nyala = not _kursor_nyala
+	_render_teks()
+
+
+func _on_timer_otomatis() -> void:
+	if not _auto:
+		_tampilkan_pilihan()
+		return
+	_lanjut_pesan()
+
+
+## Tap kotak dialog = tampil penuh (lewati ucapan).
+func _on_kotak_gui_input(event: InputEvent) -> void:
+	var ketuk := false
+	if event is InputEventMouseButton:
+		var mb := event as InputEventMouseButton
+		ketuk = mb.button_index == MOUSE_BUTTON_LEFT and mb.pressed
+	elif event is InputEventScreenTouch:
+		ketuk = (event as InputEventScreenTouch).pressed
+	if ketuk and _sedang_bicara:
+		_selesaikan_bicara()
+
+
+func _selesaikan_bicara() -> void:
+	if not _sedang_bicara:
+		return
+	_huruf_tampil = _teks_penuh.length()
+	_bicara_selesai()
+
+
+func _bicara_selesai() -> void:
+	_sedang_bicara = false
+	_timer_bicara.stop()
+	_timer_kedip.stop()
+	_huruf_tampil = _teks_penuh.length()
+	_render_teks()
+	if not _baca_ulang:
+		_riwayat.append({"dari": "ustadz", "teks": _teks_penuh})
+	var pid := String(_node_saat_ini.get("id", ""))
+	if DataChatModul01.SPINE.has(pid) or pid == "b1" or pid == "b2":
+		_bilah_progres.value = float(DataChatModul01.indeks_progres(pid) + 1) / float(DataChatModul01.jumlah_pesan())
+	_tampilkan_pilihan()
+
+
+func _tampilkan_pilihan() -> void:
+	_bersihkan_pilihan()
+	var nod := _node_saat_ini
+	var tipe := String(nod.get("tipe", ""))
+	if _baca_ulang:
+		if tipe == "penutup":
+			_tambah_tombol_tutup()
 		else:
-			_selesaikan_kuis()
+			var teks := "Lanjut ›"
+			var opsi: Array = nod.get("opsi", [])
+			if opsi.size() > 0:
+				teks = String(opsi[0].get("teks", teks))
+			_tambah_tombol_lanjut(teks)
 		return
-	_tampilkan_soal()
+	match tipe:
+		"pesan":
+			if _auto:
+				_timer_otomatis.start()
+			else:
+				var teks2 := "Lanjut ›"
+				var opsi2: Array = nod.get("opsi", [])
+				if opsi2.size() > 0:
+					teks2 = String(opsi2[0].get("teks", teks2))
+				_tambah_tombol_lanjut(teks2)
+		"cek":
+			var opsi3: Array = nod.get("opsi", [])
+			for i in opsi3.size():
+				var o: Dictionary = opsi3[i]
+				var b := GayaMisi.buat_tombol_emas(String(o.get("teks", ""))) if i == 0 else GayaMisi.buat_tombol_outline(String(o.get("teks", "")))
+				b.pressed.connect(_on_opsi_ditekan.bind(o))
+				_pilihan_box.add_child(b)
+		"soal":
+			var grid := GridContainer.new()
+			grid.columns = 2
+			grid.add_theme_constant_override("h_separation", 10)
+			grid.add_theme_constant_override("v_separation", 10)
+			var opsi4: Array = DataChatModul01.opsi_soal(nod)
+			for i in opsi4.size():
+				if _opsi_salah.has(i):
+					continue
+				var b2 := GayaMisi.buat_tombol_outline(String(opsi4[i]))
+				b2.pressed.connect(_on_soal_ditekan.bind(i))
+				grid.add_child(b2)
+			_pilihan_box.add_child(grid)
+		"penutup":
+			_tambah_tombol_tutup()
 
 
-func _selesaikan_kuis() -> void:
-	langkah_selesai.emit("kuis", DataModul01.POIN_HAFALAN)
-	_poin_total = DataModul01.POIN_MATERI + DataModul01.POIN_LATIHAN + DataModul01.POIN_HAFALAN
-	selesai.emit(_poin_total)
-	_selesai_semua = true
-	_perbarui_pill()
-	_bersihkan_isi()
-	_bangun_selesai()
+func _tambah_tombol_lanjut(teks: String) -> void:
+	var b := GayaMisi.buat_tombol_emas(teks)
+	b.pressed.connect(_lanjut_pesan)
+	_pilihan_box.add_child(b)
+	_lanjut_tampil = true
 
 
-func _bangun_selesai() -> void:
-	var kartu := _buat_kartu("Selesai — %d poin" % _poin_total)
-	kartu.add_child(_buat_label_isi("Materi, latihan, dan kuis Modul 01 tuntas.", 19, GayaMisi.KREM))
-	var tutup_btn := GayaMisi.buat_tombol_emas("Tutup")
-	tutup_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	tutup_btn.pressed.connect(tutup)
-	_isi.add_child(tutup_btn)
+func _tambah_tombol_tutup() -> void:
+	var b := GayaMisi.buat_tombol_emas("Tutup")
+	b.pressed.connect(_on_tutup_penutup)
+	_pilihan_box.add_child(b)
 
 
-func _bangun_error() -> void:
-	_bersihkan_isi()
-	_isi.add_child(_buat_label_isi("Soal belum tersedia — menunggu tashih.", 19, GayaMisi.KREM))
-	var tutup_btn := GayaMisi.buat_tombol_emas("Tutup")
-	tutup_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	tutup_btn.pressed.connect(tutup)
-	_isi.add_child(tutup_btn)
+func _bersihkan_pilihan() -> void:
+	_lanjut_tampil = false
+	for c in _pilihan_box.get_children():
+		c.queue_free()
 
 
-func _on_tutup_ditekan() -> void:
+## Lanjut dari node "pesan" (otomatis / tombol Lanjut / opsi
+## tunggal b2): "berikut" eksplisit dulu, lalu opsi tunggal,
+## lalu node berikutnya di tulang punggung.
+func _lanjut_pesan() -> void:
+	_timer_otomatis.stop()
+	var nod := _node_saat_ini
+	var berikut := String(nod.get("berikut", ""))
+	if berikut == "":
+		var opsi: Array = nod.get("opsi", [])
+		if opsi.size() > 0:
+			berikut = String(opsi[0].get("ke", ""))
+		else:
+			var i := DataChatModul01.SPINE.find(String(nod.get("id", "")))
+			if i >= 0 and i + 1 < DataChatModul01.SPINE.size():
+				berikut = DataChatModul01.SPINE[i + 1]
+	if berikut == "":
+		return
+	_tampilkan_node(DataChatModul01.cari(berikut))
+
+
+func _on_opsi_ditekan(opsi: Dictionary) -> void:
+	var teks_opsi := String(opsi.get("teks", ""))
+	if not _baca_ulang:
+		_riwayat.append({"dari": "pemain", "teks": teks_opsi})
+	var ke := String(opsi.get("ke", ""))
+	if ke == "ulang":
+		if _ulang_materi:
+			_emit_materi()
+			_tampilkan_node(DataChatModul01.cari("l1"), teks_opsi)
+		else:
+			_ulang_materi = true
+			_tampilkan_node(DataChatModul01.cari("m2"), teks_opsi)
+		return
+	if String(_node_saat_ini.get("id", "")) == "m7" and ke == "l1":
+		_emit_materi()
+	_tampilkan_node(DataChatModul01.cari(ke), teks_opsi)
+
+
+func _emit_materi() -> void:
+	if _materi_selesai:
+		return
+	_materi_selesai = true
+	langkah_selesai.emit("materi", DataChatModul01.POIN_MATERI)
+
+
+func _on_soal_ditekan(idx: int) -> void:
+	var nod := _node_saat_ini
+	var benar := DataChatModul01.benar_soal(nod)
+	var opsi: Array = DataChatModul01.opsi_soal(nod)
+	var teks_opsi := String(opsi[idx]) if idx >= 0 and idx < opsi.size() else ""
+	if not _baca_ulang:
+		_riwayat.append({"dari": "pemain", "teks": teks_opsi})
+	if idx == benar:
+		_opsi_salah.clear()
+		var berikut := _node_berikut_setelah_soal(String(nod.get("id", "")))
+		if String(nod.get("id", "")) == "l5" and not _latihan_selesai:
+			_latihan_selesai = true
+			langkah_selesai.emit("latihan", DataChatModul01.POIN_LATIHAN)
+		if String(nod.get("id", "")) == "k1" and not _kuis_selesai:
+			_kuis_selesai = true
+			langkah_selesai.emit("kuis", DataChatModul01.POIN_KUIS)
+		var puji := {"id": String(nod.get("id", "")) + "_benar", "tipe": "pesan", "teks": String(nod.get("benar", "")), "berikut": berikut}
+		_tampilkan_node(puji, teks_opsi)
+	else:
+		_opsi_salah.append(idx)
+		var tegur := {"id": String(nod.get("id", "")) + "_salah", "tipe": "pesan", "teks": String(nod.get("salah", "")), "berikut": String(nod.get("id", ""))}
+		_tampilkan_node(tegur, teks_opsi)
+
+
+func _node_berikut_setelah_soal(id: String) -> String:
+	var i := DataChatModul01.SPINE.find(id)
+	if i >= 0 and i + 1 < DataChatModul01.SPINE.size():
+		return DataChatModul01.SPINE[i + 1]
+	return "penutup"
+
+
+func _on_tutup_penutup() -> void:
+	if not _baca_ulang:
+		selesai.emit(DataChatModul01.POIN_TOTAL)
+		_simpan_kemajuan("")
+	_tutup()
+
+
+func _buka_riwayat() -> void:
+	for c in _log_list.get_children():
+		c.queue_free()
+	for entri in _riwayat:
+		var dari := String(entri.get("dari", ""))
+		var awalan := _pengajar + ": " if dari == "ustadz" else "Kamu: "
+		var l := GayaMisi.buat_label(awalan + String(entri.get("teks", "")), 18, GayaMisi.KREM if dari == "ustadz" else GayaMisi.EMAS_TERANG, true)
+		_log_list.add_child(l)
+	_log_overlay.visible = true
+
+
+func _tutup_riwayat() -> void:
+	_log_overlay.visible = false
+
+
+func _hentikan_timer() -> void:
+	_timer_bicara.stop()
+	_timer_kedip.stop()
+	_timer_otomatis.stop()
+
+
+## Tutup panel TANPA sinyal (dipanggil manajer — tutup_semua() +
+## _tampilkan() saat panel lain dibuka; sama seperti UI lama).
+## Sinyal ditutup hanya dari penutupan eksplisit (× / "Tutup").
+func tutup() -> void:
+	_hentikan_timer()
+	_sedang_bicara = false
+	_tutup_riwayat()
+	visible = false
+
+
+func _tutup() -> void:
+	_hentikan_timer()
+	_sedang_bicara = false
+	_tutup_riwayat()
 	visible = false
 	ditutup.emit()

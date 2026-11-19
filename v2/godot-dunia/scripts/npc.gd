@@ -87,12 +87,18 @@ var _kitab_pangku: Node3D # RONDE 20: _kitab() player.gd mengembalikan Node3D (w
 # SUSULAN RONDE 20: Ustadzah Mariyah pakai abaya + jilbab — target
 # lerp pakaiannya (duduk/berdiri) beda dari koko+sarung.
 var _muslimah: bool = false
+var _tunik: bool = false
 var _sarung: MeshInstance3D
 var _sarung_hem: MeshInstance3D
 var _sarung_trim: MeshInstance3D
 var _torso: MeshInstance3D
 # RONDE 20 — ikut sholat berjamaah? Satpam TIDAK (tetap di pos).
 var _ikut_sholat: bool = true
+# RUANG BELAJAR CHAT (Sinta, 19 Nov 2026 — §8): duduk belajar —
+# ustadz duduk selama dialog belajar terbuka (pose baca kitab
+# yang sama, tanpa pose baru). yaw = arah hadap saat duduk.
+var _duduk_belajar: bool = false
+var _duduk_belajar_yaw: float = 0.0
 
 
 ## RONDE 8: sembunyikan label nama saat panel chat terbuka.
@@ -158,6 +164,9 @@ func setup(nama_santri: String, pos: Vector3, wps: Array[Vector3], outfit: Dicti
 	_rig = AnimasiMixamo.rig_dari_built(built)
 	# SUSULAN RONDE 20: Ustadzah Mariyah = abaya + jilbab.
 	_muslimah = bool(built.get("muslimah", false))
+	# SERAGAM UTAMA v2: santriwati tunik (baju+sarung) memakai
+	# PAKAIAN_DEFAULT/DUDUK biasa, bukan varian abaya.
+	_tunik = bool(built.get("tunik", false))
 	# RONDE 20: NPC patroli (Kyai/Ustadzah) MULAI duduk di kursinya
 	# di dalam surau/musholla sambil baca kitab — bukan di pos
 	# spawn-nya. Kursi + hadap kiblat dari kamus patroli.
@@ -333,6 +342,14 @@ func _process(delta: float) -> void:
 	# ke Surau atau sholat).
 	if _mode_sholat:
 		_proses_sholat(delta)
+		return
+	# RUANG BELAJAR CHAT (Sinta, 19 Nov 2026 — §8): duduk belajar.
+	# Di bawah sholat (sholat menang bila bentrok), di atas
+	# patroli/keliling/idle. Hadap di-lerp ke yaw yang diminta,
+	# pose duduk dipakai ulang dari baca kitab.
+	if _duduk_belajar:
+		_visual.rotation.y = lerpf(_visual.rotation.y, _duduk_belajar_yaw, minf(1.0, delta * 6.0))
+		_terapkan_duduk_baca(delta)
 		return
 	# RONDE 20: NPC patroli (Kyai/Ustadzah) — duduk baca kitab +
 	# keliling kontrol menggantikan diam/keliling bebas + ngobrol.
@@ -635,6 +652,27 @@ func _terapkan_duduk_baca(delta: float) -> void:
 		_kitab_pangku.visible = false
 
 
+## RUANG BELAJAR CHAT (§8): duduk belajar — pakai ulang pose
+## baca kitab, TANPA pose baru. yaw = arah hadap (radian).
+## berdiri_belajar() mengembalikan NPC ke aktivitasnya (idle
+## _process me-lerp pose kembali berdiri + pakaian default).
+func duduk_belajar(yaw: float) -> void:
+	_duduk_belajar = true
+	_duduk_belajar_yaw = yaw
+
+
+func berdiri_belajar() -> void:
+	_duduk_belajar = false
+	# Snap pakaian kembali ke default (delta 1.0 = lerp penuh,
+	# abaya ikut dipetakan di _terapkan_pakaian) — _animate_idle
+	# di _process mengembalikan pose badan/kaki ke berdiri.
+	_terapkan_pakaian(1.0, SantriPlayer.PAKAIAN_DEFAULT)
+
+
+func sedang_duduk_belajar() -> bool:
+	return _duduk_belajar
+
+
 ## Lerp pakaian NPC ke target (pola player.gd _lerp_pakaian):
 ## sarung mengerut saat duduk, normal saat jalan.
 func _terapkan_pakaian(delta: float, target: Dictionary) -> void:
@@ -644,7 +682,9 @@ func _terapkan_pakaian(delta: float, target: Dictionary) -> void:
 	# kaki bersila; abaya duduk = melebar + sedikit memendek, tetap
 	# menutupi kaki bersila sampai lantai. Satu pemetaan di sini
 	# menjangkau semua pemanggil (duduk baca + 4 fase patroli).
-	if _muslimah:
+	# SERAGAM UTAMA v2: santriwati tunik TIDAK dipetakan ke abaya —
+	# sarungnya tabung biasa (PAKAIAN_DEFAULT/DUDUK).
+	if _muslimah and not _tunik:
 		if target == SantriPlayer.PAKAIAN_DUDUK:
 			target = SantriPlayer.PAKAIAN_ABAYA_DUDUK
 		elif target == SantriPlayer.PAKAIAN_DEFAULT:

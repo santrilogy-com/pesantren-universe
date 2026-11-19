@@ -8,9 +8,13 @@
 - menyisipkan patch chunked fetch (wasm + pck, SATU blok <script>,
   pola yang sama persis dengan patch chunked-wasm yang sudah terbukti
   live) sebelum <script src="index.js">
-- verifikasi: rakitan chunk sha cocok (wasm + pck), guard 3 script,
+- splash loading screen (ACC Mas 19 Nov 15:01, varian C Karakter):
+  salin splash-landscape.png + splash-portrait.png dari konsep ke staging
+  + sisipkan pemilih orientasi (portrait -> portrait, landscape ->
+  landscape, swap saat diputar) + latar overlay/body #043B2C
+- verifikasi: rakitan chunk sha cocok (wasm + pck), guard 4 script,
   fileSizes pck, worklet 2.973 B, TIDAK ADA file > 24 MiB di staging,
-  index.pck utuh TIDAK ada di staging
+  index.pck utuh TIDAK ada di staging, splash ada + pemilih ada
 - bukti boot: menjalankan test_chunked_boot.mjs (Node) yang mengeksekusi
   patch persis seperti di index.html dan memverifikasi hash rakitan
   (pck + wasm) dengan pola konsumsi engine (stream reader + clone)
@@ -26,6 +30,13 @@ import sys
 SRC = os.path.expanduser("~/workspace/pesantren-verse/v2/export/web")
 DST = os.path.expanduser("~/workspace/pesantren-verse/v2/export/web-pages")
 EXPORT_DIR = os.path.expanduser("~/workspace/pesantren-verse/v2/export")
+SPLASH_DIR = os.path.expanduser("~/workspace/pesantren-verse/v2/konsep")
+# Sumber tunggal gambar splash: file konsep (bukan salinan res:// — isinya sama,
+# tapi konsep adalah yang Mas ACC). Nama staging: splash-landscape/portrait.
+SPLASH_FILES = {
+    "splash-landscape.png": "konsep-splash-c-karakter.png",
+    "splash-portrait.png": "konsep-splash-c-karakter-portrait.png",
+}
 CHUNK_WASM = 8844228
 PCK_CHUNKS_N = 2  # naikkan bila pck melewati ~48 MiB (2 x 24 MiB)
 MAX_FILE = 25_165_824  # 24 MiB — batas aman di bawah 25 MiB Cloudflare Pages
@@ -86,6 +97,30 @@ PATCH_TEMPLATE = """\t\t<script>
 })();
 </script>"""
 
+# Pemilih splash loading screen (SATU blok <script> sendiri — guard script
+# di bawah dihitung 4, dan harness test_chunked_boot.mjs ikut diperbarui).
+# Dijalankan segera saat parser mencapai blok ini (SEBELUM paint pertama),
+# lalu swap lagi bila device diputar saat loading. Gambar default img adalah
+# index.png (landscape, hasil export boot splash); pemilih menimpa src ke
+# file eksplisit supaya tidak bergantung pada isi index.png.
+SPLASH_SCRIPT = """\t\t<script>
+// Pesantren Universe: splash loading screen orientasi (ACC Mas 19 Nov 15:01,
+// varian C Karakter). Layar loading web memilih gambar sesuai orientasi device:
+// portrait -> splash-portrait.png (judul melengkung), landscape ->
+// splash-landscape.png. Latar overlay #043B2C (CSS diganti di bawah).
+(function () {
+\tvar img = document.getElementById('status-splash');
+\tif (!img) return;
+\tfunction pilih() {
+\t\tvar src = (window.innerWidth < window.innerHeight) ? 'splash-portrait.png' : 'splash-landscape.png';
+\t\tif (img.getAttribute('src') !== src) img.setAttribute('src', src);
+\t}
+\tpilih();
+\twindow.addEventListener('resize', pilih);
+\twindow.addEventListener('orientationchange', pilih);
+})();
+</script>"""
+
 
 def sha256(path):
     h = hashlib.sha256()
@@ -138,6 +173,14 @@ for stale in ("index.wasm", "index.pck"):
         os.remove(p)
         print("hapus staging lama:", stale)
 
+# 1b. salin splash landscape+portrait dari konsep (sumber tunggal gambar)
+for dst_name, src_name in SPLASH_FILES.items():
+    s = os.path.join(SPLASH_DIR, src_name)
+    d = os.path.join(DST, dst_name)
+    assert os.path.exists(s), "splash sumber hilang: %s" % s
+    shutil.copy2(s, d)
+    print("splash:", dst_name, os.path.getsize(d), "B sha256", sha256(d)[:16])
+
 # 2. potong wasm + pck
 wasm_path = os.path.join(SRC, "index.wasm")
 wasm_parts = split_file(wasm_path, os.path.join(DST, "wasm"), CHUNK_WASM, "part")
@@ -168,6 +211,22 @@ with open(new_html_path, "r", encoding="utf-8") as f:
 anchor = '\t\t<script src="index.js"></script>'
 assert anchor in html, "anchor index.js tidak ketemu"
 assert "chunked wasm loader" not in html, "patch sudah ada"
+# 3a. splash orientasi + latar #043B2C (SEBELUM patch — pemilih jalan sedini
+# mungkin; index.html diregenerasi tiap export, jadi dibakar di sini)
+assert "splash loading screen orientasi" not in html, "splash sudah ada"
+assert 'src="index.png"' in html, "img status-splash tidak ketemu"
+html = html.replace(anchor, SPLASH_SCRIPT + "\n" + anchor, 1)
+assert "#242424" in html, "bg #status #242424 tidak ketemu"
+html = html.replace("#status {\n\tbackground-color: #242424;", "#status {\n\tbackground-color: #043B2C;", 1)
+assert "background-color: black;" in html, "bg body black tidak ketemu"
+html = html.replace("background-color: black;", "background-color: #043B2C;", 1)
+# 3a2. progress bar naik: bottom 10% -> 25%. Di 10% bar jatuh di celah judul
+# landscape (PESANTREN y 79-86%, UNIVERSE 91-98%; celah 87-90% cuma 24 px —
+# bar jadi garis pemisah judul). Di 25% bar duduk di jalan kosong: landscape
+# y 73-75% kosong (kaki figur 69%, judul 79%), portrait y 74-75% kosong
+# (kaki figur 72%). Diukur dari piksel gambar konsep, 19 Nov 2026.
+assert "#status-progress {\n\tbottom: 10%;" in html, "CSS #status-progress tidak ketemu"
+html = html.replace("#status-progress {\n\tbottom: 10%;", "#status-progress {\n\tbottom: 25%;", 1)
 html = html.replace(anchor, patch + "\n" + anchor, 1)
 with open(new_html_path, "w", encoding="utf-8") as f:
     f.write(html)
@@ -176,7 +235,16 @@ with open(new_html_path, "w", encoding="utf-8") as f:
 with open(new_html_path, "r", encoding="utf-8") as f:
     final = f.read()
 print("script open:", final.count("<script"), "script close:", final.count("</script>"))
-assert final.count("<script") == 3 and final.count("</script>") == 3
+assert final.count("<script") == 4 and final.count("</script>") == 4, "jumlah script bukan 4 (patch + splash + index.js + config)"
+assert "splash loading screen orientasi" in final, "pemilih splash tidak ada"
+assert "splash-portrait.png" in final and "splash-landscape.png" in final, "nama file splash tidak ada di pemilih"
+assert "#043B2C" in final, "latar #043B2C tidak ada"
+assert "#242424" not in final and "background-color: black;" not in final, "latar lama masih ada"
+assert "bottom: 25%" in final and "bottom: 10%" not in final, "progress bar bukan bottom 25%"
+for _sf in ("splash-landscape.png", "splash-portrait.png"):
+    _sp = os.path.join(DST, _sf)
+    assert os.path.exists(_sp), "splash staging hilang: %s" % _sf
+    print("splash staging OK:", _sf, os.path.getsize(_sp), "B")
 assert ('"index.pck":%d' % pck_size) in final, "fileSizes pck salah"
 assert "wasm/part-04.bin" in final, "chunk wasm tidak ada di patch"
 assert "pck/part-01.bin" in final, "chunk pck tidak ada di patch"

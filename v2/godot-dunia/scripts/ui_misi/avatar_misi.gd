@@ -3,8 +3,9 @@ extends Control
 ## Medali potret pembicara UI misi — Fase A, A9 (Dita, 18 Nov 2026).
 ## Digambar kode di _draw(), meniru medali_potret() di
 ## v2/konsep/desain-ui-misi.py (Sinta): lingkaran latar krem,
-## wajah, songkok putih (kyai/sanusi) ATAU hijab krem (ustadzah),
-## jubah zamrud + kerah emas bentuk V, senyum sederhana.
+## wajah, songkok putih (kyai) / peci hitam nasional (sanusi)
+## ATAU hijab krem (ustadzah), jubah zamrud + kerah emas bentuk V,
+## senyum sederhana.
 ## Tanpa texture eksternal, tanpa emoji.
 ## tipe: "kyai" (Ust. Aqsal M) | "ustadzah" | "sanusi";
 ## nilai lain -> "kyai".
@@ -18,6 +19,11 @@ const KULIT_LAIN := Color("#c68e5e")
 const HIJAB := Color("#e2d5b0")
 const GELAP_MATA := Color("#281e19")
 const PUTIH := Color("#ffffff")
+## Peci hitam NASIONAL (rata) untuk Sanusi — build Kirana 19 Nov
+## 2026: Sanusi di dunia memakai peci_model "nasional" hitam
+## (#151515 + lis #0d0d0d, lihat player.gd PAKAIAN).
+const PECI_HITAM := Color("#151515")
+const LIS_HITAM := Color("#0d0d0d")
 const ABU_GARIS := Color("#5a5a5a")
 const ABU_TERANG := Color("#c8c8c8")
 const RIM_DALAM := Color("#8a6d1f")
@@ -81,15 +87,26 @@ func _gambar() -> void:
 		# Leher + wajah.
 		draw_rect(Rect2(52, 68, 16, 14), kulit)
 		_elips(Vector2(60, 53), 22.0, 23.0, kulit)
-		# Songkok putih (setengah elips atas) + pita gelap
-		# tipis di bawahnya, persis medali_potret().
-		var peci := PackedVector2Array([Vector2(60, 33)])
-		for i in range(0, 25):
-			var a := deg_to_rad(lerpf(180.0, 360.0, float(i) / 24.0))
-			peci.append(Vector2(60, 33) + Vector2(cos(a) * 24.0, sin(a) * 21.0))
-		draw_colored_polygon(peci, PUTIH)
-		_busur(Vector2(60, 33), 24.0, 21.0, 180.0, 360.0, ABU_TERANG, 2.0)
-		draw_line(Vector2(38, 46), Vector2(82, 46), ABU_GARIS, 2.0, true)
+		if tipe == "sanusi":
+			# Peci HITAM NASIONAL (rata, tanpa kubah) + lis gelap
+			# tipis di bawahnya — sama dengan Sanusi di dunia
+			# (peci_model "nasional"). FLAG §4 SELESAI: medali ini
+			# dulu menggambar songkok putih.
+			var peci := PackedVector2Array([
+				Vector2(38, 33), Vector2(38, 18), Vector2(42, 14),
+				Vector2(78, 14), Vector2(82, 18), Vector2(82, 33)])
+			draw_colored_polygon(peci, PECI_HITAM)
+			draw_line(Vector2(38, 35), Vector2(82, 35), LIS_HITAM, 2.0, true)
+		else:
+			# Songkok putih (setengah elips atas) + pita gelap
+			# tipis di bawahnya, persis medali_potret().
+			var peci := PackedVector2Array([Vector2(60, 33)])
+			for i in range(0, 25):
+				var a := deg_to_rad(lerpf(180.0, 360.0, float(i) / 24.0))
+				peci.append(Vector2(60, 33) + Vector2(cos(a) * 24.0, sin(a) * 21.0))
+			draw_colored_polygon(peci, PUTIH)
+			_busur(Vector2(60, 33), 24.0, 21.0, 180.0, 360.0, ABU_TERANG, 2.0)
+			draw_line(Vector2(38, 46), Vector2(82, 46), ABU_GARIS, 2.0, true)
 		# Mata + senyum.
 		_elips(Vector2(50.5, 54.5), 2.5, 2.5, GELAP_MATA)
 		_elips(Vector2(69.5, 54.5), 2.5, 2.5, GELAP_MATA)

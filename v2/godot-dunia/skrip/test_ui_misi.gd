@@ -145,38 +145,36 @@ func _ready() -> void:
 	dlg.queue_free()
 	dlg2.queue_free()
 
-	# ---------- F. RuangBelajarUI (alur penuh 3 langkah) ----------
+	# ---------- F. RuangBelajarUI — chat Genshin (Sinta, 19 Nov 2026) ----------
+	# UI lama (3 langkah kartu+soal) DIGANTI chat 14 pesan (§7+§8,
+	# ACC Mas 15:18); alur penuh (cabang Belum, salah->benar,
+	# resume, baca ulang) diuji di test_ruang_belajar_chat.gd —
+	# di sini hanya kontrak dasar: tampil, bicara, pilihan, sinyal.
 	var rb := RuangBelajarUI.new()
 	add_child(rb)
-	rb.tampilkan("Ust. Sanusi")
-	_cek("RB: tampil langkah 1 materi + pengajar, tanpa TEKS DRAF", rb.visible and rb._langkah == 1 and _ada_teks(rb, "Ust. Sanusi") and not _ada_teks(rb, "TEKS DRAF"))
-	_cek("RB: materi Arab + 3 kartu kata + bait hafalan", _ada_teks(rb, "قَامَ مُحَمَّدٌ") and _ada_teks(rb, "ISIM") and _ada_teks(rb, "Bait hafalan"))
+	var save_rb := SantriSave.default_data()
 	var rb_langkah: Array = []
 	var rb_selesai_ev: Array = []
+	var rb_papan: Array = []
 	rb.langkah_selesai.connect(func(jenis: String, poin: int) -> void: rb_langkah.append([jenis, poin]))
 	rb.selesai.connect(func(total: int) -> void: rb_selesai_ev.append(total))
-	rb._on_lanjut_latihan()
-	_cek("RB: lanjut latihan -> langkah_selesai materi 10 + langkah 2", rb_langkah == [["materi", 10]] and rb._langkah == 2)
-	# Latihan soal 1: jawab SALAH dulu -> coba lagi, soal tetap sama.
-	var lat0: Dictionary = DataModul01.latihan_soal()[0]
-	var salah0 := (int(lat0.get("jawaban", 0)) + 1) % 4
-	rb._on_opsi_ditekan(salah0)
-	_cek("RB: jawaban salah -> 'Belum tepat' + bisa coba lagi", String(rb._umpan.text).contains("Belum tepat") and not rb._menunggu_lanjut)
-	rb._on_opsi_ditekan(int(lat0.get("jawaban", 0)))
-	_cek("RB: jawaban benar -> 'Benar!' + tombol lanjut", String(rb._umpan.text) == "Benar!" and rb._menunggu_lanjut)
-	rb._on_lanjut_soal()
-	for i in range(1, 5):
-		var s: Dictionary = DataModul01.latihan_soal()[i]
-		rb._on_opsi_ditekan(int(s.get("jawaban", 0)))
-		rb._on_lanjut_soal()
-	_cek("RB: latihan 5 soal -> langkah_selesai latihan 15 + langkah 3", rb_langkah == [["materi", 10], ["latihan", 15]] and rb._langkah == 3)
-	var k0: Dictionary = DataModul01.kuis_soal()[0]
-	rb._on_opsi_ditekan(int(k0.get("jawaban", 0)))
-	rb._on_lanjut_soal()
-	_cek("RB: kuis 1 soal benar -> langkah_selesai kuis 10 + selesai(35)", rb_langkah == [["materi", 10], ["latihan", 15], ["kuis", 10]] and rb_selesai_ev == [35])
-	_cek("RB: kartu 'Selesai — 35 poin' tampil", _ada_teks(rb, "Selesai — 35 poin"))
+	rb.papan_berubah.connect(func(judul: String, baris: PackedStringArray) -> void: rb_papan.append([judul, baris]))
+	rb.set_auto(false)
+	rb.tampilkan("Ust. Sanusi", save_rb)
+	_cek("RB chat: tampil + node m1 + pengajar + papan NAHWU DASAR", rb.visible and rb.node_saat_ini() == "m1" and _ada_teks(rb, "Ust. Sanusi") and rb_papan == [["NAHWU DASAR", PackedStringArray(["Modul 01 — Mengenal Kata"])]])
+	_cek("RB chat: TIDAK ADA teks mengetik / penghitung pesan", not _ada_teks(rb, "mengetik") and not _ada_teks(rb, "dari 14"))
+	_cek("RB chat: sedang bicara + pilihan BELUM tampil + tombol tidak terkunci", rb.sedang_bicara() and rb._pilihan_box.get_child_count() == 0 and not rb.ada_tombol_terkunci())
+	rb._selesaikan_bicara()
+	_cek("RB chat: m1 selesai -> tombol Lanjut tampil, tombol tidak terkunci", not rb.sedang_bicara() and rb._pilihan_box.get_child_count() == 1 and not rb.ada_tombol_terkunci())
+	rb._lanjut_pesan()
+	_cek("RB chat: lanjut -> node m2 (kalam) + papan KALAM", rb.node_saat_ini() == "m2" and (rb_papan[-1] as Array)[0] == "KALAM")
+	rb._selesaikan_bicara()
+	_cek("RB chat: m2 selesai -> 2 pilihan (Paham/Belum) aktif penuh", rb._pilihan_box.get_child_count() == 2 and not rb.ada_tombol_terkunci())
+	var opsi_m2: Array = DataChatModul01.cari("m2").get("opsi", [])
+	rb._on_opsi_ditekan(opsi_m2[0])
+	_cek("RB chat: Paham di m2 -> node m3 + gelembung player tampil", rb.node_saat_ini() == "m3" and rb._gelembung_box.visible)
 	rb.tutup()
-	_cek("RB: tutup() sembunyi tanpa sinyal tambahan", not rb.visible and rb_selesai_ev == [35])
+	_cek("RB chat: tutup() sembunyi tanpa sinyal tambahan", not rb.visible and rb_selesai_ev.is_empty())
 	rb.queue_free()
 
 	# ---------- G. TesKenaikanUI ----------
@@ -273,10 +271,12 @@ func _ready() -> void:
 
 	# ---------- J. Kunci save + wiring main.gd (guard regresi) ----------
 	_cek("Save: default_data punya rb_selesai (Array)", SantriSave.default_data().has("rb_selesai") and SantriSave.default_data()["rb_selesai"] is Array)
+	_cek("Save: default_data punya rb_chat_pos + rb_chat_modul (resume chat)", SantriSave.default_data().has("rb_chat_pos") and SantriSave.default_data().has("rb_chat_modul"))
 	var main_src := _isi_file("res://scripts/main.gd")
 	_cek("Wiring: main.gd membuat ManajerUIMisi + 4 handler", main_src.contains("ManajerUIMisi.new()") and main_src.contains("_on_manajer_dialog_selesai") and main_src.contains("_on_manajer_rb_langkah") and main_src.contains("_on_manajer_tes_selesai"))
 	_cek("Wiring: main.gd routing _buka_ui_misi_terdekat + Panel Misi saat ✕ kosong", main_src.contains("_buka_ui_misi_terdekat()") and main_src.contains("buka_panel_misi(_save)"))
 	_cek("Wiring: main.gd langkah 1->2 saat masuk pesantren", main_src.contains("Onboarding.langkah_saat_ini(_save) == 1"))
+	_cek("Wiring: adegan belajar chat (§8) — mulai/akhir + papan + resume", main_src.contains("_mulai_adegan_belajar()") and main_src.contains("_akhiri_adegan_belajar()") and main_src.contains("_on_manajer_rb_ditutup") and main_src.contains("_on_manajer_rb_kemajuan") and main_src.contains("_perbarui_papan_belajar"))
 
 	print("TES UI MISI: %d lulus, %d gagal" % [_lulus, _gagal])
 	get_tree().quit(0 if _gagal == 0 else 1)

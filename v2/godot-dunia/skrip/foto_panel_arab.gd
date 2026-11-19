@@ -77,9 +77,9 @@ func _ready() -> void:
 	await _tunggu(5)
 
 	# 3 — Tes kenaikan Q4 (يَذْهَبُ): jawab Q1-Q3 benar (0,0,0).
-	_main._manajer_misi.buka_tes("1")
+	_main._manajer_misi.buka_tes("N1")
 	await _tunggu(10)
-	var tes := _main._manajer_misi._tes
+	var tes: TesKenaikanUI = _main._manajer_misi._tes
 	var kunci_jawaban := [0, 0, 0, 1]
 	for q in 3:
 		tes._on_opsi_ditekan(kunci_jawaban[q])

@@ -50,6 +50,12 @@ static func default_data() -> Dictionary:
 		# di default_data (load_data membuang kunci yang tidak ada
 		# di sini — pelajaran bug flag pop-up Tara).
 		"rb_selesai": [],
+		# RUANG BELAJAR CHAT (Sinta, 19 Nov 2026 — §8): titik
+		# resume percakapan — id node BERIKUTNYA yang akan tampil
+		# (bukan indeks; cabang b1/b2 membuat indeks tidak stabil)
+		# + modul yang sedang berjalan. "" = tidak ada resume.
+		"rb_chat_pos": "",
+		"rb_chat_modul": 0,
 		"baca_bab": [], # bab kitab yang dibaca di rak kitab, mis.
 		# ["jurumiyah:3"] — syarat badge "Bisa Baca Kitab Kuning"
 		# (A4); ditulis reader (gelombang 2).
@@ -66,7 +72,9 @@ static func default_data() -> Dictionary:
 		# menyalin kunci yang ada di default_data).
 		# KIRANA 17 Nov 2026 (Mas: abaya + jilbab bisa dikostum):
 		# kunci "abaya" + "hijab_warna" (default = tampilan Ustadzah).
-		"outfit": {"koko": "#faf7f0", "songkok": "#faf7f0", "sarung": "#0b6b4f", "abaya": "#065f46", "hijab_warna": "#f2ead6"},
+		# SERAGAM UTAMA v2 (Kirana, 19 Nov 2026 — ACC Mas 15:41):
+		# koko putih #ffffff + sarung zamrud #008062 motif garis.
+		"outfit": {"koko": "#ffffff", "songkok": "#faf7f0", "sarung": "#008062", "sarung_motif": "garis", "abaya": "#065f46", "hijab_warna": "#ffffff"},
 		# RONDE 17: audio dimatikan (tombol "Suara" di HUD) — tersimpan
 		# supaya pilihan bertahan antar sesi.
 		"suara_mati": false,

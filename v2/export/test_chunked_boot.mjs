@@ -38,8 +38,8 @@ check('blok patch ditemukan di index.html', start >= 0 && end > start);
 if (start < 0 || end <= start) process.exit(1);
 const scriptOpen = html.lastIndexOf('<script>', start);
 const patchCode = html.slice(scriptOpen + '<script>'.length, end + '})();'.length);
-check('guard: 3 <script> / 3 </script> di index.html',
-  (html.match(/<script/g) || []).length === 3 && (html.match(/<\/script>/g) || []).length === 3);
+check('guard: 4 <script> / 4 </script> di index.html (patch + splash + index.js + config)',
+  (html.match(/<script/g) || []).length === 4 && (html.match(/<\/script>/g) || []).length === 4);
 check('patch menyebut pck/part-01.bin', patchCode.includes('pck/part-01.bin'));
 check('patch menyebut wasm/part-04.bin', patchCode.includes('wasm/part-04.bin'));
 

@@ -127,6 +127,19 @@ var _sholat_tanggal: String = ""
 # berjalan di waktu GAME (delta _process), bukan jam perangkat.
 var _sholat_adegan: String = ""
 var _sholat_adegan_t: float = 0.0
+## RUANG BELAJAR CHAT (Sinta, 19 Nov 2026 — §8): adegan belajar —
+## ustadz DUDUK + papan tulis kecil + kamera membingkai beliau
+## selama dialog belajar terbuka. _dialog_adegan_aktif = adegan
+## sedang berjalan; yaw/pitch kamera lama disimpan untuk kembali
+## ke pemain saat dialog ditutup (rig/spring/FOV di-lerp kembali
+## sendiri oleh kamera.perbarui). Papan hanya ada selama adegan.
+var _dialog_adegan_aktif := false
+var _dialog_cam_yaw := 0.0
+var _dialog_cam_yaw_lama := 0.0
+var _dialog_cam_pitch_lama := -0.35
+var _papan_belajar: Node3D = null
+var _papan_judul: Label3D = null
+var _papan_isi: Label3D = null
 const TAKBIR_TAHAN_DETIK := 4.0
 const BLACKOUT_DETIK := 2.5
 const BLACKOUT_FADE_DETIK := 0.5
@@ -740,6 +753,9 @@ func _ready() -> void:
 	_manajer_misi.tanya_dipilih.connect(_on_manajer_tanya_dipilih)
 	_manajer_misi.ruang_belajar_langkah.connect(_on_manajer_rb_langkah)
 	_manajer_misi.ruang_belajar_selesai.connect(_on_manajer_rb_selesai)
+	_manajer_misi.ruang_belajar_ditutup.connect(_on_manajer_rb_ditutup)
+	_manajer_misi.ruang_belajar_papan.connect(_on_manajer_rb_papan)
+	_manajer_misi.ruang_belajar_kemajuan.connect(_on_manajer_rb_kemajuan)
 	_manajer_misi.tes_selesai.connect(_on_manajer_tes_selesai)
 	# RONDE 6: aksi karakter + ganti outfit (kamar cangkruk).
 	_ui.aksi_dipilih.connect(_on_aksi)
@@ -1292,8 +1308,9 @@ func _on_continue() -> void:
 
 ## KIRANA 17 Nov 2026 (Mas: abaya + jilbab bisa dikostum): samakan
 ## visual pemain dengan gender save. Santriwati ("putri") memakai
-## muslimah + hijab (abaya + jilbab); santriwan tidak. Visual
-## dibangun ulang HANYA bila flag-nya berubah — masuk ulang sebagai
+## muslimah + hijab + tunik (tunik biru langit + sarung batik coklat +
+## jilbab putih — SERAGAM UTAMA v2, bukan abaya); santriwan tidak.
+## Visual dibangun ulang HANYA bila flag-nya berubah — masuk ulang sebagai
 ## santriwan tidak membangun ulang apa-apa. Flag disimpan di save
 ## supaya panel Ganti Baju tahu baris mana yang ditampilkan dan
 ## warna abaya/jilbab bertahan antar sesi.
@@ -1302,8 +1319,31 @@ func _terapkan_gender_pemain() -> void:
 	var putri := _pemain_adalah_putri()
 	outfit["muslimah"] = putri
 	outfit["hijab"] = putri
+	# SERAGAM UTAMA v2 (Kirana, 19 Nov 2026 — ACC Mas 15:41): kunci
+	# "tunik" selalu ditulis dari gender seperti muslimah/hijab —
+	# bentuk pakaian, bukan warna, jadi tidak menimpa kostum pemain.
+	outfit["tunik"] = putri
+	# Migrasi save lama yang masih seragam lama: koko/sarung masih
+	# nilai default lama + belum ada kunci "sarung_motif" -> ganti ke
+	# seragam baru. Yang sudah dikostum (koko/sarung bukan default)
+	# TIDAK disentuh — warnanya tetap milik pemain. Jilbab hanya
+	# diputihkan bila masih krem default #f2ead6.
+	if not outfit.has("sarung_motif"):
+		var koko_lama := String(outfit.get("koko", ""))
+		var sarung_lama := String(outfit.get("sarung", ""))
+		if koko_lama in ["#faf7f0", "#e8e8e8"] and sarung_lama in ["#0b6b4f", "#008062"]:
+			if putri:
+				outfit["koko"] = "#87ceeb"
+				outfit["sarung"] = "#4a2c17"
+				outfit["sarung_motif"] = "batik"
+			else:
+				outfit["koko"] = "#ffffff"
+				outfit["sarung"] = "#008062"
+				outfit["sarung_motif"] = "garis"
+		if String(outfit.get("hijab_warna", "")) == "#f2ead6":
+			outfit["hijab_warna"] = "#ffffff"
 	_save["outfit"] = outfit
-	if putri != _player.apakah_muslimah():
+	if putri != _player.apakah_muslimah() or putri != _player.apakah_tunik():
 		_player.bangun_ulang_visual(outfit)
 	SantriSave.save_data(_save)
 
@@ -1324,9 +1364,9 @@ func _on_petunjuk_ditutup() -> void:
 
 func _masuk_pesantren(pesan: String) -> void:
 	# KIRANA 17 Nov 2026 (Mas: abaya + jilbab bisa dikostum): visual
-	# pemain mengikuti gender save — santriwati tampil abaya +
-	# jilbab, santriwan tetap koko. Dipanggil di awal sini (sebelum
-	# teleport) karena _ready membangun santriwan dulu.
+	# pemain mengikuti gender save — santriwati tampil tunik + jilbab
+	# (SERAGAM UTAMA v2), santriwan tetap koko. Dipanggil di awal sini
+	# (sebelum teleport) karena _ready membangun santriwan dulu.
 	_terapkan_gender_pemain()
 	# KUALITAS ADAPTIF: mulai probe FPS ~3 detik SETELAH masuk dunia
 	# (fps layar login tidak mewakili dunia). Hanya jalan di mode
@@ -1525,14 +1565,24 @@ func _process(delta: float) -> void:
 	var tidur := _player.aksi_saat_ini() == "tidur"
 	# SINEMATIK: yaw berputar SANGAT pelan (0,05 rad/dtk); mode lain
 	# putar_sinematik mengembalikan yaw apa adanya.
-	_cam_yaw = _kamera.putar_sinematik(delta, _cam_yaw)
-	var spring_target := _kamera.perbarui(delta, _rig, _spring, _cam,
-		_player.global_position, _cam_yaw, _cam_pitch, tidur, di_asrama, di_ruangan)
-	# NAMA DI DRONE (keputusan Mas 13:19): boost skala label nama
-	# diteruskan lewat meta kamera — dibaca Palette tiap frame
-	# (pemain + NPC + ikon misi). Mode lain meta = 1,0 (tak berubah).
-	_cam.set_meta("drone_label_boost", _kamera.pengali_label_drone())
-	_kamera.terapkan_panjang_spring(_spring, _jarak_kamera_aman(spring_target, delta), delta)
+	# RUANG BELAJAR CHAT (§8): adegan belajar aktif — kamera
+	# membingkai ustadz yang duduk, BUKAN pemain (blok kamera
+	# normal di bawah dilewati). Pengaman: panel tertutup tanpa
+	# sinyal (tutup_semua / panel lain dibuka) -> adegan diakhiri
+	# di sini, kamera kembali ke pemain.
+	if _dialog_adegan_aktif and (_manajer_misi == null or _manajer_misi.panel_terbuka() != "ruang_belajar"):
+		_akhiri_adegan_belajar()
+	if _dialog_adegan_aktif:
+		_proses_kamera_dialog(delta)
+	else:
+		_cam_yaw = _kamera.putar_sinematik(delta, _cam_yaw)
+		var spring_target := _kamera.perbarui(delta, _rig, _spring, _cam,
+			_player.global_position, _cam_yaw, _cam_pitch, tidur, di_asrama, di_ruangan)
+		# NAMA DI DRONE (keputusan Mas 13:19): boost skala label nama
+		# diteruskan lewat meta kamera — dibaca Palette tiap frame
+		# (pemain + NPC + ikon misi). Mode lain meta = 1,0 (tak berubah).
+		_cam.set_meta("drone_label_boost", _kamera.pengali_label_drone())
+		_kamera.terapkan_panjang_spring(_spring, _jarak_kamera_aman(spring_target, delta), delta)
 	# RONDE PERBAIKAN (Eka): panjang spring dijaga _jarak_kamera_aman —
 	# kamera tidak boleh terhalang tembok/objek dari pemainnya (lihat
 	# fungsi di bawah). SpringArm3D saja tidak cukup: sinarnya hanya
@@ -3165,13 +3215,15 @@ func _buka_ui_misi_terdekat() -> bool:
 			Onboarding.maju(_save)
 			SantriSave.save_data(_save)
 			_update_hud()
-			_manajer_misi.buka_ruang_belajar(_pengajar_onboarding())
+			_mulai_adegan_belajar()
+			_manajer_misi.buka_ruang_belajar(_pengajar_onboarding(), _save)
 			return true
 		if putri and _dekat_npc(_fatimah):
 			Onboarding.maju(_save)
 			SantriSave.save_data(_save)
 			_update_hud()
-			_manajer_misi.buka_ruang_belajar(_pengajar_onboarding())
+			_mulai_adegan_belajar()
+			_manajer_misi.buka_ruang_belajar(_pengajar_onboarding(), _save)
 			return true
 		# TEKA-TEKI (Raka, 18 Nov 2026): dekat NPC yang bisa ditanya
 		# -> buka layar pilihan tanya (guru didahulukan di atas —
@@ -3186,10 +3238,12 @@ func _buka_ui_misi_terdekat() -> bool:
 	# putri dekat Sanusi" DIHAPUS (perintah Mas 20:30 WIB).
 	if langkah == 5:
 		if not putri and _dekat_npc(_sanusi):
-			_manajer_misi.buka_ruang_belajar(_pengajar_onboarding())
+			_mulai_adegan_belajar()
+			_manajer_misi.buka_ruang_belajar(_pengajar_onboarding(), _save)
 			return true
 		if putri and _dekat_npc(_fatimah):
-			_manajer_misi.buka_ruang_belajar(_pengajar_onboarding())
+			_mulai_adegan_belajar()
+			_manajer_misi.buka_ruang_belajar(_pengajar_onboarding(), _save)
 			return true
 	# Langkah 6: Tes kenaikan — dekat venue tes (Surau putra /
 	# Kantor Ustadzah putri, menunggu butir 19).
@@ -3297,6 +3351,178 @@ func _on_manajer_rb_selesai(poin_total: int) -> void:
 		teks += " Lanjut tes kenaikan di %s." % ("Kantor Ustadzah" if _pemain_adalah_putri() else "Surau")
 	_ui.toast(teks)
 	_update_hud()
+
+
+## ---------- RUANG BELAJAR CHAT — adegan belajar (§8) ----------
+
+## NPC pengajar untuk adegan belajar (Sanusi putra / Fatimah putri).
+func _pengajar_dialog() -> SantriNPC:
+	return _fatimah if _pemain_adalah_putri() else _sanusi
+
+
+## Mulai adegan belajar: ustadz DUDUK menghadap pemain, papan
+## tulis kecil di sampingnya, kamera membingkai beliau, HUD
+## disembunyikan. Dipanggil SEBELUM buka_ruang_belajar().
+func _mulai_adegan_belajar() -> void:
+	var guru := _pengajar_dialog()
+	if guru == null or _player == null:
+		return
+	# Kamera dialog: dari arah pemain, digeser 0,6 rad (tiga
+	# perempat) supaya ustadz tidak tampak datar dari depan.
+	var ke_pemain := _player.global_position - guru.global_position
+	ke_pemain.y = 0.0
+	_dialog_cam_yaw = atan2(ke_pemain.x, ke_pemain.z) + 0.6
+	_dialog_cam_yaw_lama = _cam_yaw
+	_dialog_cam_pitch_lama = _cam_pitch
+	# Ustadz duduk menghadap pemain (pose baca kitab, tanpa pose baru).
+	guru.duduk_belajar(atan2(ke_pemain.x, ke_pemain.z))
+	_buat_papan_belajar()
+	_dialog_adegan_aktif = true
+	_ui.set_hud_visible(false)
+
+
+## Akhiri adegan belajar: ustadz berdiri lagi, papan dihapus,
+## kamera kembali ke pemain (yaw/pitch lama dipulihkan — rig /
+## spring / FOV di-lerp kembali sendiri oleh kamera.perbarui),
+## HUD tampil lagi. Idempotent (pengaman _process + ditutup).
+func _akhiri_adegan_belajar() -> void:
+	if not _dialog_adegan_aktif:
+		return
+	_dialog_adegan_aktif = false
+	var guru := _pengajar_dialog()
+	if guru != null:
+		guru.berdiri_belajar()
+	_hapus_papan_belajar()
+	_cam_yaw = _dialog_cam_yaw_lama
+	_cam_pitch = _dialog_cam_pitch_lama
+	_ui.set_hud_visible(true)
+
+
+## Kamera dialog: membingkai ustadz yang duduk BESAR di kanan
+## layar (offset target ke kiri kamera) + papan tulis di kiri.
+## Jarak + offset menyesuaikan orientasi: portrait (HP Mas)
+## lebih jauh (FOV horizontal sempit) supaya papan muat frame.
+func _proses_kamera_dialog(delta: float) -> void:
+	var guru := _pengajar_dialog()
+	if guru == null:
+		return
+	var vp := get_viewport().get_visible_rect().size
+	var portrait := vp.x < vp.y
+	var jarak := 5.5 if portrait else 3.8
+	var geser_kanan := 0.5 if portrait else 0.8
+	var kiri := Vector3(-cos(_dialog_cam_yaw), 0.0, sin(_dialog_cam_yaw))
+	var target := guru.global_position + Vector3(0, 0.45, 0) + kiri * geser_kanan
+	var k_datar := 1.0 - exp(-8.0 * delta)
+	var k_tegak := 1.0 - exp(-5.0 * delta)
+	var pos := _rig.global_position
+	pos.x = lerpf(pos.x, target.x, k_datar)
+	pos.z = lerpf(pos.z, target.z, k_datar)
+	pos.y = lerpf(pos.y, target.y, k_tegak)
+	_rig.global_position = pos
+	_rig.rotation.y = lerp_angle(_rig.rotation.y, _dialog_cam_yaw, minf(1.0, delta * 6.0))
+	_spring.rotation.x = lerpf(_spring.rotation.x, -0.12, minf(1.0, delta * 6.0))
+	_spring.spring_length = lerpf(_spring.spring_length, jarak, 1.0 - exp(-4.0 * delta))
+
+
+## Buat papan tulis kecil di samping ustadz (kiri layar dari
+## sudut kamera, sedikit ke depan supaya tidak menutupi ustadz).
+func _buat_papan_belajar() -> void:
+	_hapus_papan_belajar()
+	var guru := _pengajar_dialog()
+	if guru == null:
+		return
+	var vp := get_viewport().get_visible_rect().size
+	var jarak_papan := 0.9 if vp.x < vp.y else 1.4
+	var kiri := Vector3(-cos(_dialog_cam_yaw), 0.0, sin(_dialog_cam_yaw))
+	var ke_kamera := Vector3(sin(_dialog_cam_yaw), 0.0, cos(_dialog_cam_yaw))
+	var pos := guru.global_position + kiri * jarak_papan + ke_kamera * 0.2
+	pos.y = guru.global_position.y
+	_papan_belajar = _buat_papan_tulis(pos, _dialog_cam_yaw)
+	add_child(_papan_belajar)
+
+
+## Papan tulis kecil: easel kayu + papan putih 1,3x0,8 m +
+## bingkai emas + Label3D judul/isi (billboard=false — menempel
+## papan seperti papan sungguhan, pola Palette.label3d).
+## Isi v1 = transliterasi/Latin saja (§8). Label menghadap +Z
+## papan (ke arah kamera).
+func _buat_papan_tulis(pos: Vector3, yaw: float) -> Node3D:
+	var papan := Node3D.new()
+	papan.name = "PapanTulisBelajar"
+	papan.position = pos
+	papan.rotation.y = yaw
+	var mat_kayu := StandardMaterial3D.new()
+	mat_kayu.albedo_color = Color("#5a3d24")
+	for sx in [-1.0, 1.0]:
+		var kaki := MeshInstance3D.new()
+		var kotak := BoxMesh.new()
+		kotak.size = Vector3(0.05, 1.15, 0.05)
+		kaki.mesh = kotak
+		kaki.material_override = mat_kayu
+		kaki.position = Vector3(sx * 0.28, 0.55, -0.02)
+		kaki.rotation.z = -sx * 0.18
+		papan.add_child(kaki)
+	var mat_emas := StandardMaterial3D.new()
+	mat_emas.albedo_color = Color("#c9a227")
+	var bingkai := MeshInstance3D.new()
+	var bkotak := BoxMesh.new()
+	bkotak.size = Vector3(1.36, 0.86, 0.03)
+	bingkai.mesh = bkotak
+	bingkai.material_override = mat_emas
+	bingkai.position = Vector3(0, 0.98, -0.01)
+	papan.add_child(bingkai)
+	var mat_putih := StandardMaterial3D.new()
+	mat_putih.albedo_color = Color("#f8f5ee")
+	var putih := MeshInstance3D.new()
+	var pkotak := BoxMesh.new()
+	pkotak.size = Vector3(1.3, 0.8, 0.02)
+	putih.mesh = pkotak
+	putih.material_override = mat_putih
+	putih.position = Vector3(0, 0.98, 0.01)
+	papan.add_child(putih)
+	_papan_judul = Palette.label3d("NAHWU DASAR", Vector3(0, 1.24, 0.035), 16, Color("#043b2c"), false)
+	_papan_judul.pixel_size = 0.005
+	_papan_judul.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	papan.add_child(_papan_judul)
+	_papan_isi = Palette.label3d("Modul 01 — Mengenal Kata", Vector3(0, 1.10, 0.035), 13, Color("#234a3a"), false)
+	_papan_isi.pixel_size = 0.005
+	_papan_isi.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	papan.add_child(_papan_isi)
+	return papan
+
+
+func _hapus_papan_belajar() -> void:
+	if _papan_belajar != null:
+		_papan_belajar.queue_free()
+	_papan_belajar = null
+	_papan_judul = null
+	_papan_isi = null
+
+
+## Isi papan mengikuti pesan (sinyal papan_berubah dari panel).
+func _on_manajer_rb_papan(judul: String, baris: PackedStringArray) -> void:
+	_perbarui_papan_belajar(judul, baris)
+
+
+func _perbarui_papan_belajar(judul: String, baris: PackedStringArray) -> void:
+	if _papan_judul != null:
+		_papan_judul.text = judul
+	if _papan_isi != null:
+		_papan_isi.text = "\n".join(baris)
+
+
+## Dialog belajar ditutup eksplisit (× / "Tutup") -> akhiri adegan.
+func _on_manajer_rb_ditutup() -> void:
+	_akhiri_adegan_belajar()
+
+
+## Titik resume percakapan (sinyal kemajuan_disimpan dari panel)
+## -> kunci save rb_chat_pos + rb_chat_modul (default_data sudah
+## punya keduanya, jadi load_data tidak membuangnya).
+func _on_manajer_rb_kemajuan(pos_id: String, modul: int) -> void:
+	_save["rb_chat_pos"] = pos_id
+	_save["rb_chat_modul"] = modul
+	SantriSave.save_data(_save)
 
 
 ## Tes kenaikan selesai (sinyal dari TesKenaikanUI, mesin diteruskan

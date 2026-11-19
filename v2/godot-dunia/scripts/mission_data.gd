@@ -127,6 +127,8 @@ const SMARTBOARD_VIDEO_URL := ""
 ## ("outfit": {"koko": hex, "songkok": hex, "sarung": hex}).
 const OUTFIT_KOKO: Array[Dictionary] = [
 	{"nama": "Putih", "warna": Color("#faf7f0")},
+	{"nama": "Putih Terang", "warna": Color("#ffffff")},
+	{"nama": "Biru Langit", "warna": Color("#87ceeb")},
 	{"nama": "Krem", "warna": Color("#e8dcc0")},
 	{"nama": "Hijau Muda", "warna": Color("#cfe8d0")},
 	{"nama": "Biru Muda", "warna": Color("#cfe0f0")},
@@ -137,6 +139,8 @@ const OUTFIT_SONGKOK: Array[Dictionary] = [
 ]
 const OUTFIT_SARUNG: Array[Dictionary] = [
 	{"nama": "Zamrud", "warna": Color("#0b6b4f")},
+	{"nama": "Zamrud Terang", "warna": Color("#008062")},
+	{"nama": "Batik Coklat", "warna": Color("#4a2c17")},
 	{"nama": "Biru", "warna": Color("#1d4e6b")},
 	{"nama": "Coklat", "warna": Color("#6b4423")},
 	{"nama": "Hitam", "warna": Color("#2b2b2b")},
@@ -178,7 +182,11 @@ const OUTFIT_KULIT: Array[Dictionary] = [
 ## KARAKTER PRIMITIF (Kirana, 17 Nov 2026 — palet KONSEP-KARAKTER.md):
 ## koko putih #e8e8e8 (dulu #faf7f0), sarung zamrud #008062 (dulu
 ## #0b6b4f), kulit santri #ffc09f (dulu #c68e5e).
-const OUTFIT_DEFAULT := {"koko": "#e8e8e8", "songkok": "#faf7f0", "sarung": "#008062", "kulit": "#ffc09f", "kacamata": false, "abaya": "#065f46", "hijab_warna": "#f2ead6"}
+## SERAGAM UTAMA v2 (Kirana, 19 Nov 2026 — ACC Mas 15:41): koko
+## diputihkan #FFFFFF; sarung putra motif garis kuning ("sarung_motif":
+## "garis" — lihat player.gd _bahan_sarung); jilbab santriwati putih
+## #FFFFFF (bukan krem #f2ead6).
+const OUTFIT_DEFAULT := {"koko": "#ffffff", "songkok": "#faf7f0", "sarung": "#008062", "sarung_motif": "garis", "kulit": "#ffc09f", "kacamata": false, "abaya": "#065f46", "hijab_warna": "#ffffff"}
 ## RONDE 15 (Mas: karakter pemimpin pesantren): outfit Ust. Aqsal
 ## Murad — Pengasuh. Koko KREM + sarung HITAM (gelap, berwibawa);
 ## serban putih krem + jenggot gelap beruban di ujung + kumis tipis.

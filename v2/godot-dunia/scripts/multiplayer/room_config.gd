@@ -92,10 +92,19 @@ static func di_titik_teleport_sah(pos: Vector3) -> bool:
 
 
 ## Outfit spawn dari jenis_kelamin DB (aturan sama dengan main.gd
-## login lokal: OUTFIT_DEFAULT + muslimah/hijab untuk putri).
+## login lokal: OUTFIT_DEFAULT + muslimah/hijab/tunik untuk putri).
 static func outfit_untuk(jenis_kelamin: String) -> Dictionary:
 	var outfit: Dictionary = MissionData.OUTFIT_DEFAULT.duplicate()
 	var putri := jenis_kelamin == "putri"
 	outfit["muslimah"] = putri
 	outfit["hijab"] = putri
+	# SERAGAM UTAMA v2 (Kirana, 19 Nov 2026 — ACC Mas 15:41): putri =
+	# tunik biru langit + sarung batik coklat + jilbab putih; putra
+	# mengikuti OUTFIT_DEFAULT (koko putih + sarung garis kuning).
+	outfit["tunik"] = putri
+	if putri:
+		outfit["koko"] = "#87ceeb"
+		outfit["sarung"] = "#4a2c17"
+		outfit["sarung_motif"] = "batik"
+		outfit["hijab_warna"] = "#ffffff"
 	return outfit

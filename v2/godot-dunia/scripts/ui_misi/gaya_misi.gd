@@ -448,3 +448,53 @@ static func buat_bilah_progres() -> ProgressBar:
 	bar.add_theme_stylebox_override("background", trek)
 	bar.add_theme_stylebox_override("fill", isi)
 	return bar
+
+
+## ---------- GENSHIN — Ruang Belajar chat (Sinta, 19 Nov 2026) ----------
+## Konsep v2/konsep/KONSEP-RUANG-BELAJAR-CHAT-v1.md §7+§8 (ACC Mas):
+## kotak dialog bawah gelap tembus pandang + garis emas tepi atas,
+## nama pembicara emas tebal, gelembung kecil player emas.
+## Panel gradien v1 TIDAK dipakai di tampilan ini. Helper gelembung
+## ustadz (gaya_gelembung_ustadz) DICORET dari scope §7 — ustadz
+## bicara di dalam kotak dialog, bukan gelembung.
+
+## Kotak dialog Genshin: zamrud gelap alpha ~0.92, rim emas 1 px,
+## garis emas 3 px di tepi atas, radius 18.
+static func gaya_kotak_dialog_genshin() -> StyleBoxFlat:
+	var s := StyleBoxFlat.new()
+	var bg := ZAMRUD_GELAP
+	bg.a = 235.0 / 255.0
+	s.bg_color = bg
+	s.border_color = EMAS
+	s.set_border_width_all(1)
+	s.border_width_top = 3
+	s.set_corner_radius_all(18)
+	s.content_margin_left = 20
+	s.content_margin_right = 20
+	s.content_margin_top = 14
+	s.content_margin_bottom = 14
+	return s
+
+
+## Gelembung kecil player: emas isi penuh, radius 16, teks
+## zamrud gelap (dipakai label di dalam gelembung).
+static func gaya_gelembung_pemain() -> StyleBoxFlat:
+	var s := StyleBoxFlat.new()
+	s.bg_color = EMAS
+	s.set_corner_radius_all(16)
+	s.content_margin_left = 16
+	s.content_margin_right = 16
+	s.content_margin_top = 8
+	s.content_margin_bottom = 8
+	return s
+
+
+## Label tebal Baloo 2 Bold (seperti judul tab) — nama pembicara
+## di kotak dialog Genshin. Bila font tebal gagal dimuat, tetap
+## tampil dengan font default proyek.
+static func buat_label_tebal(teks: String, ukuran: int, warna: Color) -> Label:
+	var l := buat_label(teks, ukuran, warna)
+	var tebal := load(_FONT_TEBAL) as Font
+	if tebal != null:
+		l.add_theme_font_override("font", tebal)
+	return l

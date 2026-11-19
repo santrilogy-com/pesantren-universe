@@ -22,6 +22,13 @@ window/size/viewport_width=1280
 window/size/viewport_height=720
 window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
+; SPLASH CUSTOM 19 Nov 2026 (Rangga — ACC Mas 15:01, varian C Karakter):
+; boot splash engine HANYA satu gambar (batas Godot) -> pakai landscape
+; (aspek native game 1280x720), bg zamrud gelap #043B2C. Layar loading web
+; (yang lama terlihat) memilih landscape/portrait sesuai orientasi device
+; lewat stage_v2.py — lihat SPLASH_SCRIPT di sana.
+window/boot_splash/bg_color=Color(0.0157, 0.2314, 0.1725, 1)
+window/boot_splash/image="res://splash/splash_landscape.png"
 
 [gui]
 

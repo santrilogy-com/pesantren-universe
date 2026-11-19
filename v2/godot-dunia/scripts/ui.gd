@@ -2101,10 +2101,15 @@ func _on_outfit_swatch(jenis: String, warna_hex: String) -> void:
 
 func open_outfit(outfit: Dictionary) -> void:
 	# KIRANA 17 Nov 2026 (Mas: abaya + jilbab bisa dikostum):
-	# santriwati melihat baris Abaya + Jilbab (bukan Koko/Songkok/
-	# Sarung); santriwan sebaliknya. Kulit + Kacamata selalu ada.
+	# santriwati abaya melihat baris Abaya + Jilbab (bukan Koko/
+	# Songkok/Sarung); santriwan sebaliknya. Kulit + Kacamata selalu ada.
+	# SERAGAM UTAMA v2: santriwati tunik (baju+sarung) melihat baris
+	# Koko/Sarung/Jilbab — bukan Abaya. Songkok tetap putra saja
+	# (putri memakai jilbab, bukan peci).
 	var muslimah := bool(outfit.get("muslimah", false))
-	var tampil := {"koko": not muslimah, "songkok": not muslimah, "sarung": not muslimah, "abaya": muslimah, "jilbab": muslimah, "kulit": true}
+	var tunik := bool(outfit.get("tunik", false))
+	var pakai_abaya := muslimah and not tunik
+	var tampil := {"koko": not pakai_abaya, "songkok": not muslimah, "sarung": not pakai_abaya, "abaya": pakai_abaya, "jilbab": muslimah, "kulit": true}
 	for jenis in _outfit_baris.keys():
 		(_outfit_baris[jenis] as VBoxContainer).visible = bool(tampil.get(jenis, true))
 	for jenis in ["koko", "songkok", "sarung", "kulit"]:
@@ -2163,6 +2168,13 @@ func show_world() -> void:
 
 func is_world_visible() -> bool:
 	return _hud.visible
+
+
+## Sembunyikan/tampilkan HUD (dipakai adegan belajar Ruang Belajar
+## chat §8 — dunia bersih ala Genshin selama dialog; dim transparan
+## manajer tetap menahan input dunia).
+func set_hud_visible(v: bool) -> void:
+	_hud.visible = v
 
 
 func get_joystick_vector() -> Vector2:

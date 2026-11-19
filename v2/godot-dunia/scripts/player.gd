@@ -264,13 +264,13 @@ func _isi_properti_sync() -> void:
 ## MULTIPLAYER FASE 1 — L4: avatar remote menerapkan outfit yang
 ## diterima dari synchronizer. Hanya dipanggil dari _process bila BUKAN
 ## otoritas dan `outfit` (sync) berbeda dari `_outfit` lokal. Kalau
-## flag muslimah berubah, visual harus DIBANGUN ULANG (abaya/jilbab
-## adalah node berbeda, bukan sekadar warna — lihat
+## flag muslimah/tunik berubah, visual harus DIBANGUN ULANG (abaya/
+## sarung adalah node berbeda, bukan sekadar warna — lihat
 ## bangun_ulang_visual); kalau tidak, cukup warnai ulang di tempat.
 func _terapkan_outfit_sync() -> void:
 	if outfit.is_empty() or outfit == _outfit:
 		return
-	if bool(outfit.get("muslimah", false)) != bool(_outfit.get("muslimah", false)):
+	if bool(outfit.get("muslimah", false)) != bool(_outfit.get("muslimah", false)) or bool(outfit.get("tunik", false)) != bool(_outfit.get("tunik", false)):
 		bangun_ulang_visual(outfit)
 	else:
 		terapkan_outfit(outfit)
@@ -325,6 +325,12 @@ func bangun_ulang_visual(outfit: Dictionary) -> void:
 ## Apakah visual saat ini muslimah (abaya + jilbab)?
 func apakah_muslimah() -> bool:
 	return bool(_outfit.get("muslimah", false))
+
+
+## SERAGAM UTAMA v2: apakah visual saat ini tunik (santriwati
+## baju+sarung, bukan abaya)?
+func apakah_tunik() -> bool:
+	return bool(_outfit.get("tunik", false))
 
 
 ## Membangun visual santri dari primitif. Dipakai pemain dan NPC.
@@ -448,6 +454,78 @@ static func _motif_sarung(warna: Color) -> StandardMaterial3D:
 	m.roughness = 0.45
 	_motif_sarung_cache[key] = m
 	return m
+
+
+# SERAGAM UTAMA v2 (Kirana, 19 Nov 2026 — ACC Mas 15:41): motif sarung
+# dipilih kunci outfit "sarung_motif": "parang" (default, perilaku
+# lama — Kyai/Satpam/sarung lain), "garis" (seragam putra: garis
+# kuning emas vertikal tipis di atas warna dasar), "batik" (seragam
+# putri: tekstur batik coklat PNG impor, warna dasar dibakar di file).
+static func _bahan_sarung(outfit: Dictionary) -> StandardMaterial3D:
+	var warna := Color(String(outfit.get("sarung", "#0b6b4f")))
+	match String(outfit.get("sarung_motif", "parang")):
+		"garis":
+			return _motif_garis_kuning(warna)
+		"batik":
+			return _motif_batik_putri()
+		_:
+			return _motif_sarung(warna)
+
+
+# SERAGAM UTAMA v2 — motif garis kuning (putra): garis VERTIKAL emas
+# #C9A227 lebar 2 px tiap 32 px (periodik 32 px -> menyambung mulus
+# melingkari tabung 256 px = 8 garis) di atas warna dasar sarung.
+# Tipis sampai hampir tidak ketara dari jauh (bukti: mockup detail
+# panel C di KONSEP-SERAGAM-UTAMA-v1.md). Cache per warna.
+static var _motif_garis_cache: Dictionary = {}
+
+
+static func _motif_garis_kuning(warna: Color) -> StandardMaterial3D:
+	var key := "garis:" + warna.to_html()
+	if _motif_garis_cache.has(key):
+		return _motif_garis_cache[key]
+	var img := Image.create(256, 128, false, Image.FORMAT_RGBA8)
+	var emas := Color("#c9a227")
+	for y in range(128):
+		for x in range(256):
+			var d := fmod(float(x), 32.0)
+			img.set_pixel(x, y, emas if d < 2.0 else warna)
+	var tex := ImageTexture.create_from_image(img)
+	var m := StandardMaterial3D.new()
+	m.albedo_texture = tex
+	m.roughness = 0.45
+	_motif_garis_cache[key] = m
+	return m
+
+
+# SERAGAM UTAMA v2 — motif batik putri (coklat sogan): tekstur PNG
+# impor (models/batik_putri_coklat.png, 512x256, 1.066 byte, palet
+# 5 warna, periodik 64 px). Satu material untuk semua santriwati.
+# Gagal muat -> jatuh ke parang coklat supaya sarung tetap batik.
+static var _motif_batik_cache: StandardMaterial3D = null
+
+
+static func _motif_batik_putri() -> StandardMaterial3D:
+	if _motif_batik_cache != null:
+		return _motif_batik_cache
+	var tex := load("res://models/batik_putri_coklat.png") as Texture2D
+	if tex == null:
+		_motif_batik_cache = _motif_sarung(Color("#4a2c17"))
+		return _motif_batik_cache
+	var m := StandardMaterial3D.new()
+	m.albedo_texture = tex
+	m.roughness = 0.45
+	_motif_batik_cache = m
+	return m
+
+
+# SERAGAM UTAMA v2 — hem sarung mengikuti motif: batik memakai dasar
+# coklat tekstur (#4A2C17), bukan warna kunci "sarung" (tekstur PNG
+# tidak memakai kunci itu; hem warna lain akan belang dengan badan).
+static func _hem_sarung_warna(outfit: Dictionary) -> Color:
+	if String(outfit.get("sarung_motif", "parang")) == "batik":
+		return Color("#4a2c17")
+	return Color(String(outfit.get("sarung", "#0b6b4f")))
 
 
 # BAHAN KAIN (Kirana, 17 Nov 2026 — ronde karakter primitif):
@@ -786,12 +864,20 @@ static func build_visual(nama: String, outfit: Dictionary) -> Dictionary:
 	# SUSULAN RONDE 20 (Mas 19:42 WIB: kostum Ustadzah "malah kek
 	# ustadz"): "muslimah" = abaya + jilbab (Ustadzah Mariyah sekarang;
 	# konstruksinya nanti dipakai ulang untuk karakter santriwati).
+	# SERAGAM UTAMA v2 (Kirana, 19 Nov 2026 — ACC Mas 15:41): santriwati
+	# TIDAK lagi abaya — "tunik" = muslimah berbaju+sarung (tunik biru
+	# langit + sarung batik coklat + jilbab putih). Abaya tetap untuk
+	# Ustadzah Mariyah / Penjaga Pos Jaga (muslimah tanpa tunik).
 	var muslimah: bool = bool(outfit.get("muslimah", false))
+	var tunik: bool = bool(outfit.get("tunik", false))
+	var pakai_abaya: bool = muslimah and not tunik
 	var warna_abaya: Color = Color(String(outfit.get("abaya", "#065f46")))
 	# KIRANA 17 Nov 2026 (Mas: abaya bisa dikostum): untuk muslimah,
 	# torso + lengan sewarna abaya (bukan koko) — sama seperti
 	# Ustadzah (koko-nya = warna abaya). Santriwan tidak berubah.
-	var warna_baju: Color = warna_abaya if muslimah else koko
+	# SERAGAM UTAMA v2: tunik memakai warna koko (biru langit),
+	# bukan abaya — walau muslimah.
+	var warna_baju: Color = koko if (not muslimah or tunik) else warna_abaya
 	var root := Node3D.new()
 	root.name = "Visual"
 
@@ -815,7 +901,7 @@ static func build_visual(nama: String, outfit: Dictionary) -> Dictionary:
 	# Nama "KakiKiri/KakiKanan" dipertahankan di BETIS (kulit) supaya
 	# loop warna kulit RONDE 11 tetap menemukannya; paha memakai warna
 	# sarung/abaya supaya kalau mengintip dari balik sarung tetap nyatu.
-	var warna_paha: Color = warna_abaya if muslimah else sarung_color
+	var warna_paha: Color = warna_abaya if pakai_abaya else sarung_color
 	var leg_l := Node3D.new()
 	leg_l.position = Vector3(-0.11, 0.62, 0)
 	var paha_l := Palette.capsule(0.085, 0.30, Vector3(0, -0.15, 0), warna_paha)
@@ -864,13 +950,13 @@ static func build_visual(nama: String, outfit: Dictionary) -> Dictionary:
 
 	# Pakaian bawah — dua bentuk, SATU slot ("sarung" di dictionary,
 	# supaya _lerp_pakaian / _terapkan_pakaian NPC tetap jalan):
-	# muslimah = ABAYA (satu gamis panjang longgar bahu -> mata kaki,
+	# pakai_abaya = ABAYA (satu gamis panjang longgar bahu -> mata kaki,
 	# tanpa motif batik, tanpa sarung terpisah); yang lain = sarung.
 	var sarung: MeshInstance3D = null
 	var hem: MeshInstance3D = null
 	var sarung_trim: MeshInstance3D = null
 	var abaya: MeshInstance3D = null
-	if muslimah:
+	if pakai_abaya:
 		# ABAYA (SUSULAN RONDE 20, Mas 19:42 WIB): tabung meruncing
 		# atas r=0.23 (bahu) -> bawah r=0.36 (hem lebar), tinggi
 		# 1.32, pusat y=0.76 — bawah di y=0.10 (mata kaki, sama
@@ -896,11 +982,13 @@ static func build_visual(nama: String, outfit: Dictionary) -> Dictionary:
 		# Sarung SAMPAI MATA KAKI (RONDE 6): tabung zamrud tinggi 0.80,
 		# pusat y=0.50 — bawah di y=0.10 (pergelangan kaki), atas di y=0.90
 		# (menutupi pinggang). Hem membulat + lis emas mengikuti bawah.
+		# SERAGAM UTAMA v2: motif dari kunci "sarung_motif" (garis/batik/
+		# parang) + hem mengikuti motif — lihat _bahan_sarung().
 		sarung = Palette.cylinder(0.20, 0.29, 0.80, Vector3(0, 0.50, 0), sarung_color)
-		sarung.material_override = _motif_sarung(sarung_color)
+		sarung.material_override = _bahan_sarung(outfit)
 		sarung.name = "Sarung"
 		root.add_child(sarung)
-		hem = Palette.sphere(0.29, Vector3(0, 0.12, 0), sarung_color)
+		hem = Palette.sphere(0.29, Vector3(0, 0.12, 0), _hem_sarung_warna(outfit))
 		hem.scale = Vector3(1.0, 0.25, 1.0)
 		hem.name = "SarungHem"
 		root.add_child(hem)
@@ -1426,6 +1514,9 @@ static func build_visual(nama: String, outfit: Dictionary) -> Dictionary:
 		# untuk yang lain) — untuk tes + pemakaian ulang santriwati.
 		"abaya": abaya,
 		"muslimah": muslimah,
+		# SERAGAM UTAMA v2: flag tunik (santriwati baju+sarung, bukan
+		# abaya) — untuk tes + pemetaan PAKAIAN NPC + sinkron MP.
+		"tunik": tunik,
 		# KARAKTER PRIMITIF: node lencana satpam (null untuk yang lain).
 		"lencana": lencana,
 	}
@@ -1528,9 +1619,11 @@ func terapkan_outfit(outfit: Dictionary) -> void:
 	# KIRANA 17 Nov 2026 (Mas: abaya + jilbab bisa dikostum): untuk
 	# muslimah, torso + lengan sewarna abaya (bukan koko) — sama
 	# seperti build_visual. Kerah tidak ada pada muslimah.
+	# SERAGAM UTAMA v2: tunik memakai warna koko (biru langit).
 	var muslimah: bool = bool(outfit.get("muslimah", false))
+	var tunik: bool = bool(outfit.get("tunik", false))
 	var warna_abaya: Color = Color(String(outfit.get("abaya", "#065f46")))
-	var warna_baju: Color = warna_abaya if muslimah else koko
+	var warna_baju: Color = koko if (not muslimah or tunik) else warna_abaya
 	# RONDE 11: cari node REKURSIF (find_child), bukan get_node_or_null
 	# — dulu "BahuKiri"/"LenganAtasKiri" dll TIDAK PERNAH ketemu karena
 	# mereka anak dari pivot lengan (bukan anak langsung visual), jadi
@@ -1557,10 +1650,11 @@ func terapkan_outfit(outfit: Dictionary) -> void:
 		(peci_band as MeshInstance3D).material_override = Palette.mat(warna_lis, 0.0, 0.45)
 	var sarung := _visual.find_child("Sarung", true, false)
 	if sarung is MeshInstance3D:
-		(sarung as MeshInstance3D).material_override = _motif_sarung(sarung_color)
+		# SERAGAM UTAMA v2: motif dari kunci "sarung_motif".
+		(sarung as MeshInstance3D).material_override = _bahan_sarung(outfit)
 	var hem := _visual.find_child("SarungHem", true, false)
 	if hem is MeshInstance3D:
-		(hem as MeshInstance3D).material_override = Palette.mat(sarung_color, 0.0, 0.45)
+		(hem as MeshInstance3D).material_override = Palette.mat(_hem_sarung_warna(outfit), 0.0, 0.45)
 	# RONDE 11: warna kulit — kepala + hidung + tangan + kaki.
 	var kulit: Color = Color(String(outfit.get("kulit", "#c68e5e")))
 	for nama_kulit in ["Kepala", "Hidung", "TanganKiri", "TanganKanan", "KakiKiri", "KakiKanan"]:
