@@ -1,11 +1,12 @@
 extends Node
 ## Foto Kantor Putra SEMENTARA (Gilang, 19 Nov 2026 — perintah Mas
-## 18:09 WIB "Bikin kantor putra sementara").
+## 18:09 WIB "Bikin kantor putra sementara"; PINDAH 18:40 WIB
+## "taruh di sebelah asrama tapi agak jauh" ke (-18,22.5)).
 ## 4 tangkapan, pola foto_npc_20.gd (main.tscn asli + kamera lepas):
-##   1 kantor dari plaza (plakat KANTOR + Surau di samping),
-##   2 kantor dekat (plakat + pintu jati),
+##   1 kantor + Asrama dari tenggara (celah 4 m kelihatan),
+##   2 kantor dekat dari utara (plakat + pintu jati menghadap Asrama),
 ##   3 panel Tes Kenaikan TERBUKA lewat jalur asli langkah 6
-##      (pemain di venue (-11,0) -> _buka_ui_misi_terdekat()),
+##      (pemain di venue (-18,18.5) -> _buka_ui_misi_terdekat()),
 ##   4 panel misi (baris N1.T "Tes Naik Bagian 2 — Kantor").
 ## Dijalankan di Xvfb display SEGAR:
 ##   Xvfb :93 -screen 0 1280x720x24 &
@@ -65,27 +66,36 @@ func _ready() -> void:
 	_cam.current = true
 
 	# ---------- 1+2 — kantor dari luar (HUD sembunyi) ----------
+	# 1: dari tenggara — kantor di depan, Asrama di belakang,
+	# celah 4 m (z 16..20) kelihatan di antara keduanya.
 	_main._ui.set_hud_visible(false)
-	await _bidik(Vector3(-2, 5, 14), Vector3(-11, 1.5, -4))
-	await _foto("kantor-putra-plaza.png")
-	await _bidik(Vector3(-8, 2.5, 6), Vector3(-11, 2.2, -2))
-	await _foto("kantor-putra-dekat.png")
+	await _bidik(Vector3(-6, 6, 30), Vector3(-22, 1.5, 14))
+	await _foto("kantor-putra-asrama-plaza.png")
+	# 2: dari utara-timur, DI DALAM celah (z 16..20) — kamera di
+	# (-13,17) menatap fasad utara (pintu + plakat menghadap Asrama).
+	# (KOREKSI: kamera lama (-18,12) ternyata DI DALAM Asrama —
+	# tapak asrama z 4..16 — fotonya cuma dinding.)
+	await _bidik(Vector3(-13, 3, 17), Vector3(-18, 2, 22))
+	await _foto("kantor-putra-asrama-dekat.png")
 
 	# ---------- 3 — tes terbuka lewat jalur asli langkah 6 ----------
-	# Pemain diteleport ke venue baru (-11,0) lalu tombol aksi
+	# Pemain diteleport ke venue baru (-18,18.5) lalu tombol aksi
 	# ditekan lewat _buka_ui_misi_terdekat() — persis jalur game.
 	var venue: Vector3 = Onboarding.venue_tes("putra")
-	print("FOTO-CEK venue_tes putra = %s (harap (-11, 0, 0))" % str(venue))
+	print("FOTO-CEK venue_tes putra = %s (harap (-18, 0, 18.5))" % str(venue))
 	_main._teleport_player(venue, 0.0)
 	await _tunggu(1.0)
 	var jarak: float = _main._player.global_position.distance_to(venue)
 	print("FOTO-CEK jarak pemain->venue = %.2f (batas 3,5)" % jarak)
 	_main._ui.set_hud_visible(true)
-	await _bidik(Vector3(-11, 2.5, 8), Vector3(-11, 1.5, -4))
+	# KOREKSI: kamera lama (-18,10) DI DALAM Asrama (z 4..16) —
+	# latar panel jadi dinding gelap. Kamera baru di celah, diagonal
+	# dari timur-laut: pemain + pintu kantor di balik panel.
+	await _bidik(Vector3(-14.5, 2.5, 16.8), Vector3(-18, 1.5, 22.5))
 	var dibuka: bool = _main._buka_ui_misi_terdekat()
 	await _tunggu(1.0)
 	print("FOTO-CEK _buka_ui_misi_terdekat() = %s, panel='%s' (harap true/tes)" % [str(dibuka), _main._manajer_misi.panel_terbuka()])
-	await _foto("kantor-putra-tes.png")
+	await _foto("kantor-putra-asrama-tes.png")
 	_main._manajer_misi.tutup_semua()
 	await _tunggu(0.5)
 
@@ -97,6 +107,6 @@ func _ready() -> void:
 	print("FOTO-CEK panel misi terbuka='%s' (harap panel_misi)" % _main._manajer_misi.panel_terbuka())
 	_main._manajer_misi._panel_misi._gulung.scroll_vertical = 10000
 	await _tunggu(0.5)
-	await _foto("kantor-putra-panelmisi.png")
+	await _foto("kantor-putra-asrama-panelmisi.png")
 	print("FOTO-SELESAI")
 	get_tree().quit()

@@ -19,9 +19,11 @@ const TAPAK := {
 	"Surau": [Vector2(-8, -24), Vector2(8, -4)],
 	"Cangkruk": [Vector2(-27, -22), Vector2(-17, -14)],
 	"AsramaPutra": [Vector2(-33.25, 4), Vector2(-14.75, 16)],
-	# 19 Nov (Gilang): Kantor Putra SEMENTARA (-11,-4), 6x5 m —
-	# salinan di skrip/test_npc_tembus.gd CANGKANG ikut diubah.
-	"KantorPutra": [Vector2(-14, -6.5), Vector2(-8, -1.5)],
+	# 19 Nov (Gilang): Kantor Putra SEMENTARA — PINDAH 18:40 WIB
+	# (perintah Mas "sebelah asrama tapi agak jauh"): (-18,22.5),
+	# 6x5 m, celah 4 m dari dinding selatan Asrama Putra.
+	# Salinan di skrip/test_npc_tembus.gd CANGKANG ikut diubah.
+	"KantorPutra": [Vector2(-21, 20), Vector2(-15, 25)],
 	"Musholla": [Vector2(128, -29), Vector2(140, -19)],
 	"AsramaPutri": [Vector2(146, 3), Vector2(164, 15)],
 }

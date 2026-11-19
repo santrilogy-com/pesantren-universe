@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>Konsep Panel Misi v2 — Pesantren Universe</title>
+<style>
+  @page { size: 1280px 720px; margin: 0; }
+  @font-face {
+    font-family: 'Baloo 2';
+    src: url('file:///home/hatch/workspace/pesantren-verse/v2/godot-dunia/fonts/Baloo2-Variable.ttf') format('truetype');
+    font-weight: 400 800;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1280px; height: 720px; overflow: hidden; }
+  body {
+    font-family: 'Baloo 2', sans-serif;
+    background: #04150f;
+    position: relative;
+  }
+  /* Latar: foto game asli, sudah diburam + digelapkan (PIL) */
+  .latar {
+    position: absolute; inset: 0;
+    background: url('file:///home/hatch/workspace/pesantren-verse/v2/konsep/konsep-panel-misi-v2-latar.png') center / cover no-repeat;
+  }
+  /* ---------- PANEL v2 ---------- */
+  .panel {
+    position: absolute;
+    left: 300px; top: 10px;
+    width: 680px; height: 700px;
+    border-radius: 26px;
+    background: linear-gradient(180deg, #145c49 0%, #0d4032 45%, #082e24 100%);
+    border: 1.5px solid rgba(232, 196, 90, 0.85);
+    box-shadow:
+      0 28px 70px rgba(0, 0, 0, 0.60),
+      0 6px 18px rgba(0, 0, 0, 0.40),
+      inset 0 1px 0 rgba(255, 255, 255, 0.10),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.25);
+    padding: 12px 20px 58px;
+    display: flex; flex-direction: column;
+    color: #f2ead6;
+  }
+  /* Tab judul emas bergradien */
+  .tab-wrap { display: flex; justify-content: center; margin-bottom: 10px; }
+  .tab {
+    background: linear-gradient(180deg, #f2c14e 0%, #e8c45a 45%, #c9a227 100%);
+    color: #043b2c;
+    font-weight: 800; font-size: 24px;
+    padding: 6px 34px 8px;
+    border-radius: 999px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.55), inset 0 -2px 0 rgba(0, 0, 0, 0.12);
+    letter-spacing: 0.2px;
+  }
+  .label-seksi {
+    font-size: 13px; font-weight: 700;
+    letter-spacing: 2.5px;
+    color: #e8c45a;
+    margin: 0 4px 7px;
+  }
+  /* ---------- Kartu baris misi ---------- */
+  .baris {
+    display: flex; align-items: center; gap: 12px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.02) 100%);
+    background-color: #0a2f26;
+    border: 1px solid rgba(242, 234, 214, 0.16);
+    border-radius: 16px;
+    padding: 5px 16px;
+    margin-bottom: 6px;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  }
+  .baris.terkunci { opacity: 0.92; background-color: #092a22; }
+  .baris.aktif {
+    background: linear-gradient(180deg, #155c47 0%, #0e4436 100%);
+    border: 1.5px solid rgba(232, 196, 90, 0.9);
+    box-shadow: 0 0 0 1px rgba(232, 196, 90, 0.25), 0 6px 18px rgba(201, 162, 39, 0.20), 0 3px 10px rgba(0, 0, 0, 0.30);
+  }
+  .ikon { width: 22px; height: 22px; flex: none; display: flex; align-items: center; justify-content: center; }
+  .ikon svg { width: 22px; height: 22px; }
+  .id { color: #e8c45a; font-weight: 700; font-size: 18px; flex: none; }
+  .judul { flex: 1; font-size: 18px; font-weight: 600; color: #f2ead6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .terkunci .judul { color: #c9c2ae; font-weight: 500; }
+  .badge-aktif {
+    flex: none;
+    background: linear-gradient(180deg, #f2c14e 0%, #c9a227 100%);
+    color: #043b2c;
+    font-size: 12px; font-weight: 800; letter-spacing: 1.2px;
+    padding: 4px 11px 5px;
+    border-radius: 999px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  }
+  .poin { flex: none; font-size: 16px; color: #c9c2ae; font-weight: 600; }
+  .baris.aktif .poin { color: #f2ead6; }
+  /* ---------- Kartu isi ---------- */
+  .kartu {
+    background: linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.015) 100%);
+    background-color: #0a2f26;
+    border: 1px solid rgba(242, 234, 214, 0.16);
+    border-radius: 16px;
+    padding: 10px 16px 11px;
+    margin-bottom: 6px;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  }
+  .kartu h3 { color: #e8c45a; font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+  .kartu p { font-size: 16px; color: #f2ead6; line-height: 1.45; font-weight: 500; }
+  .kartu .status { font-size: 16px; color: #f2ead6; margin-top: 3px; font-weight: 600; }
+  .kartu .status .dot { color: #e8c45a; }
+  .kartu.redup h3, .kartu.redup p { color: #c9c2ae; }
+  .kartu.redup h3 { display: flex; align-items: center; gap: 9px; }
+  .pola {
+    text-align: center;
+    font-size: 14px; color: #c9c2ae;
+    letter-spacing: 0.3px;
+    margin: 0 0 6px;
+  }
+  .pola b { color: #e8c45a; font-weight: 700; }
+  /* ---------- Footer ---------- */
+  .pengisi { flex: 1; }
+  .kaki {
+    position: absolute; left: 20px; right: 20px; bottom: 10px;
+    padding-top: 9px;
+    border-top: 1px solid rgba(232, 196, 90, 0.28);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .kaki .info { font-size: 15px; color: #c9c2ae; font-weight: 500; }
+  .tombol-tutup {
+    display: flex; align-items: center; gap: 8px;
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(242, 234, 214, 0.30);
+    border-radius: 12px;
+    padding: 7px 15px 8px;
+    color: #f2ead6; font-size: 16px; font-weight: 600;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  }
+  .tombol-tutup svg { width: 16px; height: 16px; }
+</style>
+</head>
+<body>
+  <div class="latar"></div>
+
+  <div class="panel">
+    <div class="tab-wrap"><div class="tab">Panel Misi</div></div>
+
+    <div class="label-seksi">MISI BAGIAN 1</div>
+
+    <div class="baris aktif">
+      <span class="ikon"><svg viewBox="0 0 24 24"><path d="M8 4.5 L20 12 L8 19.5 Z" fill="#e8c45a"/></svg></span>
+      <span class="id">N1.2</span>
+      <span class="judul">Isim</span>
+      <span class="badge-aktif">AKTIF</span>
+      <span class="poin">+10 poin</span>
+    </div>
+
+    <div class="baris terkunci">
+      <span class="ikon"><svg viewBox="0 0 24 24" fill="none" stroke="#e8c45a" stroke-width="2" stroke-linecap="round"><rect x="6" y="10.5" width="12" height="9" rx="2" fill="#e8c45a" stroke="none"/><path d="M8.5 10.5 V7.5 a3.5 3.5 0 0 1 7 0 v3"/></svg></span>
+      <span class="id">N1.3</span>
+      <span class="judul">Fi&rsquo;il</span>
+      <span class="poin">+10 poin</span>
+    </div>
+
+    <div class="baris terkunci">
+      <span class="ikon"><svg viewBox="0 0 24 24" fill="none" stroke="#e8c45a" stroke-width="2" stroke-linecap="round"><rect x="6" y="10.5" width="12" height="9" rx="2" fill="#e8c45a" stroke="none"/><path d="M8.5 10.5 V7.5 a3.5 3.5 0 0 1 7 0 v3"/></svg></span>
+      <span class="id">N1.4</span>
+      <span class="judul">Huruf &mdash; Ust. Sanusi</span>
+      <span class="poin">+10 poin</span>
+    </div>
+
+    <div class="baris terkunci">
+      <span class="ikon"><svg viewBox="0 0 24 24" fill="none" stroke="#e8c45a" stroke-width="2" stroke-linecap="round"><rect x="6" y="10.5" width="12" height="9" rx="2" fill="#e8c45a" stroke="none"/><path d="M8.5 10.5 V7.5 a3.5 3.5 0 0 1 7 0 v3"/></svg></span>
+      <span class="id">N1.5</span>
+      <span class="judul">Latihan mabni / mu&rsquo;rob</span>
+      <span class="poin">+15 poin</span>
+    </div>
+
+    <div class="baris terkunci">
+      <span class="ikon"><svg viewBox="0 0 24 24" fill="none" stroke="#e8c45a" stroke-width="2" stroke-linecap="round"><rect x="6" y="10.5" width="12" height="9" rx="2" fill="#e8c45a" stroke="none"/><path d="M8.5 10.5 V7.5 a3.5 3.5 0 0 1 7 0 v3"/></svg></span>
+      <span class="id">N1.6</span>
+      <span class="judul">Hafalan bait</span>
+      <span class="poin">+10 poin</span>
+    </div>
+
+    <div class="baris terkunci">
+      <span class="ikon"><svg viewBox="0 0 24 24" fill="none" stroke="#e8c45a" stroke-width="2" stroke-linecap="round"><rect x="6" y="10.5" width="12" height="9" rx="2" fill="#e8c45a" stroke="none"/><path d="M8.5 10.5 V7.5 a3.5 3.5 0 0 1 7 0 v3"/></svg></span>
+      <span class="id">N1.7</span>
+      <span class="judul">Peti Hijau</span>
+      <span class="poin">+25 poin</span>
+    </div>
+
+    <div class="baris terkunci">
+      <span class="ikon"><svg viewBox="0 0 24 24" fill="none" stroke="#e8c45a" stroke-width="2" stroke-linecap="round"><rect x="6" y="10.5" width="12" height="9" rx="2" fill="#e8c45a" stroke="none"/><path d="M8.5 10.5 V7.5 a3.5 3.5 0 0 1 7 0 v3"/></svg></span>
+      <span class="id">N1.T</span>
+      <span class="judul">Tes Naik Bagian 2 &mdash; Kantor</span>
+      <span class="poin">+20 poin</span>
+    </div>
+
+    <div class="kartu">
+      <h3>Tugas dari Ustadz (N1.3)</h3>
+      <p>Hafal bait + baca 1 bab di rak kitab</p>
+      <div class="status">Belum selesai <span class="dot">&bull;</span> +5 poin</div>
+    </div>
+
+    <div class="pola">Pola misi: cari Ustadz <b>&rsaquo;</b> belajar <b>&rsaquo;</b> tugas dari Ustadz</div>
+
+    <div class="kartu redup">
+      <h3><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#c9c2ae" stroke-width="2" stroke-linecap="round" style="flex:none"><rect x="6" y="10.5" width="12" height="9" rx="2" fill="#c9c2ae" stroke="none"/><path d="M8.5 10.5 V7.5 a3.5 3.5 0 0 1 7 0 v3"/></svg>Bagian 2 (Biru) &mdash; Isim Lebih Dalam</h3>
+      <p>Terbuka setelah lulus N1.T &bull; 100 poin</p>
+    </div>
+
+    <div class="pengisi"></div>
+    <div class="kaki">
+      <span class="info">Bagian 1 dari 4 &bull; Nahwu Dasar</span>
+      <span class="tombol-tutup"><svg viewBox="0 0 24 24" fill="none" stroke="#f2ead6" stroke-width="2.6" stroke-linecap="round"><path d="M5 5 L19 19 M19 5 L5 19"/></svg>Tutup</span>
+    </div>
+  </div>
+</body>
+</html>

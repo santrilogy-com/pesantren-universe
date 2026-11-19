@@ -39,7 +39,11 @@ class_name Onboarding
 ##     19 Nov 2026 (Gilang, perintah Mas 18:09 WIB "Bikin kantor
 ##     putra sementara"): Kantor Putra SEMENTARA dibangun di
 ##     (-11,-4) (pesantren_builder.gd) — venue putra PINDAH ke
-##     depan pintunya (-11,0). Putri TETAP Kantor Ustadzah (148,-33).
+##     depan pintunya (-11,0). PINDAH LAGI 18:40 WIB (perintah Mas
+##     "Kantor taruh di sebelah asrama tapi agak jauh"): kantor ke
+##     selatan Asrama Putra (-18,22.5), celah 4 m — venue putra
+##     PINDAH ke depan pintu utara (-18,18.5). Putri TETAP Kantor
+##     Ustadzah (148,-33).
 ##     (Koreksi gelombang 2, Raka: (150,−28) SALAH — yang benar
 ##     (148,−33) sesuai kampus_putri.gd KANTOR_USTADZAH_POS dan
 ##     KONSEP-TATA-LETAK.md relokasi U3; draf §6.1 + §9 butir 19
@@ -175,14 +179,16 @@ const OUTFIT_SANUSI := {
 
 ## Venue tes kenaikan — titik di DEPAN pintu gedung (pemain harus
 ## bisa berdiri di sana; jarak interaksi 3,5 m).
-##   putra: depan pintu Kantor Putra SEMENTARA (-11,0) — 19 Nov 2026
-##     (Gilang, perintah Mas 18:09 WIB). Venue LAMA (0,−14, tengah
+##   putra: depan pintu Kantor Putra SEMENTARA (-18,18.5) — 19 Nov 2026
+##     (Gilang, perintah Mas 18:40 WIB "taruh di sebelah asrama tapi
+##     agak jauh": pindah dari (-11,-4) ke selatan Asrama Putra,
+##     celah 4 m dari dinding selatan asrama). Venue LAMA (0,−14, tengah
 ##     Surau) TIDAK TERJANGKAU pemain: dinding Surau bercollision,
 ##     titik terdekat dari luar 8 m > 3,5 m — tes putra tidak bisa
 ##     dibuka dari dunia sebelum pindah ini.
 ##   putri: Kantor Ustadzah (148,−33) — titik tengah gedung; pemain
 ##     bisa berdiri di dinding utara/selatan (3,0 m < 3,5 m).
-const VENUE_TES_PUTRA := Vector3(-11, 0, 0)
+const VENUE_TES_PUTRA := Vector3(-18, 0, 18.5)
 const VENUE_TES_PUTRI := Vector3(148, 0, -33)
 
 

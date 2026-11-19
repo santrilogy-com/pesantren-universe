@@ -126,9 +126,9 @@ const CANGKRUK_EXIT := Vector3(-22, 0, -12.5)
 ## Pintu di (-11,-1,5); keluar/venue tes di (-11,0) — 1,5 m di
 ## selatan pintu, di atas jalan E-W (lihat Onboarding.VENUE_TES_PUTRA).
 ## Interior TIDAK ada — tes dibuka dari luar (langkah 6 main.gd).
-const KANTOR_PUTRA_POS := Vector3(-11, 0, -4)
-const KANTOR_PUTRA_DOOR := Vector3(-11, 0, -1.5)
-const KANTOR_PUTRA_EXIT := Vector3(-11, 0, 0)
+const KANTOR_PUTRA_POS := Vector3(-18, 0, 22.5)
+const KANTOR_PUTRA_DOOR := Vector3(-18, 0, 20)
+const KANTOR_PUTRA_EXIT := Vector3(-18, 0, 18.5)
 
 ## --- RONDE 20: Musholla Ar-Raudhah (putri, terpisah) ---
 ## Plot (18,-24), eksterior 10x8 m (sedikit lebih kecil dari Surau
@@ -1212,17 +1212,23 @@ static func _cangkruk(root: Node3D) -> void:
 
 ## Kantor Putra SEMENTARA (Gilang, 19 Nov 2026 — perintah Mas
 ## 18:09 WIB "Bikin kantor putra sementara").
+## PINDAH 18:40 WIB (perintah Mas "Kantor taruh di sebelah asrama
+## tapi agak jauh"): dari (-11,-4) barat Surau ke SELATAN Asrama
+## Putra (-18,22.5) — celah 4 m dari dinding selatan asrama
+## (z=16); barat: pohon (-24,22) 3 m; timur: koridor NPC x=-10
+## 5 m; selatan: jalan ke sawah z=30 5 m. Tapak Wudhu rencana
+## (-16,-8) kini BEBAS (posisi lama menumpang sudutnya).
 ## Pola _gedung KampusPutri (Kantor Ustadzah) dipakai ulang persis:
 ## dinding krem + collision penuh, atap datar zamrud + lis emas,
 ## jendela bingkai emas, plakat "KANTOR" font 32 di atas pintu,
 ## daun pintu jati TERTUTUP (masuk tetap teleport — di sini TIDAK
 ## ADA interior; tes dibuka dari luar, venue = titik keluar).
-## Ukuran 6x5 m, tinggi 3,4, pintu SELATAN (menghadap plaza).
+## Ukuran 6x5 m, tinggi 3,4, pintu UTARA (menghadap Asrama).
 ## Tapak di npc.gd TAPAK + skrip/test_npc_tembus.gd CANGKANG ikut
 ## ditambah ("KantorPutra") supaya segmen NPC divalidasi menghindar.
 static func _kantor_putra(root: Node3D) -> Dictionary:
-	var pintu: Vector3 = KampusPutri._gedung(root, "KantorPutra", KANTOR_PUTRA_POS.x, KANTOR_PUTRA_POS.z, 6.0, 5.0, 3.4, "S", "KANTOR")
-	KampusPutri._daun_pintu(root, "PintuKantorPutra", pintu, "S")
+	var pintu: Vector3 = KampusPutri._gedung(root, "KantorPutra", KANTOR_PUTRA_POS.x, KANTOR_PUTRA_POS.z, 6.0, 5.0, 3.4, "N", "KANTOR")
+	KampusPutri._daun_pintu(root, "PintuKantorPutra", pintu, "N")
 	return {
 		"kantor_putra_door": pintu,
 		"kantor_putra_exit": KANTOR_PUTRA_EXIT,
