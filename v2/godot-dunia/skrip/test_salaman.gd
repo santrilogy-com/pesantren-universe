@@ -117,6 +117,7 @@ func _ready() -> void:
 		duduk_npc.set("_aktivitas", "duduk")
 		duduk_npc.set("_aktivitas_timer", 60.0)
 		duduk_npc.set("_aktivitas_kursi", {"id": "tes-salaman", "pos": kursi_pos, "yaw": 1.0})
+		duduk_npc.set("_aktivitas_yaw", 1.0)
 		duduk_npc.set("_aktivitas_rute", [])
 		duduk_npc.set("_aktivitas_rute_idx", 0)
 		await _tunggu(0.5)
@@ -135,7 +136,8 @@ func _ready() -> void:
 	# ---------- FASE 4: tolak saat sholat ----------
 	print("SALAMAN: === FASE 4 tolak sholat ===")
 	var sholat_npc: Node = _npc_sistem_baru()[0]
-	sholat_npc.mulai_rute([(sholat_npc.global_position as Vector3)])
+	var rute_sholat: Array[Vector3] = [(sholat_npc.global_position as Vector3)]
+	sholat_npc.mulai_rute(rute_sholat)
 	_cek("f4: terima_salaman ditolak saat sholat", not bool(sholat_npc.terima_salaman(_main._player)))
 	sholat_npc.selesai_sholat()
 
@@ -165,14 +167,37 @@ func _ready() -> void:
 	print("SALAMAN: === FASE 7 Sanusi + Fatimah ===")
 	for guru in [_main._sanusi, _main._fatimah]:
 		var nama_guru: String = String(guru.get("_nama"))
+		# RONDE 21 (batas putra/putri KERAS, _cek_batas): pemain putra
+		# TIDAK BISA mencapai Fatimah (area putri, x>14) — didorong
+		# balik ke posisi legal terakhir. Uji Fatimah sebagai
+		# santriwati (save jenis_kelamin — yang dibaca
+		# _pemain_adalah_putri); putra menguji Sanusi, putri Fatimah.
+		if guru == _main._fatimah:
+			_main._save["jenis_kelamin"] = "putri"
+		# Tunggu cooldown pemain (5 dtk) dari salaman sebelumnya habis
+		# DULU — baru teleport + bersihkan area, supaya tidak ada NPC
+		# yang sempat berjalan masuk radius 1,5 m selama menunggu
+		# (flake run 3: NPC putri lewat dan merebut target Fatimah).
+		var tunggu_cd := 0.0
+		while not bool(_main._salaman_siap()) and tunggu_cd < 8.0:
+			await _tunggu(0.5)
+			tunggu_cd += 0.5
 		_main._player.global_position = (guru.global_position as Vector3) + Vector3(1.5, 0, 0)
 		_main._player.global_position.y = (guru.global_position as Vector3).y
 		_bersihkan_sekitar(_main._player.global_position, [guru])
 		await _tunggu(0.3)
+		# Diagnostik (flake Fatimah run 2–4): posisi + target + kesiapan.
+		var dbg_target: Node = _main._salaman_npc_terdekat()
+		print("SALAMAN-DBG f7 %s: guru=%s pemain=%s jarak=%.2f target=%s siap=%s salaman='%s'" % [
+			nama_guru, str(guru.global_position), str(_main._player.global_position),
+			(guru.global_position as Vector3).distance_to(_main._player.global_position),
+			String(dbg_target.get("_nama")) if dbg_target != null else "(null)",
+			str(bool(_main._salaman_siap())), String(guru.get("_salaman"))])
 		_main._on_aksi("salaman")
 		_cek("f7: %s merespons salaman" % nama_guru, String(guru.get("_salaman")) != "")
 		await _tunggu(3.0)
 		_cek("f7: %s selesai salaman" % nama_guru, String(guru.get("_salaman")) == "")
+	_main._save["jenis_kelamin"] = "putra"
 
 	# ---------- FASE 8: guard MP offline ----------
 	print("SALAMAN: === FASE 8 guard offline ===")

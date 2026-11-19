@@ -22,6 +22,10 @@ const POSE_MENULIS := 4
 const POSE_SALAMAN := 5
 const POSE_MELAMBAI := 6
 const POSE_TIDUR := 7
+## DUDUK KURSI (Kirana, 20 Nov 2026 — bug 3 Mas): pose duduk di kursi
+## (kaki menjuntai) — pose SENDIRI, bukan "duduk" (bersila), supaya
+## avatar remote memainkan kaki yang benar.
+const POSE_DUDUK_KURSI := 8
 
 
 ## Nama aksi (string `set_aksi`) -> pose_id. -1 = bukan pose
@@ -47,6 +51,8 @@ static func dari_aksi(nama_aksi: String) -> int:
 			return POSE_MELAMBAI
 		"tidur":
 			return POSE_TIDUR
+		"duduk_kursi":
+			return POSE_DUDUK_KURSI
 	return -1
 
 
@@ -71,6 +77,8 @@ static func ke_aksi(pose_id: int) -> String:
 			return "melambai"
 		POSE_TIDUR:
 			return "tidur"
+		POSE_DUDUK_KURSI:
+			return "duduk_kursi"
 	return "berdiri"
 
 
@@ -78,4 +86,4 @@ static func ke_aksi(pose_id: int) -> String:
 ## `SantriPlayer.sedang_aksi_diam()` dalam bentuk pose_id — dipakai
 ## server/remote tanpa perlu tahu string aksi.
 static func aksi_diam(pose_id: int) -> bool:
-	return pose_id in [POSE_DUDUK, POSE_MENULIS, POSE_TIDUR, POSE_SALAMAN, POSE_MELAMBAI, POSE_SHOLAT]
+	return pose_id in [POSE_DUDUK, POSE_MENULIS, POSE_TIDUR, POSE_SALAMAN, POSE_MELAMBAI, POSE_SHOLAT, POSE_DUDUK_KURSI]

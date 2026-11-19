@@ -71,8 +71,8 @@ func _ready() -> void:
 	_modul = _main.find_child("PencahayaanV2", true, false) as PencahayaanV2
 	_cek("Modul terpasang oleh main.gd", _modul != null)
 	_cek("Tepat 1 modul (tidak ganda)", _hitung_modul(_main) == 1)
-	_cek("21 lampu baru", _modul != null and _modul.jumlah_lampu_baru() == 21 and _hitung_omni(_modul) == 21)
-	_cek("Omni total 82 (75 + 7 lampu pintu Fase 2, dapat %d)" % _hitung_omni(_main), _hitung_omni(_main) == 82)
+	_cek("22 lampu baru", _modul != null and _modul.jumlah_lampu_baru() == 22 and _hitung_omni(_modul) == 22)
+	_cek("Omni total 86 (64 dasar + 22 modul, dapat %d)" % _hitung_omni(_main), _hitung_omni(_main) == 86)
 	_cek("Semua lampu modul tanpa bayangan", _modul != null and _semua_tanpa_bayangan(_modul))
 	_cek("Jangkauan maks <= 12 m (dapat %.1f)" % _jangkauan_maks(_modul), _modul != null and _jangkauan_maks(_modul) <= 12.01)
 	# Pintu Surau lurus -90°: _outdoor_door harus (0,0,-3.8).
@@ -117,12 +117,14 @@ func _ready() -> void:
 	if om1 != null:
 		e_mus_malam = om1.light_energy
 	_cek("Modulasi malam: Musholla ~2,6 (dapat %.2f)" % e_mus_malam, absf(e_mus_malam - 2.6) < 0.05)
-	# Modulasi siang: energi kembali ke dasar.
+	# Modulasi siang: lampu MATI (energi ~0) — perubahan disengaja Rangga
+	# 19 Nov 2026 (dulu dasar 1,0; ekspektasi lama "~1,0" sudah usang,
+	# diperbaiki 20 Nov). Sama seperti test_pencahayaan.
 	LangitDinamis.debug_jam = 12.0
 	for i in 10:
 		await get_tree().process_frame
 	var e_siang := _modul.energi_lampu("LampuV2_PintuSurau")
-	_cek("Modulasi siang: PintuSurau ~1,0 (dapat %.2f)" % e_siang, absf(e_siang - 1.0) < 0.05)
+	_cek("Modulasi siang: PintuSurau ~0,0 (dapat %.2f)" % e_siang, absf(e_siang - 0.0) < 0.05)
 	# Jalan maju masih jalan (regresi gerak).
 	var awal: Vector3 = _main._player.global_position
 	_main._ui._joystick.output = Vector2(0, -1)

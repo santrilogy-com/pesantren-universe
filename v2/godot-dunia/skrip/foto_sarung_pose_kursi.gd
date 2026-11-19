@@ -51,8 +51,10 @@ func _siapkan_dunia() -> void:
 	add_child(lantai)
 	var lantai_fisik := StaticBody3D.new()
 	var bentuk := CollisionShape3D.new()
-	var bidang := WorldBoundaryShape3D.new()
-	bentuk.shape = bidang
+	var kotak := BoxShape3D.new()
+	kotak.size = Vector3(60, 1, 60)
+	bentuk.shape = kotak
+	bentuk.position = Vector3(0, -0.5, 0)
 	lantai_fisik.add_child(bentuk)
 	add_child(lantai_fisik)
 	_cam = Camera3D.new()
@@ -112,11 +114,16 @@ func _tunggu_frame(n: int) -> void:
 
 
 func _ready() -> void:
-	_siapatkan_dunia()
+	_siapkan_dunia()
 	# ---------- NPC putra: bersila di lantai ----------
 	_npc = SantriNPC.new()
 	_npc.setup("Hasan", Vector3(0, 0, 0), [], MissionData.OUTFIT_DEFAULT, false, {}, true, true)
 	add_child(_npc)
+	# BEKUKAN _process NPC: kalau tidak, mesin keliling/aktivitas
+	# otonom menimpa pose yang dipasang manual (jalan + idle +
+	# _langkah_ke mengembalikan sarung ke DEFAULT) — foto jadi
+	# tidak mereproduksi bug. Pose dipasang langsung di bawah.
+	_npc.set_process(false)
 	await _tunggu_frame(10)
 	_npc._terapkan_duduk_baca(1.0)
 	await _tunggu_frame(90)
@@ -135,10 +142,15 @@ func _ready() -> void:
 	_angka("NPC-KURSI-BERSILA", _npc, _npc._visual, _npc._sarung, _npc._leg_l, _npc._knee_l)
 	await _foto("pose-kursi-bersila-sebelum.png", bangku_pos, Vector3(0.0, 1.0, 3.2))
 	# ---------- NPC: berdiri dari kursi (jalur KODE saat ini) ----------
-	# _akhiri_aktivitas() lalu idle — node y TETAP 0,45 (bug 4).
+	# _akhiri_aktivitas() lalu idle MANUAL (bukan _process — beku):
+	# badan kembali berdiri (visual y -> 0) tapi node y TETAP 0,45
+	# (bug 4) dan sarung TETAP terhampar (bug 1: _animate_idle tidak
+	# mengembalikan pakaian).
 	_npc._akhiri_aktivitas()
 	_npc._pause_timer = 5.0
-	await _tunggu_frame(90)
+	for i in 12:
+		_npc._animate_idle(0.25)
+		await _tunggu_frame(2)
 	_angka("NPC-BERDIRI-DARI-KURSI", _npc, _npc._visual, _npc._sarung, _npc._leg_l, _npc._knee_l)
 	await _foto("pose-berdiri-dari-kursi-sebelum.png", _npc.position, Vector3(0.0, 1.0, 3.2))
 	# ---------- PEMAIN: bersila ----------

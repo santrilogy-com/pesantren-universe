@@ -1,10 +1,10 @@
 extends Node
 ## Tes pencahayaan v2 — headless:
 ##   godot --headless --path . skrip/test_pencahayaan.tscn
-## Cek: modul terpasang, 21 lampu baru tanpa bayangan, modulasi siang/malam,
+## Cek: modul terpasang, 22 lampu baru tanpa bayangan, modulasi siang/malam,
 ## perbaikan 2 lampu interior Musholla (diterangkan 20 Nov: dasar 1,3,
 ## malam 2,6, jangkauan 8 m), lampu pintu Surau ikut pintu runtime,
-## 7 lampu pintu Fase 2 (20 Nov).
+## 7 lampu pintu Fase 2 (20 Nov) + 1 lampu pintu Kantor Putra Fase 3 (20 Nov).
 
 var _main: Node
 var _modul: PencahayaanV2
@@ -70,8 +70,8 @@ func _ready() -> void:
 	for i in 3:
 		await get_tree().process_frame
 	_cek("Modul terpasang", _modul != null and _main.find_child("PencahayaanV2", true, false) != null)
-	_cek("21 lampu baru", _modul.jumlah_lampu_baru() == 21 and _hitung_omni(_modul) == 21)
-	_cek("Omni total +21 (dapat %d)" % _hitung_omni(_main), _hitung_omni(_main) == omni_sebelum + 21)
+	_cek("22 lampu baru", _modul.jumlah_lampu_baru() == 22 and _hitung_omni(_modul) == 22)
+	_cek("Omni total +22 (dapat %d)" % _hitung_omni(_main), _hitung_omni(_main) == omni_sebelum + 22)
 	_cek("Semua lampu modul tanpa bayangan", _semua_tanpa_bayangan(_modul))
 	_cek("Jangkauan maks <= 12 m (dapat %.1f)" % _jangkauan_maks(_modul), _jangkauan_maks(_modul) <= 12.01)
 	# Lampu pintu Surau harus di pintu runtime (bukan hardcode lama).
@@ -94,8 +94,9 @@ func _ready() -> void:
 		elif l.light_color != PencahayaanV2.WARNA_HANGAT or absf(l.omni_range - 10.0) > 0.01:
 			samping_ok = false
 	_cek("4 lampu samping Surau di posisi benar (hangat, 10 m)", samping_ok)
-	# 7 lampu pintu Fase 2 (20 Nov, Mas ACC): di EXIT tiap gedung (1,5 m
-	# di luar pintu), hangat, jangkauan 10 m. Satu cek per lampu.
+	# 7 lampu pintu Fase 2 (20 Nov, Mas ACC) + 1 lampu pintu Kantor Putra
+	# Fase 3 (20 Nov, laporan Mas: kantor madrasah gelap): di EXIT tiap
+	# gedung (1,5 m di luar pintu), hangat, jangkauan 10 m. Satu cek per lampu.
 	var pintu_f2 := {
 		"LampuV2_PintuAsramaPutri": Vector3(144.5, 3.0, 9),
 		"LampuV2_PintuAsramaPutra": Vector3(-34.5, 3.0, 10),
@@ -104,6 +105,7 @@ func _ready() -> void:
 		"LampuV2_PintuMadrasah": Vector3(145.5, 3.0, -12),
 		"LampuV2_PintuStudio": Vector3(166, 3.0, -17.5),
 		"LampuV2_PintuPosJaga": Vector3(173, 3.0, -20),
+		"LampuV2_PintuKantorPutra": Vector3(-18, 3.0, 18.5),
 	}
 	for nama in pintu_f2:
 		var l := _modul.find_child(nama, true, false) as OmniLight3D

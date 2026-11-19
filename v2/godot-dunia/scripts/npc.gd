@@ -477,6 +477,13 @@ func _process(delta: float) -> void:
 	# besar (lag / time_scale tinggi) membuat NPC melompati target
 	# lalu berosilasi di sekitarnya dan tidak pernah sampai.
 	position += dir * minf(SPEED * delta, to.length())
+	# PERBAIKAN BUG 1+4 (Kirana, 20 Nov 2026): jalur keliling bebas
+	# tidak lewat _langkah_ke — NPC yang selesai duduk lalu jalan
+	# bebas tetap memakai PAKAIAN_DUDUK + melayang di tinggi kursi
+	# sampai ada rute yang memanggil _langkah_ke. Pulihkan pakaian +
+	# jepit y ke tanah di sini (cermin _langkah_ke).
+	_terapkan_pakaian(delta, SantriPlayer.PAKAIAN_DEFAULT)
+	position.y = _tinggi_tanah(position)
 	_visual.rotation.y = lerp_angle(_visual.rotation.y, atan2(dir.x, dir.z), delta * 6.0)
 	_walk_time += delta * 8.0
 	# ANIMASI-MIXAMO: jalan lewat modul (kurva mocap, bukan sinus
@@ -491,6 +498,13 @@ func _animate_idle(delta: float) -> void:
 	# seperti komentar lama di bawah — dipertahankan alasannya).
 	# RONDE 21b: siwak + menoleh HANYA saat idle murni — ditekan
 	# saat panel misi (dialog/RB/tes) terbuka.
+	# PERBAIKAN BUG 1 (Kirana, 20 Nov 2026 — Mas: "sarung mekar pas
+	# berdiri setelah duduk"): idle = keadaan BERDIRI — pakaian WAJIB
+	# kembali normal di sini. Sebelumnya hanya _langkah_ke yang
+	# memulihkan, jadi NPC yang selesai duduk lalu DIAM (pause/idle/
+	# jeda hormat) berdiri dengan PAKAIAN_DUDUK menempel sampai ia
+	# jalan lagi. Modul idle me-lerp visual ke 0 — pakaian ikut.
+	_terapkan_pakaian(delta, SantriPlayer.PAKAIAN_DEFAULT)
 	AnimasiMixamo.terapkan_idle(_rig, delta, Time.get_ticks_msec() * 0.001, _idle_phase, AnimasiMixamo.panel_misi_terbuka(get_tree()))
 
 
@@ -720,7 +734,13 @@ func _proses_patroli(delta: float) -> void:
 ## atas rehal di depan Kyai/Ustadzah (interior_surau/musholla).
 ## 20 NPC v1: `kitab_terlihat=true` untuk santri (tidak ada rehal —
 ## kitab tetap di pangkuan). Default false = perilaku lama.
-func _terapkan_duduk_baca(delta: float, kitab_terlihat: bool = false) -> void:
+## REVISI BERSILA v2 (Kirana, 20 Nov 2026 — bug 2 Mas): yaw kaki
+## DIBALIK (dulu kiri +0.50 / kanan -0.50 — kedua lutut bertemu di
+## tengah depan, alas sempit seperti kerucut; kini kiri -0.50 / kanan
+## +0.50 — lutut melebar ±0,22 ke samping, betis menyilang di bawah
+## paha). `tinggi_duduk` = tinggi permukaan duduk di atas tanah node
+## (0 lantai; 0,51 kasur -> visual +0,09) — node SELALU di tanah.
+func _terapkan_duduk_baca(delta: float, kitab_terlihat: bool = false, tinggi_duduk: float = 0.0) -> void:
 	var k := minf(1.0, delta * 8.0)
 	# Siwak hanya hidup di idle bersiwak — begitu duduk baca,
 	# siwak disembunyikan (jangan menempel di tangan saat duduk).
@@ -737,18 +757,18 @@ func _terapkan_duduk_baca(delta: float, kitab_terlihat: bool = false) -> void:
 	# (sama seperti pemain; lihat player.gd arm "duduk").
 	var k_kaki := minf(1.0, delta * 12.0)
 	var k_tangan := minf(1.0, delta * 5.0)
-	_visual.position.y = lerpf(_visual.position.y, -0.42, k)
+	_visual.position.y = lerpf(_visual.position.y, tinggi_duduk - 0.42, k)
 	_visual.rotation.x = lerpf(_visual.rotation.x, 0.20, k)
 	_leg_l.rotation.x = lerpf(_leg_l.rotation.x, -0.85, k_kaki)
 	_leg_r.rotation.x = lerpf(_leg_r.rotation.x, -0.85, k_kaki)
-	_leg_l.rotation.y = lerpf(_leg_l.rotation.y, 0.50, k_kaki)
-	_leg_r.rotation.y = lerpf(_leg_r.rotation.y, -0.50, k_kaki)
-	_leg_l.rotation.z = lerpf(_leg_l.rotation.z, 0.10, k_kaki)
-	_leg_r.rotation.z = lerpf(_leg_r.rotation.z, -0.10, k_kaki)
+	_leg_l.rotation.y = lerpf(_leg_l.rotation.y, -0.50, k_kaki)
+	_leg_r.rotation.y = lerpf(_leg_r.rotation.y, 0.50, k_kaki)
+	_leg_l.rotation.z = lerpf(_leg_l.rotation.z, -0.10, k_kaki)
+	_leg_r.rotation.z = lerpf(_leg_r.rotation.z, 0.10, k_kaki)
 	_knee_l.rotation.x = lerpf(_knee_l.rotation.x, 2.30, k_kaki)
 	_knee_r.rotation.x = lerpf(_knee_r.rotation.x, 2.30, k_kaki)
-	_knee_l.rotation.y = lerpf(_knee_l.rotation.y, 0.20, k_kaki)
-	_knee_r.rotation.y = lerpf(_knee_r.rotation.y, -0.20, k_kaki)
+	_knee_l.rotation.y = lerpf(_knee_l.rotation.y, -0.20, k_kaki)
+	_knee_r.rotation.y = lerpf(_knee_r.rotation.y, 0.20, k_kaki)
 	_knee_l.rotation.z = lerpf(_knee_l.rotation.z, 0.0, k_kaki)
 	_knee_r.rotation.z = lerpf(_knee_r.rotation.z, 0.0, k_kaki)
 	_arm_l.rotation.x = lerpf(_arm_l.rotation.x, -0.70, k_tangan)
@@ -760,6 +780,84 @@ func _terapkan_duduk_baca(delta: float, kitab_terlihat: bool = false) -> void:
 	_terapkan_pakaian(delta, SantriPlayer.PAKAIAN_DUDUK)
 	if _kitab_pangku != null:
 		_kitab_pangku.visible = kitab_terlihat
+
+
+## Pose DUDUK KURSI (Kirana, 20 Nov 2026 — bug 3 Mas: "duduk di kursi
+## malah bersila di kursi"): kaki MENJUNTAI, bukan bersila — paha
+## hampir horizontal ke depan (-1.45), betis vertikal ke bawah
+## (lutut +1.45), telapak menggantung ~13 cm di atas lantai. Pinggul
+## di tinggi kursi: visual = tinggi_duduk - 0,62 (kursi 0,45 ->
+## -0,17). Tangan di pangkuan (lengan -0,50, siku -0,30). Pakaian =
+## PAKAIAN_KURSI (sarung pendek menutupi paha + lutut; abaya ikut
+## dipetakan di _terapkan_pakaian). Cermin player.gd "duduk_kursi".
+func _terapkan_duduk_kursi(delta: float, tinggi_duduk: float = 0.45, kitab_terlihat: bool = true) -> void:
+	var k := minf(1.0, delta * 8.0)
+	var siwak_k := _rig.get("siwak") as Node3D
+	if siwak_k != null:
+		siwak_k.visible = false
+	var kepala_k := _rig.get("kepala") as Node3D
+	if kepala_k != null:
+		kepala_k.rotation.y = lerpf(kepala_k.rotation.y, 0.0, k)
+	var k_kaki := minf(1.0, delta * 12.0)
+	var k_tangan := minf(1.0, delta * 5.0)
+	_visual.position.y = lerpf(_visual.position.y, tinggi_duduk - 0.62, k)
+	_visual.rotation.x = lerpf(_visual.rotation.x, 0.05, k)
+	_leg_l.rotation.x = lerpf(_leg_l.rotation.x, -1.45, k_kaki)
+	_leg_r.rotation.x = lerpf(_leg_r.rotation.x, -1.45, k_kaki)
+	_leg_l.rotation.y = lerpf(_leg_l.rotation.y, 0.0, k_kaki)
+	_leg_r.rotation.y = lerpf(_leg_r.rotation.y, 0.0, k_kaki)
+	_leg_l.rotation.z = lerpf(_leg_l.rotation.z, 0.06, k_kaki)
+	_leg_r.rotation.z = lerpf(_leg_r.rotation.z, -0.06, k_kaki)
+	_knee_l.rotation.x = lerpf(_knee_l.rotation.x, 1.45, k_kaki)
+	_knee_r.rotation.x = lerpf(_knee_r.rotation.x, 1.45, k_kaki)
+	_knee_l.rotation.y = lerpf(_knee_l.rotation.y, 0.0, k_kaki)
+	_knee_r.rotation.y = lerpf(_knee_r.rotation.y, 0.0, k_kaki)
+	_knee_l.rotation.z = lerpf(_knee_l.rotation.z, 0.0, k_kaki)
+	_knee_r.rotation.z = lerpf(_knee_r.rotation.z, 0.0, k_kaki)
+	_arm_l.rotation.x = lerpf(_arm_l.rotation.x, -0.50, k_tangan)
+	_arm_r.rotation.x = lerpf(_arm_r.rotation.x, -0.50, k_tangan)
+	_arm_l.rotation.z = lerpf(_arm_l.rotation.z, -0.20, k_tangan)
+	_arm_r.rotation.z = lerpf(_arm_r.rotation.z, 0.20, k_tangan)
+	_elbow_l.rotation.x = lerpf(_elbow_l.rotation.x, -0.30, k_tangan)
+	_elbow_r.rotation.x = lerpf(_elbow_r.rotation.x, -0.30, k_tangan)
+	_terapkan_pakaian(delta, SantriPlayer.PAKAIAN_KURSI)
+	if _kitab_pangku != null:
+		_kitab_pangku.visible = kitab_terlihat
+
+
+## Pose duduk mengikuti JENIS kursi yang sedang diduduki
+## (_aktivitas_kursi): "kursi" = duduk_kursi (kaki menjuntai),
+## "kasur" = bersila di atas kasur (visual +0,09), "bersila" =
+## bersila di lantai. Dipakai cabang "duduk" + "baca_kamar".
+func _terapkan_duduk_sesuai_kursi(delta: float, kitab_terlihat: bool) -> void:
+	if _aktivitas_kursi.is_empty():
+		_terapkan_duduk_baca(delta, kitab_terlihat)
+		return
+	var jenis := String(_aktivitas_kursi.get("jenis", "bersila"))
+	var sp: Vector3 = _aktivitas_kursi["pos"]
+	if jenis == "kursi":
+		_terapkan_duduk_kursi(delta, sp.y, kitab_terlihat)
+	else:
+		_terapkan_duduk_baca(delta, kitab_terlihat, sp.y)
+
+
+## Titik lantai DI DEPAN kursi untuk bangun (bug 4): pakai "bangun"
+## dari registry kursi pemain (KursiPemain) bila id-nya cocok (28
+## kursi berbagi NPC/pemain — bangun kelas di lorong, BUKAN ke arah
+## meja); bila tidak ada: 0,8 m ke arah hadap duduk ("kursi") atau
+## 1,5 m ke selatan kaki kasur ("kasur"). y dihitung pemanggil via
+## _tinggi_tanah (bangun registry sudah y = lantai).
+func _titik_bangun(kursi: Dictionary) -> Vector3:
+	var id := String(kursi.get("id", ""))
+	if id != "":
+		var entri: Dictionary = KursiPemain.dari_id(id)
+		if not entri.is_empty() and entri.has("bangun"):
+			return entri["bangun"]
+	var sp: Vector3 = kursi["pos"]
+	if String(kursi.get("jenis", "")) == "kasur":
+		return sp + Vector3(0, 0, 1.5)
+	var depan := Vector3(sin(_aktivitas_yaw), 0.0, cos(_aktivitas_yaw))
+	return sp + depan * 0.8
 
 
 ## RUANG BELAJAR CHAT (§8): duduk belajar — pakai ulang pose
@@ -799,6 +897,8 @@ func _terapkan_pakaian(delta: float, target: Dictionary) -> void:
 			target = SantriPlayer.PAKAIAN_ABAYA_DUDUK
 		elif target == SantriPlayer.PAKAIAN_DEFAULT:
 			target = SantriPlayer.PAKAIAN_ABAYA_DEFAULT
+		elif target == SantriPlayer.PAKAIAN_KURSI:
+			target = SantriPlayer.PAKAIAN_ABAYA_KURSI
 	var k := minf(1.0, delta * 8.0)
 	if _sarung != null:
 		_sarung.scale = _sarung.scale.lerp(target["sarung_scale"], k)
@@ -883,6 +983,27 @@ const KURSI_DALAM = [
 ]
 
 
+## Kursi TES (DICADANGKAN — Gilang, 20 Nov 2026, konsep
+## tes-di-dalam-kantor Laras, ACC Mas 00:37 WIB). 4 kursi: penguji +
+## pemain di Kantor Putra (baru, interior z=-300 slot x=-90) dan di
+## Kantor Ustadzah (meja pindah ke tengah). Sengaja TIDAK masuk
+## KURSI_LUAR/KURSI_DALAM: kursi_bebas() hanya membaca dua const
+## itu, jadi NPC DUDUK_KURSI TIDAK PERNAH ditawari kursi tes —
+## cadangan pola Sajadah_03 (sajadah imam bukan dari pool NPC).
+## Wiring adegan tes (ronde berikut, menunggu pose duduk_kursi
+## Kirana) memakai _kursi_dari_id() di bawah untuk posisi kursi.
+const KURSI_TES = [
+	# --- Kantor Putra: pemain utara meja menghadap selatan (yaw 0),
+	# penguji selatan meja menghadap utara (yaw PI).
+	{"id": "tes_kantor_putra_pemain", "pos": Vector3(-90, 0.45, -300.65), "yaw": 0.0, "gedung": "kantor_putra", "jenis": "kursi", "putri": false, "dalam": true, "pintu_luar": Vector3(-18, 0, 20), "pintu_dalam": Vector3(-90, 0, -302.5), "spawn_dalam": Vector3(-90, 0, -301.9), "tes": true},
+	{"id": "tes_kantor_putra_penguji", "pos": Vector3(-90, 0.45, -298.95), "yaw": PI, "gedung": "kantor_putra", "jenis": "kursi", "putri": false, "dalam": true, "pintu_luar": Vector3(-18, 0, 20), "pintu_dalam": Vector3(-90, 0, -302.5), "spawn_dalam": Vector3(-90, 0, -301.9), "tes": true},
+	# --- Kantor Ustadzah: pemain barat meja menghadap timur (yaw
+	# PI/2), penguji timur meja menghadap barat (yaw -PI/2).
+	{"id": "tes_kantor_ustadzah_pemain", "pos": Vector3(-121.15, 0.45, -300), "yaw": PI / 2.0, "gedung": "kantor_ustadzah", "jenis": "kursi", "putri": true, "dalam": true, "pintu_luar": Vector3(144, 0, -33), "pintu_dalam": Vector3(-124, 0, -300), "spawn_dalam": Vector3(-122.5, 0, -300), "tes": true},
+	{"id": "tes_kantor_ustadzah_penguji", "pos": Vector3(-118.85, 0.45, -300), "yaw": -PI / 2.0, "gedung": "kantor_ustadzah", "jenis": "kursi", "putri": true, "dalam": true, "pintu_luar": Vector3(144, 0, -33), "pintu_dalam": Vector3(-124, 0, -300), "spawn_dalam": Vector3(-122.5, 0, -300), "tes": true},
+]
+
+
 ## Registry kursi (static — dipakai semua NPC): id kursi -> NPC pemakai.
 ## Satu kursi tidak pernah dipakai dua NPC. Lepas saat aktivitas
 ## selesai / sholat mulai / hormat TIDAK melepas (ditahan).
@@ -896,6 +1017,10 @@ static func _kursi_dari_id(id: String) -> Dictionary:
 		if String(k["id"]) == id:
 			return k
 	for k in KURSI_DALAM:
+		if String(k["id"]) == id:
+			return k
+	# Kursi tes (dicadangkan — dicari di sini, bukan di kursi_bebas).
+	for k in KURSI_TES:
 		if String(k["id"]) == id:
 			return k
 	return {}
@@ -1048,7 +1173,11 @@ func _proses_aktivitas(delta: float) -> void:
 			match _jalan_rute_aktivitas(delta):
 				"sampai":
 					var sp: Vector3 = _aktivitas_kursi["pos"]
-					position = sp
+					# Node di TANAH di x,z kursi (bug 4: JANGAN di
+					# tinggi kursi — visual yang naik ke tinggi
+					# duduk; node di 0,45 akan berdiri di atas
+					# bangku saat aktivitas berakhir).
+					position = Vector3(sp.x, _tinggi_tanah(sp), sp.z)
 					_visual.rotation.y = _aktivitas_yaw
 					_aktivitas = "duduk"
 					_aktivitas_timer = _rng.randf_range(60.0, 180.0)
@@ -1056,7 +1185,9 @@ func _proses_aktivitas(delta: float) -> void:
 					_akhiri_aktivitas()
 		"duduk":
 			_visual.rotation.y = lerpf(_visual.rotation.y, _aktivitas_yaw, minf(1.0, delta * 6.0))
-			_terapkan_duduk_baca(delta, true)
+			# Bug 3: pose ikut JENIS kursi (kursi = menjuntai,
+			# kasur/bersila = bersila) — bukan selalu bersila.
+			_terapkan_duduk_sesuai_kursi(delta, true)
 			_aktivitas_timer -= delta
 			if _aktivitas_timer <= 0.0:
 				_akhiri_aktivitas()
@@ -1078,7 +1209,9 @@ func _proses_aktivitas(delta: float) -> void:
 			match _jalan_rute_aktivitas(delta):
 				"sampai":
 					var sp2: Vector3 = _aktivitas_kursi["pos"]
-					position = sp2
+					# Node di TANAH (interior y=0) — sama seperti
+					# "ke_kursi" (bug 4).
+					position = Vector3(sp2.x, _tinggi_tanah(sp2), sp2.z)
 					_visual.rotation.y = _aktivitas_yaw
 					_aktivitas = "baca_kamar"
 					_aktivitas_timer = _rng.randf_range(60.0, 180.0)
@@ -1086,7 +1219,9 @@ func _proses_aktivitas(delta: float) -> void:
 					_akhiri_aktivitas()
 		"baca_kamar":
 			_visual.rotation.y = lerpf(_visual.rotation.y, _aktivitas_yaw, minf(1.0, delta * 6.0))
-			_terapkan_duduk_baca(delta, true)
+			# Bug 3: kasur = bersila di atas kasur (visual +0,09),
+			# kursi interior = duduk_kursi.
+			_terapkan_duduk_sesuai_kursi(delta, true)
 			_aktivitas_timer -= delta
 			if _aktivitas_timer <= 0.0:
 				# Keluar dulu (teleport ke pintu luar), baru akhiri
@@ -1116,6 +1251,24 @@ func _akhiri_aktivitas() -> void:
 		_kitab_pangku.visible = false
 	if _kitab_tangan != null:
 		_kitab_tangan.visible = false
+	# DUDUK KURSI (Kirana, 20 Nov 2026 — bug 4 + bug 1): berdiri dari
+	# kursi/kasur HARUS turun ke lantai DI DEPAN perabot. Node selama
+	# duduk memang sudah di tanah, tapi x,z-nya DI DALAM bangku/kasur
+	# — tanpa melangkah ke "bangun", NPC berdiri menembus bangku.
+	# Penjaga < 1,5 m: jalur "baca_kamar -> teleport ke pintu_luar
+	# dulu" memanggil fungsi ini SETELAH teleport — NPC sudah jauh
+	# dari kursi, jadi langkah bangun TIDAK boleh membatalkannya.
+	# Pakaian di-snap ke DEFAULT di sini (bug 1): setiap jalur keluar
+	# dari duduk WAJIB mengembalikan sarung — jangan tunggu idle.
+	if _aktivitas in ["duduk", "baca_kamar"] and not _aktivitas_kursi.is_empty():
+		var jenis_akhiri := String(_aktivitas_kursi.get("jenis", "bersila"))
+		if jenis_akhiri in ["kursi", "kasur"]:
+			var sp_akhiri: Vector3 = _aktivitas_kursi["pos"]
+			if Vector2(position.x, position.z).distance_to(Vector2(sp_akhiri.x, sp_akhiri.z)) < 1.5:
+				var bangun := _titik_bangun(_aktivitas_kursi)
+				position = Vector3(bangun.x, _tinggi_tanah(bangun), bangun.z)
+		_terapkan_pakaian(1.0, SantriPlayer.PAKAIAN_DEFAULT)
+		_visual.position.y = 0.0
 	lepas_kursi(self)
 	_aktivitas = ""
 	_aktivitas_kursi = {}
@@ -1331,8 +1484,9 @@ func _akhiri_hormat() -> void:
 		_hormat_aktivitas_tersimpan = {}
 		if _aktivitas in ["duduk", "baca_kamar"] and not _aktivitas_kursi.is_empty():
 			# Kembali ke posisi kursi (b_kembali sudah jalan ke sana).
+			# Node di TANAH (bug 4: kursi pos.y 0,45 bukan y node).
 			var sp: Vector3 = _aktivitas_kursi["pos"]
-			position = sp
+			position = Vector3(sp.x, _tinggi_tanah(sp), sp.z)
 			_visual.rotation.y = _aktivitas_yaw
 		elif _aktivitas == "jalan_kitab" and _kitab_tangan != null:
 			_kitab_tangan.visible = true

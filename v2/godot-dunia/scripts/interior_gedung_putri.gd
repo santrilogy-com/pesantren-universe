@@ -5,6 +5,11 @@ extends Node3D
 ## Kantor Ustadzah, Madrasah, Studio, Pos Jaga TL. Asrama / Musholla /
 ## Kelas dikerjakan tim lain — JANGAN disentuh dari sini.
 ##
+## Kantor Putra (putra) JUGA tinggal di file ini sejak 20 Nov 2026
+## (Gilang — konsep tes-di-dalam-kantor Laras, ACC Mas 00:37 WIB):
+## interior baru 6x5 di slot x=-90, memakai ulang SEMUA helper di
+## bawah (bukan file baru — supaya tidak menduplikasi ~250 baris).
+##
 ## Zona map: garis z=-300 (sama seperti Surau / Cangkruk / Musholla),
 ## pusat x -180 / -120 / +180 / +240 — jauh dari map yang sudah ada
 ## (Surau x~0, Cangkruk x -67..-53, Musholla x 53..67) supaya tidak
@@ -29,16 +34,43 @@ extends Node3D
 ## punya collision (StaticBody3D) — tidak bisa ditembus.
 
 ## --- Kantor Ustadzah: 8x6 m, tinggi 3,4, pintu BARAT (x=-124) ---
+## PENATAAN ULANG 20 Nov 2026 (Gilang — konsep tes-di-dalam-kantor):
+## meja PINDAH dari dinding timur ke TENGAH (-120,-300); kursi
+## penguji di timur meja menghadap barat; kursi pemain BARU di barat
+## meja menghadap timur (berhadapan untuk adegan tes).
 const KANTOR_CENTER := Vector3(-120, 0, -300)
 const KANTOR_DOOR := Vector3(-124, 0, -300)
 const KANTOR_SPAWN := Vector3(-122.5, 0, -300)
 const KANTOR_BOUNDS := {"min_x": -124.0, "max_x": -116.0, "min_z": -303.0, "max_z": -297.0}
 const KANTOR_TINGGI := 3.4
-const KANTOR_MEJA := Vector3(-116.55, 0, -300)
-const KANTOR_KURSI := Vector3(-117.9, 0, -300)
+const KANTOR_MEJA := Vector3(-120, 0, -300)
+const KANTOR_KURSI := Vector3(-118.85, 0, -300)
+const KANTOR_KURSI_PENGUJI := Vector3(-118.85, 0, -300)
+const KANTOR_KURSI_PEMAIN := Vector3(-121.15, 0, -300)
 const KANTOR_LEMARI := Vector3(-122.3, 0, -302.6)
 const KANTOR_RAK := Vector3(-118.3, 0, -297.325)
 const KANTOR_PAPAN := Vector3(-118.5, 1.6, -302.82)
+## --- Kantor Putra: 6x5 m, tinggi 3,4, pintu UTARA (z=-302.5) ---
+## Interior BARU (Gilang, 20 Nov 2026 — konsep tes-di-dalam-kantor
+## Laras, ACC Mas 00:37 WIB). Slot pusat x=-90 (antara Kantor
+## Ustadzah x -124..-116 dan Cangkruk x -67..-53 — 20 m+ ke tetangga
+## terdekat, tidak menumpuk interior lain). Denah: pintu utara,
+## spawn dalam menghadap selatan, meja tengah, kursi pemain utara +
+## kursi penguji selatan berhadapan.
+## Lemari x=-92.15 (bukan -92.25 di konsep): lemari lebar 1,4 m di
+## -92.25 menembus 0,075 m ke dinding barat (muka dalam -92.875) —
+## digeser 10 cm ke timur supaya tidak menembus.
+const KANTOR_PUTRA_CENTER := Vector3(-90, 0, -300)
+const KANTOR_PUTRA_DOOR := Vector3(-90, 0, -302.5)
+const KANTOR_PUTRA_SPAWN := Vector3(-90, 0, -301.9)
+const KANTOR_PUTRA_BOUNDS := {"min_x": -93.0, "max_x": -87.0, "min_z": -302.5, "max_z": -297.5}
+const KANTOR_PUTRA_TINGGI := 3.4
+const KANTOR_PUTRA_MEJA := Vector3(-90, 0, -299.8)
+const KANTOR_PUTRA_KURSI_PEMAIN := Vector3(-90, 0, -300.65)
+const KANTOR_PUTRA_KURSI_PENGUJI := Vector3(-90, 0, -298.95)
+const KANTOR_PUTRA_LEMARI := Vector3(-92.15, 0, -298.05)
+const KANTOR_PUTRA_RAK := Vector3(-87.35, 0, -300.1)
+const KANTOR_PUTRA_PAPAN := Vector3(-90, 1.6, -297.68)
 ## --- Madrasah: 10x8 m, tinggi 3,8, pintu BARAT (x=-185) ---
 const MADRASAH_CENTER := Vector3(-180, 0, -300)
 const MADRASAH_DOOR := Vector3(-185, 0, -300)
@@ -103,9 +135,29 @@ static func build_kantor() -> Dictionary:
 		"bounds": KANTOR_BOUNDS,
 		"meja_pos": KANTOR_MEJA,
 		"kursi_pos": KANTOR_KURSI,
+		"kursi_penguji_pos": KANTOR_KURSI_PENGUJI,
+		"kursi_pemain_pos": KANTOR_KURSI_PEMAIN,
 		"lemari_pos": KANTOR_LEMARI,
 		"rak_pos": KANTOR_RAK,
 		"papan_pos": KANTOR_PAPAN,
+	}
+
+
+static func build_kantor_putra() -> Dictionary:
+	var node := InteriorGedungPutri.new()
+	node.name = "InteriorKantorPutra"
+	node._bangun_kantor_putra()
+	return {
+		"root": node,
+		"interior_door": KANTOR_PUTRA_DOOR,
+		"interior_spawn": KANTOR_PUTRA_SPAWN,
+		"bounds": KANTOR_PUTRA_BOUNDS,
+		"meja_pos": KANTOR_PUTRA_MEJA,
+		"kursi_pemain_pos": KANTOR_PUTRA_KURSI_PEMAIN,
+		"kursi_penguji_pos": KANTOR_PUTRA_KURSI_PENGUJI,
+		"lemari_pos": KANTOR_PUTRA_LEMARI,
+		"rak_pos": KANTOR_PUTRA_RAK,
+		"papan_pos": KANTOR_PUTRA_PAPAN,
 	}
 
 
@@ -163,9 +215,13 @@ static func build_pos_jaga() -> Dictionary:
 
 ## ------------------------- KANTOR USTADZAH -------------------------
 ## 8x6 m (x -124..-116, z -303..-297), pintu BARAT di (-124,-300).
-## Isi: meja kerja + kursi (dinding timur), lemari arsip (utara),
-## rak buku kecil (selatan), papan pengumuman (utara), lampu, karpet,
-## 2 jendela (utara + selatan, ikut cangkang: pintu W -> jendela N/S).
+## PENATAAN ULANG 20 Nov 2026 (konsep tes-di-dalam-kantor): meja di
+## TENGAH ruangan (dulu menempel dinding timur), kursi penguji di
+## timur meja menghadap barat + kursi pemain BARU di barat meja
+## menghadap timur — berhadapan untuk adegan tes. Isi lain tetap:
+## lemari arsip (utara), rak buku kecil (selatan), papan pengumuman
+## (utara), lampu, karpet, 2 jendela (utara + selatan, ikut cangkang:
+## pintu W -> jendela N/S).
 
 func _bangun_kantor() -> void:
 	var c := KANTOR_CENTER
@@ -184,9 +240,11 @@ func _bangun_kantor() -> void:
 	# Lis emas di atas pintu (dalam) + label KELUAR dua sisi.
 	add_child(Palette.box(Vector3(0.3, 0.1, LEBAR_PINTU), Vector3(c.x - 3.85, TINGGI_PINTU + 0.05, c.z), Palette.EMAS_DESAIN, 0.4))
 	_label_keluar(Vector3(c.x - 3.8, 2.7, c.z), PI / 2.0, Vector3(c.x - 4.2, 2.7, c.z), -PI / 2.0)
-	# Perabot.
-	_meja_kerja(KANTOR_MEJA, -PI / 2.0, "MejaKerja")
-	_kursi(KANTOR_KURSI, PI / 2.0, "KursiKerja")
+	# Perabot — meja TENGAH (sumbu timur-barat), kursi penguji timur
+	# menghadap barat + kursi pemain barat menghadap timur.
+	_meja_kerja(KANTOR_MEJA, 0.0, "MejaKerja")
+	_kursi(KANTOR_KURSI_PENGUJI, -PI / 2.0, "KursiPenguji")
+	_kursi(KANTOR_KURSI_PEMAIN, PI / 2.0, "KursiPemain")
 	_lemari(KANTOR_LEMARI, 0.0, "LemariArsip", 1.4, 2.0, 0.5)
 	_rak_buku(KANTOR_RAK, PI, "RakBuku", 1.6, 1.8, 0.35)
 	_papan(KANTOR_PAPAN, 0.0, "PapanPengumuman", "PENGUMUMAN", 2.0, 1.1, Palette.KREM, "pengumuman")
@@ -195,6 +253,48 @@ func _bangun_kantor() -> void:
 	_lampu_hangat(Vector3(-117.2, 0, -302.0), KANTOR_TINGGI, "LampuKantor")
 	_jendela(Vector3(-121.0, 1.7, -302.875), 0.0, "JendelaUtara")
 	_jendela(Vector3(-118.8, 1.7, -297.125), PI, "JendelaSelatan")
+
+
+## ------------------------- KANTOR PUTRA (BARU) -------------------------
+## 6x5 m (x -93..-87, z -302.5..-297.5), pintu UTARA di (-90,-302.5).
+## Interior BARU (Gilang, 20 Nov 2026 — konsep tes-di-dalam-kantor
+## Laras, ACC Mas 00:37 WIB). Pola Studio (pintu utara -> jendela
+## timur + barat). Isi: meja tengah (sumbu timur-barat), kursi
+## pemain utara menghadap selatan + kursi penguji selatan menghadap
+## utara (berhadapan untuk adegan tes), lemari (barat-daya), rak
+## (dinding timur), papan (dinding selatan), karpet, lampu hangat +
+## 2 jendela kaca terang (§5 konsep — interior tes HARUS terang).
+
+func _bangun_kantor_putra() -> void:
+	var c := KANTOR_PUTRA_CENTER
+	# Lantai krem + karpet zamrud di bawah meja (visual saja).
+	_static_box(self, Vector3(6, 0.14, 5), Vector3(c.x, -0.05, c.z), Palette.KREM).name = "Lantai"
+	add_child(Palette.box(Vector3(2.2, 0.05, 1.5), Vector3(c.x, 0.05, -299.8), Palette.ZAMRUD_GELAP))
+	# Dinding: selatan, barat, timur utuh; utara bercelah pintu 1,6 m.
+	_static_box(self, Vector3(6.5, KANTOR_PUTRA_TINGGI, TEBAL_DINDING), Vector3(c.x, KANTOR_PUTRA_TINGGI / 2.0, c.z + 2.5), Palette.KREM).name = "DindingSelatan"
+	_static_box(self, Vector3(TEBAL_DINDING, KANTOR_PUTRA_TINGGI, 5), Vector3(c.x - 3, KANTOR_PUTRA_TINGGI / 2.0, c.z), Palette.KREM).name = "DindingBarat"
+	_static_box(self, Vector3(TEBAL_DINDING, KANTOR_PUTRA_TINGGI, 5), Vector3(c.x + 3, KANTOR_PUTRA_TINGGI / 2.0, c.z), Palette.KREM).name = "DindingTimur"
+	_static_box(self, Vector3(2.45, KANTOR_PUTRA_TINGGI, TEBAL_DINDING), Vector3(c.x - 2.025, KANTOR_PUTRA_TINGGI / 2.0, c.z - 2.5), Palette.KREM).name = "DindingUtara_Barat"
+	_static_box(self, Vector3(2.45, KANTOR_PUTRA_TINGGI, TEBAL_DINDING), Vector3(c.x + 2.025, KANTOR_PUTRA_TINGGI / 2.0, c.z - 2.5), Palette.KREM).name = "DindingUtara_Timur"
+	_static_box(self, Vector3(LEBAR_PINTU, KANTOR_PUTRA_TINGGI - TINGGI_PINTU, TEBAL_DINDING), Vector3(c.x, TINGGI_PINTU + (KANTOR_PUTRA_TINGGI - TINGGI_PINTU) / 2.0, c.z - 2.5), Palette.KREM).name = "AmbangPintu"
+	# Plafon krem (collision — pola InteriorCangkruk: kamera SpringArm).
+	_static_box(self, Vector3(6.5, TEBAL_DINDING, 5.5), Vector3(c.x, KANTOR_PUTRA_TINGGI + 0.12, c.z), Palette.KREM).name = "Plafon"
+	# Lis emas di atas pintu (dalam) + label KELUAR dua sisi.
+	add_child(Palette.box(Vector3(LEBAR_PINTU, 0.1, 0.3), Vector3(c.x, TINGGI_PINTU + 0.05, c.z - 2.35), Palette.EMAS_DESAIN, 0.4))
+	_label_keluar(Vector3(c.x, 2.7, c.z - 2.3), 0.0, Vector3(c.x, 2.7, c.z - 2.7), PI)
+	# Perabot: meja tengah (sumbu timur-barat), kursi pemain utara
+	# menghadap selatan + kursi penguji selatan menghadap utara.
+	_meja_kerja(KANTOR_PUTRA_MEJA, 0.0, "MejaKerja")
+	_kursi(KANTOR_PUTRA_KURSI_PEMAIN, 0.0, "KursiPemain")
+	_kursi(KANTOR_PUTRA_KURSI_PENGUJI, PI, "KursiPenguji")
+	_lemari(KANTOR_PUTRA_LEMARI, PI, "LemariArsip", 1.4, 2.0, 0.5)
+	_rak_buku(KANTOR_PUTRA_RAK, -PI / 2.0, "RakBuku", 1.6, 1.8, 0.35)
+	_papan(KANTOR_PUTRA_PAPAN, PI, "PapanPengumuman", "PENGUMUMAN", 2.0, 1.1, Palette.KREM, "pengumuman")
+	# Lampu hangat (timur-laut, lepas garis pintu->tengah — pelajaran
+	# InteriorCangkruk ronde 8) + 2 jendela kaca terang (timur + barat).
+	_lampu_hangat(Vector3(-88.5, 0, -301.0), KANTOR_PUTRA_TINGGI, "LampuKantorPutra")
+	_jendela(Vector3(-87.125, 1.7, -300.0), -PI / 2.0, "JendelaTimur")
+	_jendela(Vector3(-92.875, 1.7, -300.0), PI / 2.0, "JendelaBarat")
 
 
 ## ------------------------- MADRASAH -------------------------

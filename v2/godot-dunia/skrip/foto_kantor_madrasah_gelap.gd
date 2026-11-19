@@ -1,5 +1,5 @@
 extends Node
-## Probe "kantor madrasah gelap" (Cahya, 20 Nov 2026) — SEBELUM perbaikan.
+## Probe "kantor madrasah gelap" (Cahya, 20 Nov 2026) — SESUDAH perbaikan.
 ## Ukur luminansi rata-rata viewport + simpan foto, siang (12:00) & malam (21:00):
 ##   M1/M2 interior Madrasah | K1/K2 interior Kantor Ustadzah (pembanding,
 ##   pola builder sama) | U1/U2 interior Musholla (pembanding, Mas ACC terang)
@@ -42,23 +42,23 @@ func _ready() -> void:
 		await get_tree().process_frame
 	_energi_lampu("SIANG-12")
 	# --- SIANG 12:00 ---
-	await _foto("km-madrasah-interior-siang-sebelum.png", Vector3(-183.5, 1.7, -297.5), Vector3(-179.0, 1.2, -302.5), 12.0, "madrasah")
-	await _foto("km-kantor-interior-siang-sebelum.png", Vector3(-122.5, 1.7, -297.5), Vector3(-117.5, 1.2, -301.5), 12.0, "kantor")
-	await _foto("km-musholla-interior-siang-sebelum.png", InteriorMusholla.ke_dunia(Vector3(60, 1.8, -297.0)), InteriorMusholla.ke_dunia(Vector3(60, 1.2, -304.0)), 12.0, "musholla")
-	await _foto("km-kantor-putra-luar-siang-sebelum.png", Vector3(-18, 2.5, 12), Vector3(-18, 2.0, 22.5), 12.0, "")
+	await _foto("km-madrasah-interior-siang-sesudah.png", Vector3(-183.5, 1.7, -297.5), Vector3(-179.0, 1.2, -302.5), 12.0, "madrasah")
+	await _foto("km-kantor-interior-siang-sesudah.png", Vector3(-122.5, 1.7, -297.5), Vector3(-117.5, 1.2, -301.5), 12.0, "kantor")
+	await _foto("km-musholla-interior-siang-sesudah.png", InteriorMusholla.ke_dunia(Vector3(60, 1.8, -297.0)), InteriorMusholla.ke_dunia(Vector3(60, 1.2, -304.0)), 12.0, "musholla")
+	await _foto("km-kantor-putra-luar-siang-sesudah.png", Vector3(-18, 2.5, 12), Vector3(-18, 2.0, 22.5), 12.0, "")
 	# --- MALAM 21:00 ---
 	LangitDinamis.debug_jam = 21.0
 	for i in 10:
 		await get_tree().process_frame
 	_energi_lampu("MALAM-21")
-	await _foto("km-madrasah-interior-malam-sebelum.png", Vector3(-183.5, 1.7, -297.5), Vector3(-179.0, 1.2, -302.5), 21.0, "madrasah")
-	await _foto("km-kantor-interior-malam-sebelum.png", Vector3(-122.5, 1.7, -297.5), Vector3(-117.5, 1.2, -301.5), 21.0, "kantor")
-	await _foto("km-musholla-interior-malam-sebelum.png", InteriorMusholla.ke_dunia(Vector3(60, 1.8, -297.0)), InteriorMusholla.ke_dunia(Vector3(60, 1.2, -304.0)), 21.0, "musholla")
-	await _foto("km-kantor-putra-luar-malam-sebelum.png", Vector3(-18, 2.5, 12), Vector3(-18, 2.0, 22.5), 21.0, "")
-	await _foto("km-kantor-putra-venue-malam-sebelum.png", Vector3(-18, 1.7, 15.5), Vector3(-18, 1.5, 20.0), 21.0, "")
-	await _foto("km-madrasah-luar-malam-sebelum.png", Vector3(140, 2.5, -2), Vector3(152, 2.0, -12), 21.0, "")
+	await _foto("km-madrasah-interior-malam-sesudah.png", Vector3(-183.5, 1.7, -297.5), Vector3(-179.0, 1.2, -302.5), 21.0, "madrasah")
+	await _foto("km-kantor-interior-malam-sesudah.png", Vector3(-122.5, 1.7, -297.5), Vector3(-117.5, 1.2, -301.5), 21.0, "kantor")
+	await _foto("km-musholla-interior-malam-sesudah.png", InteriorMusholla.ke_dunia(Vector3(60, 1.8, -297.0)), InteriorMusholla.ke_dunia(Vector3(60, 1.2, -304.0)), 21.0, "musholla")
+	await _foto("km-kantor-putra-luar-malam-sesudah.png", Vector3(-18, 2.5, 12), Vector3(-18, 2.0, 22.5), 21.0, "")
+	await _foto("km-kantor-putra-venue-malam-sesudah.png", Vector3(-18, 1.7, 15.5), Vector3(-18, 1.5, 20.0), 21.0, "")
+	await _foto("km-madrasah-luar-malam-sesudah.png", Vector3(140, 2.5, -2), Vector3(152, 2.0, -12), 21.0, "")
 	LangitDinamis.debug_jam = -1.0
-	print("PROBE KANTOR MADRASAH SELESAI")
+	print("PROBE KANTOR MADRASAH SESUDAH SELESAI")
 	get_tree().quit(0)
 
 

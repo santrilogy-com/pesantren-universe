@@ -7,11 +7,13 @@ extends Node3D
 ## Musholla/Cangkruk tidak punya lampu nyata; interior Musholla tidak ikut
 ## terang di malam hari (2 lampunya tidak masuk grup LampuCahaya).
 ##
-## Modul ini SATU file sendiri: 21 OmniLight baru (semua TANPA bayangan,
+## Modul ini SATU file sendiri: 22 OmniLight baru (semua TANPA bayangan,
 ## hangat #ffd9a0, jangkauan 8-12 m) + perbaikan 2 lampu interior Musholla.
 ## 11 lampu Fase 1 (23:05, Cangkruk Putri dihapus 18 Nov -> 10 tersisa)
 ## + 4 lampu samping Surau (23:45, laporan Mas: sisi Surau masih gelap)
-## + 7 lampu pintu Fase 2 (20 Nov, Mas ACC 20:41 WIB; audit 20:38).
+## + 7 lampu pintu Fase 2 (20 Nov, Mas ACC 20:41 WIB; audit 20:38)
+## + 1 lampu pintu Kantor Putra Fase 3 (20 Nov, laporan Mas: kantor
+## madrasah gelap di malam hari; ukur Cahya: mean 20,7 luar / 21,9 venue).
 ## Matahari/key light + langit + ambient adalah urusan Rangga (langit_dinamis.gd)
 ## — modul ini TIDAK menyentuhnya.
 ##
@@ -90,6 +92,15 @@ func _bangun(main: Node, pintu_surau: Vector3) -> void:
 	_tambah_lampu("LampuV2_PintuMadrasah", Vector3(145.5, 3.0, -12), 0.9, 10.0, "dinding", Vector3(0.25, 0.12, 0), Vector3(0.5, 0.1, 0.3))
 	_tambah_lampu("LampuV2_PintuStudio", Vector3(166, 3.0, -17.5), 0.9, 10.0, "dinding", Vector3(0, 0.12, 0.25))
 	_tambah_lampu("LampuV2_PintuPosJaga", Vector3(173, 3.0, -20), 0.9, 10.0, "dinding", Vector3(0.25, 0.12, 0), Vector3(0.5, 0.1, 0.3))
+	# 23 — Lampu pintu Kantor Putra (Fase 3, 20 Nov, laporan Mas: area
+	# kantor madrasah GELAP di malam hari — gedung baru pindah 19 Nov
+	# belum dapat lampu pintu Fase 2; ukur Cahya 20 Nov: mean 20,7 di
+	# luar + 21,9 di venue, vs fasad Madrasah 50,9 yang berlampu).
+	# Pola Fase 2: braket dinding + bola, hangat, 0,9 -> 1,8 malam,
+	# jangkauan 10 m, tanpa bayangan. Posisi = EXIT Kantor Putra
+	# (-18, 18.5), 1,5 m di utara pintu (pintu menghadap utara,
+	# dinding di selatan lampu -> offset +Z, sama seperti PintuStudio).
+	_tambah_lampu("LampuV2_PintuKantorPutra", Vector3(-18, 3.0, 18.5), 0.9, 10.0, "dinding", Vector3(0, 0.12, 0.25))
 	# Perbaikan lampu lama: 2 lampu interior Musholla (lihat _perbaiki_musholla).
 	_perbaiki_musholla(main)
 
@@ -125,7 +136,7 @@ func _process(_delta: float) -> void:
 
 ## Jumlah lampu baru modul ini (untuk tes).
 func jumlah_lampu_baru() -> int:
-	return 21 # 10 Fase 1 tersisa + 4 samping Surau + 7 pintu Fase 2 (20 Nov)
+	return 22 # 10 Fase 1 tersisa + 4 samping Surau + 7 pintu Fase 2 (20 Nov) + 1 pintu Kantor Putra Fase 3 (20 Nov)
 
 
 ## Energi lampu modul ini berdasarkan nama (untuk tes).

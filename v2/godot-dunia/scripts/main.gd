@@ -330,6 +330,10 @@ var _asrama_putri_door_luar: Vector3 = Vector3(146, 0, 9)
 var _asrama_putri_exit: Vector3 = Vector3(144.5, 0, 9)
 var _kantor_door_luar: Vector3 = Vector3(144, 0, -33)
 var _kantor_exit: Vector3 = Vector3(142.5, 0, -33)
+# Kantor Putra (Gilang, 20 Nov 2026 — konsep tes-di-dalam-kantor):
+# pintu utara cangkang (-18,20), titik keluar (-18,18.5) di utara pintu.
+var _kantor_putra_door_luar: Vector3 = Vector3(-18, 0, 20)
+var _kantor_putra_exit: Vector3 = Vector3(-18, 0, 18.5)
 var _madrasah_door_luar: Vector3 = Vector3(147, 0, -12)
 var _madrasah_exit: Vector3 = Vector3(145.5, 0, -12)
 var _studio_door_luar: Vector3 = Vector3(166, 0, -16)
@@ -345,6 +349,7 @@ var _pos_jaga_exit: Vector3 = Vector3(173, 0, -20)
 var _kelas_putri_pos: Vector3 = Vector3(130, 0, 10)
 var _asrama_putri_pos: Vector3 = Vector3(152, 0, 9)
 var _kantor_pos: Vector3 = Vector3(148, 0, -33)
+var _kantor_putra_pos: Vector3 = Vector3(-18, 0, 22.5)
 var _madrasah_pos: Vector3 = Vector3(152, 0, -12)
 var _studio_pos: Vector3 = Vector3(166, 0, -12)
 var _pos_jaga_pos: Vector3 = Vector3(176, 0, -20)
@@ -408,6 +413,12 @@ var _di_dalam_kantor: bool = false
 var _kantor_root: Node3D
 var _kantor_interior_door: Vector3 = Vector3(-124, 0, -300)
 var _kantor_interior_spawn: Vector3 = Vector3(-122.5, 0, -300)
+# Kantor Putra (Gilang, 20 Nov 2026 — konsep tes-di-dalam-kantor):
+# interior baru 6x5 di slot x=-90, pintu utara (-90,-302.5).
+var _di_dalam_kantor_putra: bool = false
+var _kantor_putra_root: Node3D
+var _kantor_putra_interior_door: Vector3 = Vector3(-90, 0, -302.5)
+var _kantor_putra_interior_spawn: Vector3 = Vector3(-90, 0, -301.9)
 var _di_dalam_madrasah: bool = false
 var _madrasah_root: Node3D
 var _madrasah_interior_door: Vector3 = Vector3(-185, 0, -300)
@@ -625,6 +636,14 @@ func _ready() -> void:
 	_kantor_interior_door = kantor["interior_door"]
 	_kantor_interior_spawn = kantor["interior_spawn"]
 	_kantor_root.visible = false
+	# KANTOR PUTRA (Gilang, 20 Nov 2026 — konsep tes-di-dalam-kantor
+	# Laras, ACC Mas 00:37 WIB): interior baru 6x5, slot x=-90.
+	var kantor_putra := InteriorGedungPutri.build_kantor_putra()
+	add_child(kantor_putra["root"])
+	_kantor_putra_root = kantor_putra["root"]
+	_kantor_putra_interior_door = kantor_putra["interior_door"]
+	_kantor_putra_interior_spawn = kantor_putra["interior_spawn"]
+	_kantor_putra_root.visible = false
 	var madrasah := InteriorGedungPutri.build_madrasah()
 	add_child(madrasah["root"])
 	_madrasah_root = madrasah["root"]
@@ -675,6 +694,7 @@ func _ready() -> void:
 	# (AsramaPutra.build Nadia, (-24,10)) — default sama.
 	_asrama_putra_pos = _pesantren.get("asrama_putra_pos", Vector3(-24, 0, 10))
 	_kantor_pos = _pesantren.get("kantor_ustadzah_pos", Vector3(148, 0, -33))
+	_kantor_putra_pos = _pesantren.get("kantor_putra_pos", Vector3(-18, 0, 22.5))
 	_madrasah_pos = _pesantren.get("madrasah_pos", Vector3(152, 0, -12))
 	_studio_pos = _pesantren.get("studio_pos", Vector3(166, 0, -12))
 	_pos_jaga_pos = _pesantren.get("pos_jaga_tl", Vector3(176, 0, -20))
@@ -1566,6 +1586,7 @@ func _respawn_ke_spawn() -> void:
 	_di_dalam_asrama_putri = false
 	_di_dalam_asrama_putra = false
 	_di_dalam_kantor = false
+	_di_dalam_kantor_putra = false
 	_di_dalam_madrasah = false
 	_di_dalam_studio = false
 	_di_dalam_pos_jaga = false
@@ -1621,6 +1642,7 @@ func _process(delta: float) -> void:
 	# ASRAMA PUTRA (Lestari): pintu Asrama Putra — pola yang sama.
 	_cek_pintu_asrama_putra()
 	_cek_pintu_kantor()
+	_cek_pintu_kantor_putra()
 	_cek_pintu_madrasah()
 	_cek_pintu_studio()
 	_cek_pintu_pos_jaga()
@@ -1661,7 +1683,7 @@ func _process(delta: float) -> void:
 	# sebagai jaring pengaman. Saat tidur, target rig diturunkan ke
 	# 0,9 m supaya kamera memandang badan yang berbaring, bukan
 	# udara kosong di atas kasur.
-	var di_ruangan := _di_dalam or _di_dalam_cangkruk or _di_dalam_musholla or _di_dalam_kelas_putri or _di_dalam_asrama_putri or _di_dalam_asrama_putra or _di_dalam_kantor or _di_dalam_madrasah or _di_dalam_studio or _di_dalam_pos_jaga
+	var di_ruangan := _di_dalam or _di_dalam_cangkruk or _di_dalam_musholla or _di_dalam_kelas_putri or _di_dalam_asrama_putri or _di_dalam_asrama_putra or _di_dalam_kantor or _di_dalam_kantor_putra or _di_dalam_madrasah or _di_dalam_studio or _di_dalam_pos_jaga
 	# RONDE 7 revisi: saat tidur spring 3,0 m (lebih dekat + lebih
 	# rendah — kasur mengisi frame, plafon tidak mendominasi).
 	# KAMERA ASRAMA (Lestari, 18 Nov 2026 — perbesaran Nadia tapak
@@ -2042,6 +2064,13 @@ func _update_interact_button() -> void:
 	if _di_dalam_kantor and _dekat_pintu_kantor_dalam():
 		_ui.set_interact_visible(true, "KELUAR KANTOR USTADZAH")
 		return
+	# KANTOR PUTRA (Gilang, 20 Nov 2026 — konsep tes-di-dalam-kantor).
+	if _kantor_putra_root != null and not _di_dalam_kantor_putra and _dekat_pintu_kantor_putra_luar():
+		_ui.set_interact_visible(true, "MASUK KANTOR PUTRA")
+		return
+	if _di_dalam_kantor_putra and _dekat_pintu_kantor_putra_dalam():
+		_ui.set_interact_visible(true, "KELUAR KANTOR PUTRA")
+		return
 	if not _di_dalam_madrasah and _dekat_pintu_madrasah_luar():
 		_ui.set_interact_visible(true, "MASUK MADRASAH")
 		return
@@ -2090,7 +2119,7 @@ func _update_interact_button() -> void:
 ## SFX LANGKAH (Sinta): dipanggil tiap signal langkah pemain.
 ## Di dalam Surau/Musholla/Cangkruk = lantai kayu, di luar = tanah.
 func _saat_langkah() -> void:
-	_audio.mainkan_langkah(_di_dalam or _di_dalam_musholla or _di_dalam_cangkruk or _di_dalam_kelas_putri or _di_dalam_asrama_putri or _di_dalam_asrama_putra or _di_dalam_kantor or _di_dalam_madrasah or _di_dalam_studio or _di_dalam_pos_jaga)
+	_audio.mainkan_langkah(_di_dalam or _di_dalam_musholla or _di_dalam_cangkruk or _di_dalam_kelas_putri or _di_dalam_asrama_putri or _di_dalam_asrama_putra or _di_dalam_kantor or _di_dalam_kantor_putra or _di_dalam_madrasah or _di_dalam_studio or _di_dalam_pos_jaga)
 
 
 func _cek_pintu_surau() -> void:
@@ -2346,6 +2375,47 @@ func _keluar_kantor() -> void:
 	_ui.toast("Kamu keluar dari Kantor Ustadzah.")
 
 
+## KANTOR PUTRA (Gilang, 20 Nov 2026 — konsep tes-di-dalam-kantor
+## Laras, ACC Mas 00:37 WIB). Pola Studio (pintu UTARA): masuk =
+## jalan ke zona pintu luar (-18, 18.5..20) -> teleport ke spawn
+## dalam (-90,-301.9) menghadap selatan; keluar = jalan menembus
+## celah pintu dalam ke utara -> teleport ke titik keluar.
+## Wiring ADEGAN (penguji duduk, tombol DUDUK -> panel tes) TIDAK
+## di sini — menunggu pose duduk_kursi Kirana (ronde berikut).
+func _cek_pintu_kantor_putra() -> void:
+	if not _ui.is_world_visible():
+		return
+	var p := _player.global_position
+	if not _di_dalam_kantor_putra:
+		if absf(p.x - _kantor_putra_door_luar.x) < 1.0 and p.z > _kantor_putra_exit.z and p.z < _kantor_putra_door_luar.z:
+			_masuk_kantor_putra()
+	else:
+		var d2 := p - _kantor_putra_interior_door
+		if absf(d2.x) < 1.2 and -d2.z > 0.0 and -d2.z < 1.5:
+			_keluar_kantor_putra()
+
+
+func _masuk_kantor_putra() -> void:
+	if _kantor_putra_root == null:
+		_ui.toast("Kantor Putra masih dibangun.")
+		return
+	_di_dalam_kantor_putra = true
+	_audio.mainkan_pintu(true)
+	_set_interior_terlihat(false, false, false, false, false, false, false, false, false, false, true)
+	_set_sandal_ruangan(true)
+	_teleport_player(_kantor_putra_interior_spawn, PI)
+	_ui.toast("Kamu masuk ke dalam Kantor Putra.")
+
+
+func _keluar_kantor_putra() -> void:
+	_di_dalam_kantor_putra = false
+	_audio.mainkan_pintu(false)
+	_set_interior_terlihat(false, false)
+	_set_sandal_ruangan(false)
+	_teleport_player(_kantor_putra_exit, 0.0)
+	_ui.toast("Kamu keluar dari Kantor Putra.")
+
+
 func _cek_pintu_madrasah() -> void:
 	if not _ui.is_world_visible():
 		return
@@ -2468,7 +2538,7 @@ func _cek_pintu_cangkruk() -> void:
 ## ke polyline pagar (PAGAR_GARIS dihapus Raka saat merge).
 func _cek_batas(delta: float) -> void:
 	_batas_toast_timer = maxf(0.0, _batas_toast_timer - delta)
-	if not _ui.is_world_visible() or _di_dalam or _di_dalam_cangkruk or _di_dalam_musholla or _di_dalam_kelas_putri or _di_dalam_asrama_putri or _di_dalam_asrama_putra or _di_dalam_kantor or _di_dalam_madrasah or _di_dalam_studio or _di_dalam_pos_jaga:
+	if not _ui.is_world_visible() or _di_dalam or _di_dalam_cangkruk or _di_dalam_musholla or _di_dalam_kelas_putri or _di_dalam_asrama_putri or _di_dalam_asrama_putra or _di_dalam_kantor or _di_dalam_kantor_putra or _di_dalam_madrasah or _di_dalam_studio or _di_dalam_pos_jaga:
 		return
 	# Pengasuh + musyrif/musyrifah + Keamanan boleh lewat.
 	if _pemain_boleh_lewat_batas():
@@ -2607,7 +2677,7 @@ func _keluar_cangkruk() -> void:
 ## ASRAMA PUTRA (Lestari): parameter ke-10 = asrama_putra —
 ## ditambahkan DI AKHIR supaya semua panggilan lama (posisi 1..9)
 ## tidak bergeser.
-func _set_interior_terlihat(surau: bool, cangkruk: bool, musholla: bool = false, asrama_putri: bool = false, kelas_putri: bool = false, kantor: bool = false, madrasah: bool = false, studio: bool = false, pos_jaga: bool = false, asrama_putra: bool = false) -> void:
+func _set_interior_terlihat(surau: bool, cangkruk: bool, musholla: bool = false, asrama_putri: bool = false, kelas_putri: bool = false, kantor: bool = false, madrasah: bool = false, studio: bool = false, pos_jaga: bool = false, asrama_putra: bool = false, kantor_putra: bool = false) -> void:
 	if _interior_root != null:
 		_interior_root.visible = surau
 	if _cangkruk_root != null:
@@ -2628,6 +2698,8 @@ func _set_interior_terlihat(surau: bool, cangkruk: bool, musholla: bool = false,
 		_pos_jaga_root.visible = pos_jaga
 	if _asrama_putra_root != null:
 		_asrama_putra_root.visible = asrama_putra
+	if _kantor_putra_root != null:
+		_kantor_putra_root.visible = kantor_putra
 
 
 ## Sandal otomatis lepas saat masuk ruangan (Surau/cangkruk) dan
@@ -2707,6 +2779,16 @@ func _dekat_pintu_kantor_luar() -> bool:
 
 func _dekat_pintu_kantor_dalam() -> bool:
 	return _player.global_position.distance_to(_kantor_interior_door) < 2.5
+
+
+## KANTOR PUTRA (Gilang, 20 Nov 2026 — konsep tes-di-dalam-kantor):
+## luar = titik keluar (-18,18.5), dalam = pintu interior (-90,-302.5).
+func _dekat_pintu_kantor_putra_luar() -> bool:
+	return _player.global_position.distance_to(_kantor_putra_exit) < 2.5
+
+
+func _dekat_pintu_kantor_putra_dalam() -> bool:
+	return _player.global_position.distance_to(_kantor_putra_interior_door) < 2.5
 
 
 func _dekat_pintu_madrasah_luar() -> bool:
@@ -3048,6 +3130,13 @@ func _on_interact() -> void:
 		return
 	if _di_dalam_kantor and _dekat_pintu_kantor_dalam():
 		_keluar_kantor()
+		return
+	# KANTOR PUTRA (Gilang, 20 Nov 2026 — konsep tes-di-dalam-kantor).
+	if _kantor_putra_root != null and not _di_dalam_kantor_putra and _dekat_pintu_kantor_putra_luar():
+		_masuk_kantor_putra()
+		return
+	if _di_dalam_kantor_putra and _dekat_pintu_kantor_putra_dalam():
+		_keluar_kantor_putra()
 		return
 	if not _di_dalam_madrasah and _dekat_pintu_madrasah_luar():
 		_masuk_madrasah()
@@ -3992,6 +4081,8 @@ func _data_peta() -> Dictionary:
 		pemain = Vector2(_asrama_putra_pos.x, _asrama_putra_pos.z)
 	if _di_dalam_kantor:
 		pemain = Vector2(_kantor_pos.x, _kantor_pos.z)
+	if _di_dalam_kantor_putra:
+		pemain = Vector2(_kantor_putra_pos.x, _kantor_putra_pos.z)
 	if _di_dalam_madrasah:
 		pemain = Vector2(_madrasah_pos.x, _madrasah_pos.z)
 	if _di_dalam_studio:
@@ -4164,6 +4255,16 @@ func _on_aksi(nama: String) -> void:
 			# dari muka dalam dinding utara.
 			_player.set_facing(0.0)
 			_player.global_position = _kasur_terdekat() + Vector3(0, 0, 0.95)
+	# DUDUK KURSI (Kirana, 20 Nov 2026 — bug 4 Mas: "berdiri dari duduk
+	# di kursi malah berdiri DI ATAS kursinya"): "Berdiri" dari pose
+	# duduk_kursi HARUS lewat berdiri_dari_kursi() — turun ke lantai
+	# DI DEPAN kursi (titik "bangun"), BUKAN set_aksi("berdiri") polos
+	# yang membiarkan node tetap di x,z kursi. Toast + return di sini
+	# (logika bangun-tidur di bawah tidak relevan untuk kursi).
+	if nama == "berdiri" and _player.aksi_saat_ini() == "duduk_kursi":
+		_player.berdiri_dari_kursi()
+		_ui.toast("Berdiri.")
+		return
 	_player.set_aksi(nama)
 	# RONDE 8: bangun dari tidur — jepret kamera ke posisi akhir +
 	# pitch default (-0,35) supaya tidak menyapu melewati lampu gantung

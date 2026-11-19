@@ -78,9 +78,31 @@ const BUBBLE_MAKS := 100
 ## (konstanta bersama tidak bisa memuaskan dua condongan sekaligus —
 ## lihat RONDE-DUDUK-SARUNG-STATUS.md); clip itu di balik rehal/kitab
 ## dan tertutup lantai, verdict akhir dari foto S3/S4.
+## REVISI BERSILA v2 (Kirana, 20 Nov 2026 — bug 2 Mas: "duduk bersila
+## juga mekar kayak bunga", foto pose-bersila-*-sebelum): kerucut
+## (1.70, 0.45, 1.70) masih terbaca seperti POT/BEL bunga — sisi
+## lurus curam, atas sempit (Ø0,68), lutut tersembunyi total di
+## dalamnya. Yang baru: GUNDUKAN RENDAH LEBAR — sarung (1.95, 0.32,
+## 1.95) / sarung_y 0,66: tinggi dunia cuma 0,26 (dulu 0,36), atas
+## Ø0,78 (pangkuan datar, badan muncul dari tengah kain), bawah
+## Ø1,13; hem (1.95, 0.20, 1.95) / hem_y 0,49 (titik terendah dunia
+## 0,012 — menyentuh lantai, tanpa celah ke rim bawah sarung 0,092:
+## hem atas 0,128 menutupinya). Tepi atas dunia 0,368 — kitab menulis
+## (bawah y 0,36) tetap terselip. Lutut bersila kini MELEBAR ke
+## samping (yaw kaki dibalik, lihat _terapkan_pose "duduk") supaya
+## alasnya terbaca seperti orang bersila beneran, bukan kerucut.
 const PAKAIAN_DEFAULT := {"sarung_scale": Vector3.ONE, "sarung_y": 0.50, "hem_scale": Vector3(1.0, 0.25, 1.0), "hem_y": 0.12, "trim_y": 0.14, "torso_scale": Vector3.ONE, "peci_z": 1.0}
-const PAKAIAN_DUDUK := {"sarung_scale": Vector3(1.70, 0.45, 1.70), "sarung_y": 0.65, "hem_scale": Vector3(1.70, 0.20, 1.70), "hem_y": 0.50, "trim_y": 0.50, "torso_scale": Vector3.ONE, "peci_z": 1.0}
+const PAKAIAN_DUDUK := {"sarung_scale": Vector3(1.95, 0.32, 1.95), "sarung_y": 0.66, "hem_scale": Vector3(1.95, 0.20, 1.95), "hem_y": 0.49, "trim_y": 0.49, "torso_scale": Vector3.ONE, "peci_z": 1.0}
 const PAKAIAN_TIDUR := {"sarung_scale": Vector3(1.15, 1.0, 0.55), "sarung_y": 0.50, "hem_scale": Vector3(1.15, 0.25, 0.5), "hem_y": 0.12, "trim_y": 0.14, "torso_scale": Vector3(1.0, 1.0, 0.6), "peci_z": 0.7}
+## DUDUK KURSI (Kirana, 20 Nov 2026 — bug 3 Mas): sarung DIPENDEKKAN
+## supaya menutupi paha horizontal + lutut, betis polos menggantung
+## di bawah hem: sarung (1.10, 0.42, 1.10) / sarung_y 0,72 — tepi
+## atas dunia 0,718 (menutupi bawah torso 0,56), rim bawah dunia
+## 0,382 (tepat di bawah lutut 0,414); hem (1.10, 0.25, 1.10) /
+## hem_y 0,56 menutup rim. Paha (warna sarung) menjorok ~4 cm ke
+## depan tabung — terbaca sebagai kain yang meregang di atas paha.
+const PAKAIAN_KURSI := {"sarung_scale": Vector3(1.10, 0.42, 1.10), "sarung_y": 0.72, "hem_scale": Vector3(1.10, 0.25, 1.10), "hem_y": 0.56, "trim_y": 0.56, "torso_scale": Vector3.ONE, "peci_z": 1.0}
+const PAKAIAN_ABAYA_KURSI := {"sarung_scale": Vector3(1.05, 0.55, 1.05), "sarung_y": 0.85, "hem_scale": Vector3(1.05, 0.25, 1.05), "hem_y": 0.50, "trim_y": 0.50, "torso_scale": Vector3.ONE, "peci_z": 1.0}
 # SUSULAN RONDE 20 (Mas 19:42 WIB: kostum Ustadzah "malah kek ustadz"
 # — koko + sarung batik + penutup kepala seperti songkok): ABAYA +
 # JILBAB. Abaya = SATU gamis panjang longgar (bahu -> mata kaki),
@@ -89,8 +111,12 @@ const PAKAIAN_TIDUR := {"sarung_scale": Vector3(1.15, 1.0, 0.55), "sarung_y": 0.
 # 1,32 m sampai lutut dan membuka kaki bersila — abaya duduk justru
 # MELEBAR (1.55) + sedikit memendek (0.78), tetap menutupi kaki
 # bersila sampai lantai (hem dunia ~0.04 saat visual turun -0.42).
+# REVISI BERSILA v2 (Kirana, 20 Nov 2026 — bug 2, sama seperti sarung):
+# gamis duduk ikut diratakan + dilebarkan: (1.85, 0.55, 1.85) /
+# sarung_y 0,82 — gundukan dunia 0,037..0,763, bawah Ø1,07; hem
+# (1.85, 0.20, 1.85) / hem_y 0,50 (titik terendah dunia 0,022).
 const PAKAIAN_ABAYA_DEFAULT := {"sarung_scale": Vector3.ONE, "sarung_y": 0.76, "hem_scale": Vector3(1.0, 0.25, 1.0), "hem_y": 0.12, "trim_y": 0.14, "torso_scale": Vector3.ONE, "peci_z": 1.0}
-const PAKAIAN_ABAYA_DUDUK := {"sarung_scale": Vector3(1.65, 0.72, 1.65), "sarung_y": 0.95, "hem_scale": Vector3(1.65, 0.25, 1.65), "hem_y": 0.44, "trim_y": 0.46, "torso_scale": Vector3.ONE, "peci_z": 1.0}
+const PAKAIAN_ABAYA_DUDUK := {"sarung_scale": Vector3(1.85, 0.55, 1.85), "sarung_y": 0.82, "hem_scale": Vector3(1.85, 0.20, 1.85), "hem_y": 0.50, "trim_y": 0.50, "torso_scale": Vector3.ONE, "peci_z": 1.0}
 
 ## Arah gerak di ruang pesantren (sudah relatif kamera), panjang 0..1.
 var move_dir: Vector3 = Vector3.ZERO
@@ -142,6 +168,13 @@ var _anim_blend: float = 0.0
 var _aksi: String = "berdiri"
 var _aksi_timer: float = 0.0
 var _bawa_kitab: bool = false
+## DUDUK KURSI (Kirana, 20 Nov 2026 — bug 3+4 Mas): kursi yang sedang
+## diduduki pemain (entry scripts/kursi_pemain.gd) + tinggi duduknya
+## di atas lantai node (0,45 kursi biasa, 0,51 kasur). Kosong = pemain
+## tidak duduk di kursi terdaftar. Dipakai _terapkan_pose
+## ("duduk_kursi" + "duduk" via API), pembeku fisika, dan bangun.
+var _kursi_duduk: Dictionary = {}
+var _kursi_tinggi_duduk: float = 0.45
 var _menulis_t: float = 0.0
 var _sandal_l: MeshInstance3D
 var _sandal_r: MeshInstance3D
@@ -1742,6 +1775,16 @@ func set_aksi(nama: String) -> void:
 ## berubah). Isi = badan set_aksi lama yang dipindah utuh ke sini.
 func _set_aksi_visual(nama: String) -> void:
 	_aksi = nama
+	# DUDUK KURSI (Kirana, 20 Nov 2026 — bug 4): keluar dari
+	# duduk_kursi lewat jalur APA PUN (teleport/reset/sholat/Aksi)
+	# WAJIB mengembalikan collision + membersihkan state kursi —
+	# tanpa ini pemain yang di-teleport saat duduk di kursi tetap
+	# beku + tembus. Posisi TIDAK digeser di sini (berdiri_dari_kursi
+	# yang menggeser ke "bangun"); jalur lain memang memindahkan
+	# pemain sendiri (teleport/reset/sholat).
+	if nama != "duduk_kursi" and not _kursi_duduk.is_empty():
+		_aktifkan_fisik_duduk()
+		_kursi_duduk = {}
 	# RONDE 18: pose "sholat" kini TAKBIR statis (bukan siklus) —
 	# tidak ada timer yang perlu di-reset.
 	# RONDE 8 (retest: pose 5 dtk terlalu singkat — penguji mengecek 20
@@ -1782,10 +1825,91 @@ func bawa_kitab_aktif() -> bool:
 
 
 ## Pose yang menahan gerak (duduk/menulis/tidur/salaman/melambai/
-## sholat): main.gd menolkan input gerak selama pose ini supaya pose
-## tidak rusak oleh animasi jalan. Berdiri + bawa kitab boleh jalan.
+## sholat/duduk_kursi): main.gd menolkan input gerak selama pose ini
+## supaya pose tidak rusak oleh animasi jalan. Berdiri + bawa kitab
+## boleh jalan.
 func sedang_aksi_diam() -> bool:
-	return _aksi in ["duduk", "menulis", "tidur", "salaman", "melambai", "sholat"]
+	return _aksi in ["duduk", "menulis", "tidur", "salaman", "melambai", "sholat", "duduk_kursi"]
+
+
+## DUDUK KURSI — API untuk Gilang (wiring kursi pemain) + Laras
+## (adegan tes di dalam kantor). Dipanggil main.gd saat pemain menekan
+## DUDUK di dekat kursi terdaftar (scripts/kursi_pemain.gd).
+## - "kursi" -> pose "duduk_kursi" (kaki menjuntai);
+##   "bersila"/"kasur" -> pose "duduk" (bersila, visual ikut tinggi).
+## - Node dipindah ke TANAH di x,z kursi (y = lantai_y) — TIDAK
+##   PERNAH di atas kursi; visual yang naik ke tinggi duduk.
+## - Fisika dibekukan + collision dimatikan selama duduk (kotak
+##   collision bangku 0,5 m akan mendorong kapsul keluar).
+func duduk_di_kursi(kursi: Dictionary) -> void:
+	if kursi.is_empty():
+		return
+	var jenis := String(kursi.get("jenis", "kursi"))
+	var pos: Vector3 = kursi["pos"]
+	var lantai_y := float(kursi.get("lantai_y", 0.0))
+	_kursi_duduk = kursi.duplicate()
+	_kursi_tinggi_duduk = pos.y - lantai_y
+	global_position = Vector3(pos.x, lantai_y, pos.z)
+	_visual.rotation.y = float(kursi.get("yaw", 0.0))
+	_nonaktifkan_fisik_duduk()
+	if jenis == "kursi":
+		set_aksi("duduk_kursi")
+	else:
+		set_aksi("duduk")
+
+
+## Berdiri dari kursi (bug 4 Mas): turun ke lantai DI DEPAN kursi —
+## titik "bangun" dari registry (kelas: lorong, BUKAN ke arah meja;
+## madrasah/studio: belakang kursi; kasur: 1,5 m selatan kaki).
+## Tanpa "bangun" (entry lama): 0,8 m ke arah hadap. Collision
+## diaktifkan lagi SETELAH pindah (supaya tidak terdorong bangku).
+func berdiri_dari_kursi() -> void:
+	if _kursi_duduk.is_empty():
+		set_aksi("berdiri")
+		return
+	var bangun: Vector3
+	if _kursi_duduk.has("bangun"):
+		bangun = _kursi_duduk["bangun"]
+	else:
+		var depan := Vector3(sin(_visual.rotation.y), 0.0, cos(_visual.rotation.y))
+		bangun = global_position + depan * 0.8
+		bangun.y = float(_kursi_duduk.get("lantai_y", 0.0))
+	velocity = Vector3.ZERO
+	global_position = bangun
+	_kursi_duduk = {}
+	_aktifkan_fisik_duduk()
+	set_aksi("berdiri")
+
+
+## Kursi yang sedang diduduki ({} bila tidak duduk di kursi) —
+## dipakai main.gd untuk label/tombol DUDUK + wiring tes kantor.
+func kursi_duduk() -> Dictionary:
+	return _kursi_duduk
+
+
+func _bentuk_fisik() -> CollisionShape3D:
+	for c in get_children():
+		if c is CollisionShape3D:
+			return c
+	return null
+
+
+func _nonaktifkan_fisik_duduk() -> void:
+	var b := _bentuk_fisik()
+	if b != null:
+		b.set_deferred("disabled", true)
+
+
+func _aktifkan_fisik_duduk() -> void:
+	var b := _bentuk_fisik()
+	if b != null:
+		b.set_deferred("disabled", false)
+
+
+## Pemain memakai abaya (muslimah tanpa tunik)? Dipakai _terapkan_pose
+## untuk memilih varian pakaian duduk/kursi yang benar.
+func _pakai_abaya() -> bool:
+	return bool(_outfit.get("muslimah", false)) and not bool(_outfit.get("tunik", false))
 
 
 ## BUBBLE-ML (Gita, 17 Nov 2026): bubble 3D DIMATIKAN — fungsi ini
@@ -1979,14 +2103,24 @@ func _physics_process(delta: float) -> void:
 	# (L4) + interpolasi di _process (L5).
 	if not is_multiplayer_authority():
 		return
-	if not is_on_floor():
-		velocity.y -= GRAVITY * delta
-	else:
-		velocity.y = -0.5
 	var v := _baca_input()
-	velocity.x = v.x * SPEED
-	velocity.z = v.z * SPEED
-	move_and_slide()
+	if not _kursi_duduk.is_empty():
+		# DUDUK KURSI (Kirana, 20 Nov 2026): fisika BEKU selama duduk
+		# di kursi — gravitasi + move_and_slide dimatikan supaya badan
+		# (collision dimatikan) tidak jatuh/melorot dari kursi; pose
+		# dipertahankan _terapkan_pose. Input sudah nol via main.gd
+		# (sedang_aksi_diam), v dinolkan juga supaya hadap + pose_id
+		# tidak berubah.
+		v = Vector3.ZERO
+		velocity = Vector3.ZERO
+	else:
+		if not is_on_floor():
+			velocity.y -= GRAVITY * delta
+		else:
+			velocity.y = -0.5
+		velocity.x = v.x * SPEED
+		velocity.z = v.z * SPEED
+		move_and_slide()
 	# Hadap ke arah gerak (putar visual dengan halus).
 	if v.length() > 0.1 and not sedang_aksi_diam():
 		var target_yaw := atan2(v.x, v.z)
@@ -2032,20 +2166,32 @@ func _terapkan_pose(delta: float) -> void:
 			# melipat DULU (k_kaki cepat), badan menyusul, tangan
 			# TERAKHIR ke pangkuan (k_tangan lambat); sebelumnya semua
 			# bergerak serentak sehingga transisi terasa "teleport".
+			# REVISI BERSILA v2 (Kirana, 20 Nov 2026 — bug 2 Mas):
+			# yaw kaki DIBALIK — dulu kaki kiri +0.50 / kanan -0.50
+			# membuat KEDUA LUTUT BERTEMU di tengah depan (x≈0),
+			# alasnya sempit seperti kerucut; kini kiri -0.50 /
+			# kanan +0.50 (lutut MELEBAR ke samping ±0,22, betis
+			# menyilang di bawah paha) — alas bersila yang lebar,
+			# seperti orang bersila beneran. z + yaw lutut ikut
+			# dibalik supaya lipatan tetap searah.
+			# Tinggi visual ikut _kursi_tinggi_duduk bila duduk via
+			# duduk_di_kursi("kasur") — kasur 0,51 -> visual +0,09
+			# (pinggul 0,71); duduk biasa/bersila -> -0,42.
 			var k_kaki := minf(1.0, delta * 12.0)
 			var k_tangan := minf(1.0, delta * 5.0)
-			_visual.position.y = lerpf(_visual.position.y, -0.42, k)
+			var duduk_y := -0.42 if _kursi_duduk.is_empty() else _kursi_tinggi_duduk - 0.42
+			_visual.position.y = lerpf(_visual.position.y, duduk_y, k)
 			_visual.rotation.x = lerpf(_visual.rotation.x, 0.08, k)
 			_leg_l.rotation.x = lerpf(_leg_l.rotation.x, -0.85, k_kaki)
 			_leg_r.rotation.x = lerpf(_leg_r.rotation.x, -0.85, k_kaki)
-			_leg_l.rotation.y = lerpf(_leg_l.rotation.y, 0.50, k_kaki)
-			_leg_r.rotation.y = lerpf(_leg_r.rotation.y, -0.50, k_kaki)
-			_leg_l.rotation.z = lerpf(_leg_l.rotation.z, 0.10, k_kaki)
-			_leg_r.rotation.z = lerpf(_leg_r.rotation.z, -0.10, k_kaki)
+			_leg_l.rotation.y = lerpf(_leg_l.rotation.y, -0.50, k_kaki)
+			_leg_r.rotation.y = lerpf(_leg_r.rotation.y, 0.50, k_kaki)
+			_leg_l.rotation.z = lerpf(_leg_l.rotation.z, -0.10, k_kaki)
+			_leg_r.rotation.z = lerpf(_leg_r.rotation.z, 0.10, k_kaki)
 			_knee_l.rotation.x = lerpf(_knee_l.rotation.x, 2.30, k_kaki)
 			_knee_r.rotation.x = lerpf(_knee_r.rotation.x, 2.30, k_kaki)
-			_knee_l.rotation.y = lerpf(_knee_l.rotation.y, 0.20, k_kaki)
-			_knee_r.rotation.y = lerpf(_knee_r.rotation.y, -0.20, k_kaki)
+			_knee_l.rotation.y = lerpf(_knee_l.rotation.y, -0.20, k_kaki)
+			_knee_r.rotation.y = lerpf(_knee_r.rotation.y, 0.20, k_kaki)
 			_knee_l.rotation.z = lerpf(_knee_l.rotation.z, 0.0, k_kaki)
 			_knee_r.rotation.z = lerpf(_knee_r.rotation.z, 0.0, k_kaki)
 			_arm_l.rotation.x = lerpf(_arm_l.rotation.x, -0.35, k_tangan)
@@ -2054,7 +2200,40 @@ func _terapkan_pose(delta: float) -> void:
 			_arm_r.rotation.z = lerpf(_arm_r.rotation.z, 0.20, k_tangan)
 			_elbow_l.rotation.x = lerpf(_elbow_l.rotation.x, -0.20, k_tangan)
 			_elbow_r.rotation.x = lerpf(_elbow_r.rotation.x, -0.20, k_tangan)
-			_lerp_pakaian(delta, PAKAIAN_DUDUK)
+			_lerp_pakaian(delta, PAKAIAN_ABAYA_DUDUK if _pakai_abaya() else PAKAIAN_DUDUK)
+		"duduk_kursi":
+			# DUDUK KURSI (Kirana, 20 Nov 2026 — bug 3 Mas: "duduk
+			# di kursi malah bersila di kursi"): kaki MENJUNTAI,
+			# bukan bersila — paha hampir horizontal ke depan
+			# (-1.45), betis vertikal ke bawah (lutut +1.45),
+			# telapak menggantung ~13 cm di atas lantai (betis rig
+			# cuma 0,28 m — memang menjuntai, sesuai kata Mas).
+			# Pinggul di tinggi kursi: visual = _kursi_tinggi_duduk
+			# - 0,62 (kursi 0,45 -> -0,17). Badan tegak condong
+			# 0,05; tangan di pangkuan (lengan -0,50, siku -0,30).
+			var k_kaki_k := minf(1.0, delta * 12.0)
+			var k_tangan_k := minf(1.0, delta * 5.0)
+			_visual.position.y = lerpf(_visual.position.y, _kursi_tinggi_duduk - 0.62, k)
+			_visual.rotation.x = lerpf(_visual.rotation.x, 0.05, k)
+			_leg_l.rotation.x = lerpf(_leg_l.rotation.x, -1.45, k_kaki_k)
+			_leg_r.rotation.x = lerpf(_leg_r.rotation.x, -1.45, k_kaki_k)
+			_leg_l.rotation.y = lerpf(_leg_l.rotation.y, 0.0, k_kaki_k)
+			_leg_r.rotation.y = lerpf(_leg_r.rotation.y, 0.0, k_kaki_k)
+			_leg_l.rotation.z = lerpf(_leg_l.rotation.z, 0.06, k_kaki_k)
+			_leg_r.rotation.z = lerpf(_leg_r.rotation.z, -0.06, k_kaki_k)
+			_knee_l.rotation.x = lerpf(_knee_l.rotation.x, 1.45, k_kaki_k)
+			_knee_r.rotation.x = lerpf(_knee_r.rotation.x, 1.45, k_kaki_k)
+			_knee_l.rotation.y = lerpf(_knee_l.rotation.y, 0.0, k_kaki_k)
+			_knee_r.rotation.y = lerpf(_knee_r.rotation.y, 0.0, k_kaki_k)
+			_knee_l.rotation.z = lerpf(_knee_l.rotation.z, 0.0, k_kaki_k)
+			_knee_r.rotation.z = lerpf(_knee_r.rotation.z, 0.0, k_kaki_k)
+			_arm_l.rotation.x = lerpf(_arm_l.rotation.x, -0.50, k_tangan_k)
+			_arm_r.rotation.x = lerpf(_arm_r.rotation.x, -0.50, k_tangan_k)
+			_arm_l.rotation.z = lerpf(_arm_l.rotation.z, -0.20, k_tangan_k)
+			_arm_r.rotation.z = lerpf(_arm_r.rotation.z, 0.20, k_tangan_k)
+			_elbow_l.rotation.x = lerpf(_elbow_l.rotation.x, -0.30, k_tangan_k)
+			_elbow_r.rotation.x = lerpf(_elbow_r.rotation.x, -0.30, k_tangan_k)
+			_lerp_pakaian(delta, PAKAIAN_ABAYA_KURSI if _pakai_abaya() else PAKAIAN_KURSI)
 		"menulis":
 			# Menulis RONDE DUDUK: kaki sama seperti duduk (paha -0.85,
 			# lutut +2.30 — bersila terlipat, bukan batang kaku);

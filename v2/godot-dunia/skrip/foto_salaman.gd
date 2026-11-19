@@ -49,23 +49,26 @@ func _ready() -> void:
 	_main._ui.set_hud_visible(false)
 	_cam = Camera3D.new()
 	_cam.fov = 50.0
+	_cam.current = true
 	add_child(_cam)
-	# Bilal diam di (-4,4), pemain di (-4,6) — berhadapan sumbu z.
+	# Bilal diam di (-4,4), pemain di (-4,5.4) — berhadapan sumbu z,
+	# 1,4 m (jarak salaman nyata) supaya tangan yang terulur bertemu.
 	var bilal: Node = _main._bilal
 	bilal.global_position = Vector3(-4, 0, 4)
 	bilal.set("_target", Vector3(-4, 0, 4))
 	bilal.set("_pause_timer", 30.0)
-	_main._player.global_position = Vector3(-4, 0, 6)
+	_main._player.global_position = Vector3(-4, 0, 5.4)
 	await _tunggu(0.5)
 	_main._on_aksi("salaman")
 	print("FOTO-SALAMAN pemain=%s bilal=%s" % [String(_main._player.aksi_saat_ini()), String(bilal.get("_salaman"))])
 	await _tunggu(1.5)
 	print("FOTO-SALAMAN saat foto bilal=%s arm_r=%.2f" % [String(bilal.get("_salaman")), float(bilal.get("_arm_r").rotation.x)])
-	# Foto 1: samping (profil berhadapan) — kamera dari timur.
-	await _bidik(Vector3(0, 1.8, 5), Vector3(-4, 1.0, 5))
+	# Foto 1: samping (profil berhadapan) — kamera dari timur, bidik
+	# titik tengah pasangan (-4, 1.0, 4.7).
+	await _bidik(Vector3(0, 1.8, 4.7), Vector3(-4, 1.0, 4.7))
 	await _foto("salaman-pemain-bilal.png")
 	# Foto 2: lebar dari tenggara — konteks plaza Surau.
-	await _bidik(Vector3(2, 3.0, 10), Vector3(-4, 1.0, 5))
+	await _bidik(Vector3(2, 3.0, 10), Vector3(-4, 1.0, 4.7))
 	await _foto("salaman-pemain-bilal-lebar.png")
 	print("FOTO-SALAMAN selesai")
 	get_tree().quit(0)
