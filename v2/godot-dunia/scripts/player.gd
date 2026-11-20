@@ -679,9 +679,14 @@ static func _motif_drape_bersila(outfit: Dictionary, pakai_abaya: bool) -> Stand
 	if pakai_abaya:
 		img.fill(warna)
 	elif motif == "garis":
+		# v7.1: garis vertikal emas dilembutkan 55% di separuh
+		# belakang (x=64..192, u 0,25..0,75) supaya dari belakang
+		# tidak terbaca lipatan rok; depan (x<64 / x>=192) tetap
+		# tegas seperti motif sarung aslinya.
 		for y in range(128):
 			for x in range(256):
-				img.set_pixel(x, y, emas if fmod(float(x), 32.0) < 2.0 else warna)
+				var c_garis := emas if (x < 64 or x >= 192) else emas.lerp(warna, 0.55)
+				img.set_pixel(x, y, c_garis if fmod(float(x), 32.0) < 2.0 else warna)
 	elif motif == "batik":
 		var tex_batik := load("res://models/batik_putri_coklat.png") as Texture2D
 		if tex_batik != null:
@@ -734,13 +739,14 @@ static func _motif_drape_bersila(outfit: Dictionary, pakai_abaya: bool) -> Stand
 			img.set_pixel(x, y, img.get_pixel(x, y).lerp(lipat_gelap, 0.55 * s))
 		for y in range(82, 84):
 			img.set_pixel(x, y, img.get_pixel(x, y).lerp(krem, 0.30 * s))
-	# --- Lipatan tengah-belakang (v7): lekuk vertikal di u=0,5 ---
-	# Kain berkumpul di tengah belakang (th=π) — memecah kerucut
-	# polos jadi dua massa. x=126..130, y=20..75, memudar di ujung.
-	for y in range(20, 76):
-		var t := sin(PI * float(y - 20) / 56.0)
-		for x in range(126, 131):
-			img.set_pixel(x, y, img.get_pixel(x, y).lerp(lipat_gelap, 0.5 * t))
+	# --- Lipatan tengah-belakang (v7, diperkuat v7.1): lekuk vertikal
+	# di u=0,5 --- Kain berkumpul di tengah belakang (th=π) — memecah
+	# kerucut polos jadi dua massa. x=124..132, y=15..90, memudar di
+	# ujung; sejajar dengan lekuk geometris di _bangun_drape_bersila.
+	for y in range(15, 91):
+		var t := sin(PI * float(y - 15) / 76.0)
+		for x in range(124, 133):
+			img.set_pixel(x, y, img.get_pixel(x, y).lerp(lipat_gelap, 0.65 * t))
 	var tex := ImageTexture.create_from_image(img)
 	var m := StandardMaterial3D.new()
 	m.albedo_texture = tex
@@ -1132,34 +1138,45 @@ static func _gauss_bump(d: float, sigma: float) -> float:
 ## bersilang di muka depan (cincin 2..4), paling depan di antara
 ## kedua lutut, seperti di foto lotus. Motif V emas dipertahankan
 ## (titik lutut digeser ke u=0,162 mengikuti arah lutut baru).
-## v7 (Kirana, 20 Nov 2026 — verdict Mas 08:32 WIB "Dari depan ok,
-## dari belakang sama samping aneh"): DEPAN v6.1 sudah OK — jangan
-## diubah. Diagnosa foto belakang (baru, v61diag): belakang = kerucut
-## halus tanpa lipatan, garis vertikal emas terbaca seperti rok/
-## lonceng, pinggang sempit (r 0,19) di bawah torso = "boneka di
-## atas tatakan". Samping = dinding tegak karena "turun depan" hanya
-## menurunkan strip depan (th≈0), cincin atas di sisi (th≈±π/2)
-## tetap setinggi pinggang. Perbaikan: (1) TURUN SAMPING — turun
-## juga diterapkan di sisi (Gaussian sempit σ=0,35 di th≈±π/2):
-## profil samping jadi baji (tinggi di belakang 0,83, landai ke
-## ~0,50 di sisi/depan); lutut (±1,02) hampir tak kena (faktor
-## ~0,08), tangan (±0,46) dan belakang (π) tak kena. (2) TONJOLAN
-## PANTAT — kolom ke-7 cincin: radius belakang (th≈π) membesar di
-## cincin atas (0,07/0,06/0,04/0,02) supaya pinggang belakang
-## membulat selebar torso, bukan kerucut sempit. (3) MOTIF: garis
-## lipatan horizontal di v≈0,62 + lipatan tengah-belakang di u=0,5
-## (_motif_drape_bersila) supaya belakang terbaca kain berlipat,
-## bukan lonceng polos. Cincin bawah + tes lantai v6 TIDAK berubah.
+## v7.1 (Kirana, 20 Nov 2026 — sesudah lihat foto v7 sendiri):
+## v7: depan TETAP OK; samping jadi baji (lebih baik) TAPI belakang
+## terbaca "sirip" — dinding belakang (0,83) kontras tajam dengan
+## sisi yang turun (0,50), dan tonjolan pantat mendorong belakang
+## keluar (z=-0,26) melewati punggung torso (z≈-0,17). Belakang
+## masih lonceng: kerucut halus + garis vertikal emas = lipatan rok.
+## Perbaikan: (1) PINGGANG ELIPS — skala-z per cincin (0,72/0,8/
+## 0,9/0,95/1/1/1): pinggang lebih dangkal dari lebar (seperti
+## pinggul asli), belakang atas tertarik ke z≈-0,19 (sejajar
+## punggung torso) — sirip hilang; depan tidak berubah (siluet
+## ditentukan x dan y). (2) LEKUK TENGAH-BELAKANG geometris —
+## lembah dangkal 0,03 di th=π (cincin 1..4) membelah tonjolan
+## pantat jadi dua massa. (3) MOTIF: garis vertikal emas "garis"
+## dilembutkan 55% di separuh belakang (x=64..192) supaya tidak
+## terbaca lipatan rok; lipatan tengah-belakang diperlebar/
+## diperdalam. Cincin bawah + tes lantai v6 TIDAK berubah.
+## v7.2 (Kirana, 20 Nov 2026 — sesudah lihat foto v7.1 sendiri):
+## v7.1: depan TETAP OK; sirip samping berkurang sedikit, tapi
+## dinding belakang masih DATAR (garis emas memang melembut, tapi
+## permukaan tetap satu bidang hijau polos) dan "sirip" Fatimah
+## masih jelas. Akar: loft adalah permukaan putar — belakang tidak
+## punya lipatan 3D. Perbaikan: (1) LIPATAN VERTIKAL BELAKANG —
+## 2 tonjolan (0,035) di th=π±0,55, cincin 1..5, mengapit lekuk
+## tengah; cahaya menangkap lipatan seperti kain sungguhan.
+## (2) PAHA BELAKANG — massa 0,05 di th=±2,35, cincin 3..5:
+## dari belakang dua paha, dari samping bokong/paha. (3) TURUN
+## BELAKANG — cincin atas turun 0,08 di th=π (lekuk U dangkal),
+## sudut atas-belakang membulat, sirip memendek. Depan TIDAK
+## berubah (semua tambahan di th>1,3 atau ri0-belakang).
 static func _bangun_drape_bersila(bahan: Material) -> MeshInstance3D:
-	# [y_dasar, r0, amp, cz, naik, turun_depan, pantat]
+	# [y_dasar, r0, amp, cz, naik, turun_depan, pantat, z_skal]
 	var cincin: Array = [
-		[0.83, 0.19, 0.00, 0.00, 0.00, 0.30, 0.07],
-		[0.72, 0.23, 0.06, 0.02, 0.00, 0.22, 0.06],
-		[0.62, 0.27, 0.15, 0.05, 0.01, 0.12, 0.04],
-		[0.54, 0.30, 0.24, 0.08, 0.03, 0.05, 0.02],
-		[0.47, 0.32, 0.28, 0.10, 0.05, 0.00, 0.00],
-		[0.43, 0.33, 0.28, 0.12, 0.07, 0.00, 0.00],
-		[0.42, 0.33, 0.26, 0.13, 0.09, 0.00, 0.00],
+		[0.83, 0.19, 0.00, 0.00, 0.00, 0.30, 0.07, 0.72],
+		[0.72, 0.23, 0.06, 0.02, 0.00, 0.22, 0.06, 0.80],
+		[0.62, 0.27, 0.15, 0.05, 0.01, 0.12, 0.04, 0.90],
+		[0.54, 0.30, 0.24, 0.08, 0.03, 0.05, 0.02, 0.95],
+		[0.47, 0.32, 0.28, 0.10, 0.05, 0.00, 0.00, 1.00],
+		[0.43, 0.33, 0.28, 0.12, 0.07, 0.00, 0.00, 1.00],
+		[0.42, 0.33, 0.26, 0.13, 0.09, 0.00, 0.00, 1.00],
 	]
 	var seg := 40
 	var arah_lutut := 1.02
@@ -1183,6 +1200,7 @@ static func _bangun_drape_bersila(bahan: Material) -> MeshInstance3D:
 		var naik: float = cincin[ri][4]
 		var turun: float = cincin[ri][5]
 		var pantat: float = cincin[ri][6]
+		var z_skal: float = cincin[ri][7]
 		for si in seg + 1:
 			var th := TAU * float(si) / float(seg)
 			var tonjol := _gauss_bump(th - arah_lutut, sigma) + _gauss_bump(th + arah_lutut, sigma)
@@ -1193,6 +1211,24 @@ static func _bangun_drape_bersila(bahan: Material) -> MeshInstance3D:
 			# σ=0,6 di th=π; sisi (±π/2) dan lutut (±1,02) tak kena.
 			if pantat > 0.0:
 				r += pantat * _gauss_bump(th - PI, 0.6)
+			# LEKUK TENGAH-BELAKANG (v7.1): lembah dangkal 0,03 di
+			# th=π (cincin 1..4) — membelah tonjolan pantat jadi dua
+			# massa (bokong), bukan satu tonjolan. Gaussian sempit
+			# σ=0,18; sisi dan lutut tak kena.
+			if ri >= 1 and ri <= 4:
+				r -= 0.03 * _gauss_bump(th - PI, 0.18)
+			# LIPATAN VERTIKAL BELAKANG (v7.2): 2 tonjolan lipatan
+			# di th=π±0,55 (cincin 1..5) — dinding belakang tidak
+			# lagi datar; cahaya menangkap lipatan seperti kain
+			# sungguhan. Mengapit lekuk tengah-belakang.
+			if ri >= 1 and ri <= 5:
+				r += 0.035 * (_gauss_bump(th - (PI - 0.55), 0.16) + _gauss_bump(th - (PI + 0.55), 0.16))
+			# PAHA BELAKANG (v7.2): massa paha di sisi-belakang
+			# (th=±2,35, cincin 3..5) — dari belakang terbaca dua
+			# paha, dari samping terbaca bokong/paha. Lutut
+			# (±1,02) dan tengah-belakang (π) hampir tak kena.
+			if ri >= 3 and ri <= 5:
+				r += 0.05 * (_gauss_bump(th - 2.35, 0.35) + _gauss_bump(th + 2.35, 0.35))
 			# BETIS MENYILANG (v6): tonjolan depan lebar di cincin
 			# tengah (ri 2..4) — massa horizontal betis bersilang
 			# di muka depan, paling depan di antara kedua lutut.
@@ -1212,7 +1248,17 @@ static func _bangun_drape_bersila(bahan: Material) -> MeshInstance3D:
 			# saja, belakang (π) tak kena. Profil samping jadi baji
 			# rendah: tinggi di belakang (pinggang), landai ke depan.
 			y -= turun * (_gauss_bump(th, 0.35) + _gauss_bump(th - PI / 2.0, 0.35) + _gauss_bump(th + PI / 2.0, 0.35))
-			verts.append(Vector3(r * sin(th), y, cz + r * cos(th)))
+			# TURUN BELAKANG (v7.2): pinggang belakang cincin atas
+			# turun 0,08 (hanya ri0, Gaussian lebar σ=0,8 di th=π)
+			# — sudut atas-belakang membulat, "sirip" memendek;
+			# tepi atas belakang jadi lekuk U dangkal. Sarung inti
+			# di balik drape menutup celah pinggang.
+			if ri == 0:
+				y -= 0.08 * _gauss_bump(th - PI, 0.8)
+			# PINGGANG ELIPS (v7.1): skala-z per cincin — pinggang
+			# lebih dangkal dari lebar (seperti pinggul asli);
+			# belakang atas tertarik ke dalam, sejajar punggung.
+			verts.append(Vector3(r * sin(th), y, (cz + r * cos(th)) * z_skal))
 			normals.append(Vector3(sin(th), 0.0, cos(th)).normalized())
 			uvs.append(Vector2(float(si) / float(seg), float(ri) / float(cincin.size() - 1)))
 	var langkah := seg + 1
