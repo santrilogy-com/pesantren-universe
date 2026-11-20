@@ -115,6 +115,26 @@ func _ready() -> void:
 		_drape_mesh.get_aabb().size.x >= 0.78)
 	_cek("DRAPE v4: lebar alas <= 0.95 (bukan kerucut bunga)",
 		_drape_mesh.get_aabb().size.x <= 0.95)
+	# DRAPE v5 (Kirana, 20 Nov 2026 — verdict Mas 07:37 WIB "Kurang
+	# bagus masih" atas drape v4.2): garis lipatan paha menyilang
+	# lewat MOTIF drape khusus — garis emas diagonal (belah ketupat
+	# pinggang->lutut->tengah bawah) + lembah tengah gelap + sorot
+	# lutut. Dicek per piksel tekstur 256x128 (u = sudut/2π,
+	# v = pinggang->hem): garis lipatan emas di (20,41), lembah
+	# gelap di (2,100), sorot lutut di (45,76).
+	var _visual_tes := SantriPlayer.build_visual("Tes", MissionData.OUTFIT_DEFAULT)
+	var _drape_mat := (_visual_tes["drape"] as MeshInstance3D).material_override as StandardMaterial3D
+	_cek("DRAPE v5: bahan drape BEDA dari bahan sarung (motif khusus)",
+		_drape_mat != (_visual_tes["sarung"] as MeshInstance3D).material_override)
+	_cek("DRAPE v5: bahan drape punya tekstur motif", _drape_mat.albedo_texture != null)
+	if _drape_mat.albedo_texture != null:
+		var _img_drape := _drape_mat.albedo_texture.get_image()
+		_cek("DRAPE v5: garis lipatan emas di (20,41)",
+			_img_drape.get_pixel(20, 41).is_equal_approx(Color("#c9a227")))
+		_cek("DRAPE v5: lembah tengah lebih gelap dari dasar",
+			_img_drape.get_pixel(2, 100).get_luminance() < Color("#008062").get_luminance() * 0.8)
+		_cek("DRAPE v5: sorot lutut lebih terang dari dasar",
+			_img_drape.get_pixel(45, 76).get_luminance() > Color("#008062").get_luminance())
 	_cek("PoseIds POSE_DUDUK_KURSI = 8", PoseIds.POSE_DUDUK_KURSI == 8)
 	_cek("PoseIds dari_aksi(duduk_kursi) = 8", PoseIds.dari_aksi("duduk_kursi") == 8)
 	_cek("PoseIds ke_aksi(8) = duduk_kursi", PoseIds.ke_aksi(8) == "duduk_kursi")
@@ -254,6 +274,10 @@ func _ready() -> void:
 		not ustadzah._lutut_l.visible and not ustadzah._lutut_r.visible)
 	_cek("DRAPE abaya bersila: sarung inti = ABAYA_DUDUK v3 (0.75,0.50,0.75)",
 		ustadzah._sarung.scale.is_equal_approx(Vector3(0.75, 0.50, 0.75)))
+	# DRAPE v5 abaya: motif lipatan paha menyilang juga ada di gamis.
+	var _drape_abaya := (SantriPlayer.build_visual("Tes", MissionData.OUTFIT_USTADZAH)["drape"] as MeshInstance3D).material_override as StandardMaterial3D
+	_cek("DRAPE v5 abaya: garis lipatan emas di (20,41)",
+		_drape_abaya.albedo_texture != null and _drape_abaya.albedo_texture.get_image().get_pixel(20, 41).is_equal_approx(Color("#c9a227")))
 
 	# ---------- "ke_kursi": node tiba di TANAH, bukan di tinggi kursi ----------
 	var npc2 := _npc_baru("Budi", Vector3(-3.4, 0, 24.0), MissionData.OUTFIT_DEFAULT, false)

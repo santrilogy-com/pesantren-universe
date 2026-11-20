@@ -494,11 +494,10 @@ func apakah_tunik() -> bool:
 static var _motif_sarung_cache: Dictionary = {}
 
 
-static func _motif_sarung(warna: Color) -> StandardMaterial3D:
-	var key := "batik:" + warna.to_html()
-	if _motif_sarung_cache.has(key):
-		return _motif_sarung_cache[key]
-	var img := Image.create(256, 128, false, Image.FORMAT_RGBA8)
+## Isi gambar 256x128 dengan pita diagonal parang (dipakai
+## _motif_sarung DAN _motif_drape_bersila — satu sumber, supaya
+## drape bersila tetap bermotif sama seperti sarungnya).
+static func _isi_parang(img: Image, warna: Color) -> void:
 	var krem := Color("#f8f6ee")
 	var emas := Color("#d4a017")
 	# Pencerahan ADAPTIF (Kirana, 19 Nov 2026 — sarung Kyai terbaca
@@ -540,6 +539,14 @@ static func _motif_sarung(warna: Color) -> StandardMaterial3D:
 				if dx * dx + dy * dy < 6.0:
 					c = emas
 			img.set_pixel(x, y, c)
+
+
+static func _motif_sarung(warna: Color) -> StandardMaterial3D:
+	var key := "batik:" + warna.to_html()
+	if _motif_sarung_cache.has(key):
+		return _motif_sarung_cache[key]
+	var img := Image.create(256, 128, false, Image.FORMAT_RGBA8)
+	_isi_parang(img, warna)
 	var tex := ImageTexture.create_from_image(img)
 	var m := StandardMaterial3D.new()
 	m.albedo_texture = tex
@@ -610,6 +617,113 @@ static func _motif_batik_putri() -> StandardMaterial3D:
 	m.albedo_texture = tex
 	m.roughness = 0.45
 	_motif_batik_cache = m
+	return m
+
+
+# MOTIF DRAPE BERSILA v5 (Kirana, 20 Nov 2026 — verdict Mas 07:37 WIB
+# "Kurang bagus masih" atas drape v4.2): muka depan drape masih halus
+# dan garis emas vertikal motif "garis" membuat drape terbaca ROK,
+# bukan paha menyilang. Bahan drape kini KHUSUS (bukan bahan sarung):
+# tekstur 256x128 yang dipetakan sama seperti UV drape (u = sudut/2π,
+# v = pinggang->hem) digambari garis lipatan mengikuti paha menyilang:
+# dua garis emas diagonal membentuk belah ketupat di muka depan — dari
+# puncak pinggang (u≈0,03) melebar ke tiap lutut (u≈±0,127, v≈0,60)
+# lalu kembali ke tengah bawah (u≈0, v=1) mengikuti betis bersilang —
+# plus lembah tengah GELAP (bayangan di antara lutut) dan sorot terang
+# di tiap lutut supaya lutut terbaca bulat. Garis emas digambar di atas
+# bayangan gelap yang lebih lebar (lipatan terbaca sebagai lekuk, bukan
+# garis tempel). Dasar tekstur tetap motif sarung yang sama
+# (garis/parang/batik/polos) supaya drape nyatu dengan sarungnya.
+# Cache per warna+motif seperti motif sarung.
+static var _motif_drape_cache: Dictionary = {}
+
+
+static func _garis_tebal(img: Image, a: Vector2, b: Vector2, warna: Color, lebar: float) -> void:
+	var panjang := a.distance_to(b)
+	var langkah := maxi(1, int(panjang))
+	var r := int(ceil(lebar * 0.5))
+	for i in range(langkah + 1):
+		var p := a.lerp(b, float(i) / float(langkah))
+		for dy in range(-r, r + 1):
+			for dx in range(-r, r + 1):
+				if dx * dx + dy * dy <= r * r:
+					var px := int(p.x) + dx
+					var py := int(p.y) + dy
+					if px >= 0 and px < 256 and py >= 0 and py < 128:
+						img.set_pixel(px, py, warna)
+
+
+static func _sorot_lutut(img: Image, pusat: Vector2, radius: float, krem: Color, kuat: float) -> void:
+	var r := int(radius)
+	for dy in range(-r, r + 1):
+		for dx in range(-r, r + 1):
+			var d := sqrt(float(dx * dx + dy * dy))
+			if d <= radius:
+				var px := int(pusat.x) + dx
+				var py := int(pusat.y) + dy
+				if px >= 0 and px < 256 and py >= 0 and py < 128:
+					var t := kuat * (1.0 - d / radius)
+					img.set_pixel(px, py, img.get_pixel(px, py).lerp(krem, t))
+
+
+static func _motif_drape_bersila(outfit: Dictionary, pakai_abaya: bool) -> StandardMaterial3D:
+	var motif := String(outfit.get("sarung_motif", "parang"))
+	var warna := Color(String(outfit.get("abaya", "#065f46"))) if pakai_abaya else Color(String(outfit.get("sarung", "#0b6b4f")))
+	var key := "drape:" + ("abaya:" if pakai_abaya else motif + ":") + warna.to_html()
+	if _motif_drape_cache.has(key):
+		return _motif_drape_cache[key]
+	var img := Image.create(256, 128, false, Image.FORMAT_RGBA8)
+	var emas := Color("#c9a227")
+	var krem := Color("#f8f6ee")
+	# --- Dasar: motif sarung yang sama (garis/parang/batik/polos) ---
+	if pakai_abaya:
+		img.fill(warna)
+	elif motif == "garis":
+		for y in range(128):
+			for x in range(256):
+				img.set_pixel(x, y, emas if fmod(float(x), 32.0) < 2.0 else warna)
+	elif motif == "batik":
+		var tex_batik := load("res://models/batik_putri_coklat.png") as Texture2D
+		if tex_batik != null:
+			# get_image() pada tekstur impor mengembalikan gambar
+			# internal yang DIPAKAI BERSAMA — resize/convert langsung
+			# akan mengecilkan tekstur batik sarung (512x256) juga.
+			# Duplikasi dulu, baru ubah salinannya.
+			var ib := tex_batik.get_image().duplicate()
+			ib.convert(Image.FORMAT_RGBA8)
+			ib.resize(256, 128)
+			img.blit_rect(ib, Rect2i(0, 0, 256, 128), Vector2i(0, 0))
+		else:
+			img.fill(Color("#4a2c17"))
+	else:
+		_isi_parang(img, warna)
+	# --- Garis lipatan: belah ketupat paha menyilang ---
+	# Puncak pinggang (u≈0,03 / v≈0,08) -> lutut (u≈0,127 / v≈0,60)
+	# -> tengah bawah (u≈0,02 / v=1). Cermin di sisi kiri.
+	var gelap := warna.darkened(0.3)
+	var lipat_kanan: Array[Vector2] = [Vector2(8, 10), Vector2(33, 76), Vector2(5, 127)]
+	var lipat_kiri: Array[Vector2] = [Vector2(248, 10), Vector2(223, 76), Vector2(251, 127)]
+	for garis in [lipat_kanan, lipat_kiri]:
+		for s in range(garis.size() - 1):
+			_garis_tebal(img, garis[s], garis[s + 1], gelap, 9.0)
+	for garis in [lipat_kanan, lipat_kiri]:
+		for s in range(garis.size() - 1):
+			_garis_tebal(img, garis[s], garis[s + 1], emas, 5.0)
+	# --- Lembah tengah: bayangan gelap di antara lutut (jahitan u=0) ---
+	var lembah := warna.darkened(0.35)
+	for y in range(45, 128):
+		for x in range(0, 4):
+			img.set_pixel(x, y, lembah)
+		for x in range(252, 256):
+			img.set_pixel(x, y, lembah)
+	# --- Sorot lutut: lutut menangkap cahaya, terbaca bulat ---
+	_sorot_lutut(img, Vector2(33, 76), 16.0, krem, 0.25)
+	_sorot_lutut(img, Vector2(223, 76), 16.0, krem, 0.25)
+	var tex := ImageTexture.create_from_image(img)
+	var m := StandardMaterial3D.new()
+	m.albedo_texture = tex
+	m.roughness = 0.45
+	_motif_drape_cache[key] = m
 	return m
 
 
@@ -974,18 +1088,23 @@ static func _gauss_bump(d: float, sigma: float) -> float:
 ## bertahap (0,02/0,08/0,22) supaya tidak ada lipatan terbalik.
 ## UV: u = sudut/2π (motif garis/batik melingkar seperti tabung),
 ## v = tinggi cincin.
+## v5 (Kirana, 20 Nov 2026 — verdict Mas 07:37 WIB "Kurang bagus
+## masih"): tonjolan lutut lebih besar + lebih terlokalisir (amp
+## 0,32/0,27, sigma 0,28 — lutut lebih bulat menonjol); garis
+## lipatan paha menyilang kini lewat MOTIF drape khusus
+## (_motif_drape_bersila), bukan geometri lagi.
 static func _bangun_drape_bersila(bahan: Material) -> MeshInstance3D:
 	var cincin: Array = [
 		[0.78, 0.22, 0.00, 0.00, 0.00],
 		[0.64, 0.24, 0.05, 0.02, 0.00],
 		[0.52, 0.26, 0.14, 0.05, 0.00],
-		[0.44, 0.29, 0.27, 0.09, 0.02],
-		[0.37, 0.29, 0.22, 0.10, 0.08],
+		[0.44, 0.29, 0.32, 0.09, 0.02],
+		[0.37, 0.29, 0.27, 0.10, 0.08],
 		[0.30, 0.28, 0.12, 0.08, 0.14],
 	]
 	var seg := 40
 	var arah_lutut := 0.80
-	var sigma := 0.32
+	var sigma := 0.28
 	var arah_lipat := 0.45
 	var sigma_lipat := 0.13
 	var verts := PackedVector3Array()
@@ -1241,7 +1360,10 @@ static func build_visual(nama: String, outfit: Dictionary) -> Dictionary:
 	# UV: u = sudut/2π (motif garis/batik melingkar seperti tabung),
 	# v = tinggi cincin. Skala di-lerp lewat kunci "drape_scale":
 	# penuh saat duduk/menulis (bersila), 0 di pose lain.
-	var drape := _bangun_drape_bersila(bahan_lutut)
+	# DRAPE BERSILA v5 (Kirana, 20 Nov 2026 — verdict Mas 07:37 WIB
+	# "Kurang bagus masih"): bahan drape KHUSUS bermotif lipatan paha
+	# menyilang (_motif_drape_bersila), bukan bahan sarung/abaya biasa.
+	var drape := _bangun_drape_bersila(_motif_drape_bersila(outfit, pakai_abaya))
 	root.add_child(drape)
 
 	# JUNTAI DUDUK KURSI (Kirana, 20 Nov 2026 — verdict Mas 06:55 WIB
@@ -1933,10 +2055,11 @@ func terapkan_outfit(outfit: Dictionary) -> void:
 		var nl := _visual.find_child(nama_lutut, true, false)
 		if nl is MeshInstance3D:
 			(nl as MeshInstance3D).material_override = _bahan_kain(warna_abaya) if pakai_abaya_warna else _bahan_sarung(outfit)
-	# DRAPE BERSILA v3: bahan ikut sarung/abaya saat ganti outfit.
+	# DRAPE BERSILA v5: bahan drape KHUSUS (motif lipatan paha
+	# menyilang) — bukan bahan sarung/abaya biasa.
 	var drape_node := _visual.find_child("SarungDrape", true, false)
 	if drape_node is MeshInstance3D:
-		(drape_node as MeshInstance3D).material_override = _bahan_kain(warna_abaya) if pakai_abaya_warna else _bahan_sarung(outfit)
+		(drape_node as MeshInstance3D).material_override = _motif_drape_bersila(outfit, pakai_abaya_warna)
 	# JUNTAI DUDUK KURSI: bahan ikut sarung/abaya saat ganti outfit.
 	var juntai_node := _visual.find_child("SarungJuntai", true, false)
 	if juntai_node is MeshInstance3D:
