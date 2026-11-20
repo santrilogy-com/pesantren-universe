@@ -21,11 +21,12 @@
 - Laki-laki dewasa, proporsi realistis, wajah lengkap dengan hidung/bibir/mata yang terbentuk.
 - Kandidat lain yang dipertimbangkan: Grab3D Human Head (CC0, kepala saja — sulit digabung badan), Grab3D Medieval Villager (CC0, gaya stylized), Meshy AI (CC0, kualitas tidak konsisten + sempat di-skip Mas), Mixamo (butuh login Adobe), MakeHuman/MPFB (perlu install addon berat + hasil cenderung manekin).
 
-## Hasil olahan Blender (selesai 20 Nov 2026, ~16:36 WIB — Bima)
+## Hasil olahan Blender — VERSI FINAL (tahap 12, 20 Nov 2026 ~17:39 WIB — Bima)
 
-**File akhir:** `ust-aqsal.glb` (4,05 MB, 55.129 tris, 32 mesh, 11 material) +
+**File akhir:** `ust-aqsal.glb` (4,22 MB, 58.525 tris, 30 mesh, 13 material) +
 `ust-aqsal.blend`. Render verifikasi: `kyai-depan.png`, `kyai-samping.png`,
-`kyai-wajah.png` (+ `kyai-wajah-redup.png`, `kyai-wajah-standard.png`).
+`kyai-wajah.png`. Skrip: `skrip-11-lipatan-dalam.py` + `skrip-12-tekstur-kuat.py`.
+Tekstur lipatan: `lipatan-jubah.png` (512×64, dibuat via PIL).
 
 **Tahapan:**
 1. **Impor + cek:** wajah halus seperti manekin (kulit licin, wajah
@@ -60,13 +61,47 @@
    itu artefak cahaya, BUKAN materialnya. Di bawah cahaya redup/normal ia
    gelap (`kyai-wajah-redup.png`). Di artifact Three.js (cahaya normal) ia
    akan hitam. Jangan menaikkan intensitas lampu artifact terlalu tinggi.
+9. **Perbaiki "balok" (tahap 9, 23:55 WIB):** jubah lathe dengan 9 lipatan
+   geometri (modulasi sinus amp 1,2% → 5% + harmonik + noise), hem
+   bergelombang ±0,02, lengan terpisah miring keluar, serban dibangun ulang
+   jadi 6 cincin torus + tutup kubah + ekor (satu node `GEO-serban`), kumis
+   jadi SATU ellipsoid, jenggot lebih ramping. Hasil: serban terbaca lilitan,
+   lengan terpisah, hem bergelombang — tapi lipatan tidak kebaca (overexposure)
+   dan ada bercak kulit di bahu + lubang hitam di leher.
+10. **Perbaiki "balok" 2 (tahap 10):** deltoid badan diratakan (R bahu
+    0,193 → ~0,154), profil jubah bahu dilebarkan, lipatan diperdalam
+    (1,5% → 6%), warna jubah/serban diredupkan, serban 5 cincin lebih ramping,
+    jenggot dipendekkan, kerah DIHAPUS, lampu verifikasi diredupkan (Key 500).
+    Hasil: bercak bahu hilang, serban lilitan bagus — tapi lipatan tetap tidak
+    kebaca. Analisis piksel membuktikan: scanline jubah 236–249, variasi
+    hanya ±6, tanpa pola periodik — jubah overexposure, bukan geometri hilang.
+11. **Lipatan dalam + tekstur (tahap 11):** lipatan geometri diperdalam
+    (3% → 10%) + **tekstur garis lipatan** `lipatan-jubah.png`
+    (B(u)=0,88+0,06·sin(18πu)) di `MAT-jubah` dengan UV silinder; lengan pakai
+    `MAT-lengan` polos; piringan penutup leher `GEO-leher-dalam` (r=0,095,
+    z=1,53, `MAT-kulit-polos`). **Pelajaran:** `img.pixels = [...]` di
+    Blender GAGAL diam-diam dalam sesi ini (piksel terbaca 0,0 = hitam) —
+    tekstur pertama membuat jubah jadi arang. Solusi: buat PNG via PIL, lalu
+    `bpy.data.images.load()`. Proses sempat terbunuh SIGTERM saat restart
+    drain (17:17 WIB) — Blender hilang karena VM diganti; diinstal ulang via
+    `dpkg -i /var/cache/apt/archives/*.deb` (Blender 4.0.2 kembali jalan).
+12. **Tekstur kuat + tutup leher (tahap 12, final):** kontras tekstur
+    dinaikkan (0,72–0,95, puncak 242 / lembah 184) + `img.reload()`; penutup
+    leher dinaikkan (z=1,555) dan dibesarkan (r=0,100) — lubang hitam leher
+    tertutup. Hasil render: lipatan TERUKUR (scanline jubah variasi 34–39
+    level, ~15%, pola periodik 9 lipatan), hem bergelombang, lengan terpisah,
+    serban lilitan terbaca, bahu bersih, leher tertutup rapat.
 
-**Penilaian jujur akhir:** badan terbaca Kyai (serban putih, jubah putih
-A-line berkancing, sandal, tasbih). Wajah model dasar tetap manekin-halus.
-Jenggot final adalah cangkang halus tanpa helai — jenggot pendek rapi,
-bukan jenggot lebat realistis. Serban lathe terbaca seperti topi putih
-membulat dari depan. Ini batas maksimal jalur model-gratis + perintah teks;
-sculpt wajah/helai jenggot butuh tangan manusia.
+**Penilaian jujur akhir (tahap 12):** badan terbaca Kyai (serban lilitan
+putih, jubah putih A-line berkancing dengan lipatan terukur, sandal, tasbih).
+Wajah model dasar tetap manekin-halus. Jenggot cangkang halus tanpa helai —
+jenggot pendek rapi, bukan jenggot lebat realistis. Jubah masih terasa polos
+dari jauh (lipatan ~15%, halus, bukan garis tegas). **Ini batas maksimal
+jalur model-gratis + perintah teks** — tiga iterasi "balok" (tahap 9, 10,
+11/12) masing-masing memperbaiki satu lapis, tapi tidak mengubah kesan dasar.
+Sculpt wajah/helai jenggot/lipatan kain yang meyakinkan butuh tangan manusia
+(atau model dasar yang lebih baik). Jangan dipoles laporannya: kalau Mas
+masih bilang "balok", jalurnya sudah mentok di sini.
 
 **Detail builder:** lihat `BUILDER-NOTE.md` (path GLB, nama node/material,
 kustomisasi yang bisa/tidak bisa, batasan).
