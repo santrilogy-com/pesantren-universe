@@ -193,12 +193,13 @@ func _ready() -> void:
 	_cek("DRAPE v6: lutut menyentuh lantai (y lutut 0.40..0.46)", _y_di_x_max >= 0.40 and _y_di_x_max <= 0.46)
 	_cek("DRAPE v6: betis menyilang paling depan (z depan > z lutut)", _z_max > _z_di_x_max)
 	_cek("DRAPE v6: rotasi drape melawan condong visual (-0.20)", is_equal_approx(npc._drape.rotation.x, -0.20))
-	# DRAPE v7/v7.2 (Kirana, 20 Nov 2026 — verdict Mas 08:32 WIB
-	# "Dari depan ok, dari belakang sama samping aneh"): tepi atas
-	# drape turun di SISI (turun samping, ~0,53 bukan pinggang
-	# 0,83) dan turun 0,08 di BELAKANG atas (lekuk U dangkal,
-	# 0,75). Cek dari verteks: strip sisi (|x|>0,15, |z|<0,02 —
-	# hanya verteks th≈±π/2) dan belakang (z<-0,15).
+	# DRAPE v8 (Kirana, 20 Nov 2026 — verdict Mas 10:07 WIB
+	# "Belakang ok.. samping aneh.."): tepi atas mengikuti PANGKUAN
+	# (_lap_pangkuan) — rata setinggi lutut, bukan lingkaran pinggang:
+	# sisi ~0,62, belakang ~0,65 (sirip 0,75 MATI), tanpa takik.
+	# Cek dari verteks: strip sisi (|x|>0,15, |z|<0,02 — hanya
+	# verteks th≈±π/2) dan belakang (z<-0,15); verteks cincin 0
+	# si=5 (th≈0,79, antara lekuk depan dan paha) dan si=0 (depan).
 	var _y_sisi_max := 0.0
 	var _y_belakang_max := 0.0
 	for _v in _drape_verts:
@@ -206,8 +207,17 @@ func _ready() -> void:
 			_y_sisi_max = maxf(_y_sisi_max, _v.y)
 		if _v.z < -0.15:
 			_y_belakang_max = maxf(_y_belakang_max, _v.y)
-	_cek("DRAPE v7: sisi atas turun (y maks strip sisi 0.50..0.56)", _y_sisi_max >= 0.50 and _y_sisi_max <= 0.56)
-	_cek("DRAPE v7.2: belakang atas turun (y maks belakang 0.70..0.80)", _y_belakang_max >= 0.70 and _y_belakang_max <= 0.80)
+	_cek("DRAPE v8: sisi atas di pangkuan (y maks strip sisi 0.58..0.66)", _y_sisi_max >= 0.58 and _y_sisi_max <= 0.66)
+	_cek("DRAPE v8: belakang atas di pantat (y maks belakang 0.62..0.68)", _y_belakang_max >= 0.62 and _y_belakang_max <= 0.68)
+	_cek("DRAPE v8: tepi atas RATA (selisih belakang-sisi <= 0.06)", absf(_y_belakang_max - _y_sisi_max) <= 0.06)
+	_cek("DRAPE v8: tanpa takik (y cincin 0 th~0,79 di 0.60..0.68)", _drape_verts[5].y >= 0.60 and _drape_verts[5].y <= 0.68)
+	_cek("DRAPE v8: lekuk depan tetap (y cincin 0 th=0 di 0.52..0.58)", _drape_verts[0].y >= 0.52 and _drape_verts[0].y <= 0.58)
+	# DRAPE v8: paruh depan-bawah mundur — z maks cincin bawah
+	# (ring 6, indeks 6*41=246..286) <= 0,42 (v7.2: 0,46).
+	var _z_bawah_max := -999.0
+	for _i in range(246, 287):
+		_z_bawah_max = maxf(_z_bawah_max, _drape_verts[_i].z)
+	_cek("DRAPE v8: ujung hem depan mundur (z maks cincin 6 <= 0.42)", _z_bawah_max <= 0.42)
 	# DRAPE v7 motif: lipatan horizontal setinggi lutut (y=79)
 	# lebih gelap dari garis emas di atasnya (y=60) pada kolom
 	# yang sama (x=64, sisi — jauh dari V depan dan lekuk tengah).

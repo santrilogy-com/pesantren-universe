@@ -1103,6 +1103,20 @@ static func _gauss_bump(d: float, sigma: float) -> float:
 	return exp(-(w * w) / (sigma * sigma))
 
 
+# DRAPE v8 — garis pangkuan: tepi atas drape mengikuti PAHA.
+# Tonjolan paha di ±1,02 (tangan bertumpu di sana), lekuk depan
+# (rongga antar paha menyilang), pantat di π hanya +0,05 di atas
+# alas. Semua Gaussian LEBAR (σ>=0,45) — tepi atas rata, tidak ada
+# takik seperti Gaussian sempit v6.1/v7. Nilai: lutut 0,69, depan
+# 0,54, sisi 0,62, belakang 0,65 (dulu: depan 0,53, sisi 0,53,
+# belakang 0,75 = sirip).
+static func _lap_pangkuan(th: float) -> float:
+	return 0.60 \
+		+ 0.09 * (_gauss_bump(th - 1.02, 0.45) + _gauss_bump(th + 1.02, 0.45)) \
+		- 0.06 * _gauss_bump(th, 0.6) \
+		+ 0.05 * _gauss_bump(th - PI, 0.7)
+
+
 ## DRAPE BERSILA v4 — bangun mesh loft sarung bersila (ArrayMesh).
 ## Cincin [y_dasar, R0, tonjolan, geser_z, naik_depan]: pinggang
 ## sempit (r 0,22) -> lutut melebar ke arah lutut ASLI (±0,93 rad
@@ -1167,16 +1181,41 @@ static func _gauss_bump(d: float, sigma: float) -> float:
 ## BELAKANG — cincin atas turun 0,08 di th=π (lekuk U dangkal),
 ## sudut atas-belakang membulat, sirip memendek. Depan TIDAK
 ## berubah (semua tambahan di th>1,3 atau ri0-belakang).
+## v8 (Kirana, 20 Nov 2026 — verdict Mas 10:07 WIB "Belakang ok..
+## samping aneh.." atas v7.2; depan + belakang DIKUNCI): ROMBAK tepi
+## atas drape mengikuti PAHA, bukan lingkaran pinggang. Akar sisi
+## aneh: cincin atas (pinggang, y 0,83) adalah lingkaran TERTUTUP
+## setinggi pinggang — dari samping, punggungnya (th=π, 0,75)
+## menjulang 0,22 di atas sisi (0,53) = sirip tajam; Gaussian turun
+## yang sempit (σ=0,35) menyisakan punggung tinggi di antara
+## lembahnya = takik. Padahal paha sungguhan: pangkuan RATA setinggi
+## lutut (±0,60), pantat hanya sedikit di atas sisi, paha tempat
+## tangan bertumpu sedikit lebih tinggi. Perbaikan: tepi atas cincin
+## 0..2 kini fungsi pangkuan _lap_pangkuan(th) — tonjolan paha di
+## ±1,02, lekuk depan, pantat di π; semua Gaussian lebar (σ>=0,45),
+## tidak ada takik. Cincin 0..1 juga menonjol radial di arah paha
+## (±0,95) — dua massa paha menerus dari pinggul ke tonjolan lutut
+## cincin 2..6. Cincin 3..6 TIDAK berubah (lutut/betis/hem sudah
+## mengikuti kaki asli + menentukan depan/belakang yang di-ACC).
+## Paruh depan-bawah: cz cincin 5..6 dikecilkan (0,12/0,13 -> 0,07)
+## + naik hem cincin 6 (0,09 -> 0,06) supaya ujung depan-bawah
+## mundur ke lantai, bukan menjorok. Depan/belakang: tepi atas
+## depan (0,54) dan lebar alas (1,04) tetap; belakang turun 0,75 ->
+## 0,65 (punggung pantat) — celah pinggang ditutup sarung inti
+## (sarung_y 0,70, menjangkau lokal 0,63..0,77).
 static func _bangun_drape_bersila(bahan: Material) -> MeshInstance3D:
-	# [y_dasar, r0, amp, cz, naik, turun_depan, pantat, z_skal]
+	# [y_dasar, r0, amp, cz, naik, turun_depan, pantat, z_skal, lap_amp]
+	# v8: cincin 0..2 = pangkuan (y_dasar = alas fungsi pangkuan,
+	# lap_amp = seberapa kuat mengikuti _lap_pangkuan); cincin 3..6
+	# TIDAK berubah (lap_amp 0 = rumus lama).
 	var cincin: Array = [
-		[0.83, 0.19, 0.00, 0.00, 0.00, 0.30, 0.07, 0.72],
-		[0.72, 0.23, 0.06, 0.02, 0.00, 0.22, 0.06, 0.80],
-		[0.62, 0.27, 0.15, 0.05, 0.01, 0.12, 0.04, 0.90],
-		[0.54, 0.30, 0.24, 0.08, 0.03, 0.05, 0.02, 0.95],
-		[0.47, 0.32, 0.28, 0.10, 0.05, 0.00, 0.00, 1.00],
-		[0.43, 0.33, 0.28, 0.12, 0.07, 0.00, 0.00, 1.00],
-		[0.42, 0.33, 0.26, 0.13, 0.09, 0.00, 0.00, 1.00],
+		[0.60, 0.19, 0.00, 0.00, 0.00, 0.00, 0.07, 0.72, 1.0],
+		[0.55, 0.23, 0.06, 0.02, 0.00, 0.00, 0.06, 0.80, 0.8],
+		[0.56, 0.27, 0.15, 0.05, 0.00, 0.00, 0.04, 0.90, 0.4],
+		[0.54, 0.30, 0.24, 0.08, 0.03, 0.05, 0.02, 0.95, 0.0],
+		[0.47, 0.32, 0.28, 0.10, 0.05, 0.00, 0.00, 1.00, 0.0],
+		[0.43, 0.33, 0.28, 0.07, 0.07, 0.00, 0.00, 1.00, 0.0],
+		[0.42, 0.33, 0.26, 0.07, 0.06, 0.00, 0.00, 1.00, 0.0],
 	]
 	var seg := 40
 	var arah_lutut := 1.02
@@ -1201,6 +1240,7 @@ static func _bangun_drape_bersila(bahan: Material) -> MeshInstance3D:
 		var turun: float = cincin[ri][5]
 		var pantat: float = cincin[ri][6]
 		var z_skal: float = cincin[ri][7]
+		var lap_amp: float = cincin[ri][8]
 		for si in seg + 1:
 			var th := TAU * float(si) / float(seg)
 			var tonjol := _gauss_bump(th - arah_lutut, sigma) + _gauss_bump(th + arah_lutut, sigma)
@@ -1211,6 +1251,13 @@ static func _bangun_drape_bersila(bahan: Material) -> MeshInstance3D:
 			# σ=0,6 di th=π; sisi (±π/2) dan lutut (±1,02) tak kena.
 			if pantat > 0.0:
 				r += pantat * _gauss_bump(th - PI, 0.6)
+			# PAHA (v8): dua massa paha di cincin atas (ri 0..1) —
+			# selubung kain mengikuti paha dari pinggul (±0,95) ke
+			# lutut (±1,02, tonjolan lutut cincin 2..6): dari depan
+			# kolom paha menerus, dari samping pangkuan terbaca
+			# massa paha, bukan dinding.
+			if ri <= 1:
+				r += 0.04 * (_gauss_bump(th - 0.95, 0.35) + _gauss_bump(th + 0.95, 0.35))
 			# LEKUK TENGAH-BELAKANG (v7.1): lembah dangkal 0,03 di
 			# th=π (cincin 1..4) — membelah tonjolan pantat jadi dua
 			# massa (bokong), bukan satu tonjolan. Gaussian sempit
@@ -1240,21 +1287,20 @@ static func _bangun_drape_bersila(bahan: Material) -> MeshInstance3D:
 			# di pencahayaan datar. Dari cincin ri >= 1.
 			if ri >= 1:
 				r -= 0.06 * (_gauss_bump(th - arah_lipat, sigma_lipat) + _gauss_bump(th + arah_lipat, sigma_lipat))
-			var y := y_dasar + naik * (1.0 - clampf(tonjol, 0.0, 1.0)) * maxf(0.0, cos(th))
-			# TURUN DEPAN + TURUN SAMPING (v6.1 + v7): muka depan DAN
-			# sisi cincin atas TURUN ke pangkuan (y≈0,50-0,53) —
-			# Gaussian sempit σ=0,35 di th=0 dan th=±π/2; tangan
-			# (th≈0,46) hampir tak kena, lutut (±1,02) kena ~0,03
-			# saja, belakang (π) tak kena. Profil samping jadi baji
-			# rendah: tinggi di belakang (pinggang), landai ke depan.
-			y -= turun * (_gauss_bump(th, 0.35) + _gauss_bump(th - PI / 2.0, 0.35) + _gauss_bump(th + PI / 2.0, 0.35))
-			# TURUN BELAKANG (v7.2): pinggang belakang cincin atas
-			# turun 0,08 (hanya ri0, Gaussian lebar σ=0,8 di th=π)
-			# — sudut atas-belakang membulat, "sirip" memendek;
-			# tepi atas belakang jadi lekuk U dangkal. Sarung inti
-			# di balik drape menutup celah pinggang.
-			if ri == 0:
-				y -= 0.08 * _gauss_bump(th - PI, 0.8)
+			# TINGGI (v8): cincin 0..2 mengikuti PANGKUAN — tepi atas
+			# = fungsi _lap_pangkuan (tonjolan paha, lekuk depan,
+			# pantat), bukan lingkaran pinggang + Gaussian turun.
+			# Cincin 3..6 memakai rumus lama (naik hem + turun).
+			var y: float
+			if lap_amp > 0.0:
+				y = y_dasar + lap_amp * (_lap_pangkuan(th) - 0.60)
+			else:
+				y = y_dasar + naik * (1.0 - clampf(tonjol, 0.0, 1.0)) * maxf(0.0, cos(th))
+				# TURUN DEPAN (v6.1, cincin 3 saja): muka depan
+				# cincin TURUN ke pangkuan (y≈0,52) — Gaussian
+				# sempit σ=0,35 di th=0 dan th=±π/2; lutut (±1,02)
+				# kena ~0,03 saja, belakang (π) tak kena.
+				y -= turun * (_gauss_bump(th, 0.35) + _gauss_bump(th - PI / 2.0, 0.35) + _gauss_bump(th + PI / 2.0, 0.35))
 			# PINGGANG ELIPS (v7.1): skala-z per cincin — pinggang
 			# lebih dangkal dari lebar (seperti pinggul asli);
 			# belakang atas tertarik ke dalam, sejajar punggung.
