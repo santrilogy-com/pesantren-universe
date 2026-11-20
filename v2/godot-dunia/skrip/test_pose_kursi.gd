@@ -108,20 +108,23 @@ func _ready() -> void:
 		and SantriPlayer.PAKAIAN_TIDUR["juntai_scale"].is_equal_approx(Vector3.ZERO)
 		and SantriPlayer.PAKAIAN_ABAYA_DEFAULT["juntai_scale"].is_equal_approx(Vector3.ZERO)
 		and SantriPlayer.PAKAIAN_ABAYA_DUDUK["juntai_scale"].is_equal_approx(Vector3.ZERO))
-	# DRAPE v4 (Kirana, 20 Nov 2026 — verdict Mas 06:55 WIB "Tidak
-	# seperti bersila" atas drape v3.1): alas lebih lebar dari 0,64.
+	# DRAPE v6 (Kirana, 20 Nov 2026 — rombak pakai referensi foto
+	# asli; Mas 08:00 WIB "Aneh.. coba kamu nyari referensi orang
+	# duduk bersila"): alas ikut referensi lotus — lebar ~1,04
+	# (2x bahu), tinggi 0,41, rasio ~2,6; lutut di sisi ±1,02 rad.
 	var _drape_mesh := (SantriPlayer.build_visual("Tes", MissionData.OUTFIT_DEFAULT)["drape"] as MeshInstance3D).mesh as ArrayMesh
-	_cek("DRAPE v4: lebar alas >= 0.78 (v3.1 cuma 0.64 — rok kecil)",
-		_drape_mesh.get_aabb().size.x >= 0.78)
-	_cek("DRAPE v4: lebar alas <= 0.95 (bukan kerucut bunga)",
-		_drape_mesh.get_aabb().size.x <= 0.95)
+	_cek("DRAPE v6: lebar alas >= 1.00 (lotus ~2x bahu, v5 cuma 0.87)",
+		_drape_mesh.get_aabb().size.x >= 1.00)
+	_cek("DRAPE v6: lebar alas <= 1.15 (bukan kerucut bunga)",
+		_drape_mesh.get_aabb().size.x <= 1.15)
 	# DRAPE v5 (Kirana, 20 Nov 2026 — verdict Mas 07:37 WIB "Kurang
 	# bagus masih" atas drape v4.2): garis lipatan paha menyilang
 	# lewat MOTIF drape khusus — garis emas diagonal (belah ketupat
 	# pinggang->lutut->tengah bawah) + lembah tengah gelap + sorot
 	# lutut. Dicek per piksel tekstur 256x128 (u = sudut/2π,
-	# v = pinggang->hem): garis lipatan emas di (20,41), lembah
-	# gelap di (2,100), sorot lutut di (45,76).
+	# v = pinggang->hem): garis lipatan emas di (24,41), lembah
+	# gelap di (2,100), sorot lutut di (45,76). v6: titik lutut
+	# garis V digeser ke u=0,162 (x=42) ikut arah lutut ±1,02 rad.
 	var _visual_tes := SantriPlayer.build_visual("Tes", MissionData.OUTFIT_DEFAULT)
 	var _drape_mat := (_visual_tes["drape"] as MeshInstance3D).material_override as StandardMaterial3D
 	_cek("DRAPE v5: bahan drape BEDA dari bahan sarung (motif khusus)",
@@ -129,8 +132,8 @@ func _ready() -> void:
 	_cek("DRAPE v5: bahan drape punya tekstur motif", _drape_mat.albedo_texture != null)
 	if _drape_mat.albedo_texture != null:
 		var _img_drape := _drape_mat.albedo_texture.get_image()
-		_cek("DRAPE v5: garis lipatan emas di (20,41)",
-			_img_drape.get_pixel(20, 41).is_equal_approx(Color("#c9a227")))
+		_cek("DRAPE v6: garis lipatan emas di (24,41)",
+			_img_drape.get_pixel(24, 41).is_equal_approx(Color("#c9a227")))
 		_cek("DRAPE v5: lembah tengah lebih gelap dari dasar",
 			_img_drape.get_pixel(2, 100).get_luminance() < Color("#008062").get_luminance() * 0.8)
 		_cek("DRAPE v5: sorot lutut lebih terang dari dasar",
@@ -162,10 +165,34 @@ func _ready() -> void:
 		not npc._lutut_l.visible and not npc._lutut_r.visible)
 	_cek("DRAPE bersila: sarung tegak (rot_x 0, z 0)",
 		is_equal_approx(npc._sarung.rotation.x, 0.0) and is_equal_approx(npc._sarung.position.z, 0.0))
-	_cek("DRAPE v4 bersila: alas lebar >= 0.78",
-		(npc._drape.mesh as ArrayMesh).get_aabb().size.x >= 0.78)
+	_cek("DRAPE v6 bersila: alas lebar >= 1.00",
+		(npc._drape.mesh as ArrayMesh).get_aabb().size.x >= 1.00)
 	_cek("DRAPE v4 bersila: alas menutupi lutut (setengah lebar >= lutut 0.244 + kapsul 0.085)",
 		(npc._drape.mesh as ArrayMesh).get_aabb().size.x * 0.5 >= 0.244 + 0.085)
+	# DRAPE v6 (Kirana, 20 Nov 2026 — akar masalah v1–v5): alas
+	# drape TIDAK BOLEH terkubur di bawah lantai. Cek memakai
+	# verteks mesh LOKAL: rotasi node drape (-condong visual) dan
+	# condong visual saling meniadakan, jadi dunia_y = lokal_y -
+	# 0,42; alas di lantai <=> verteks terbawah >= 0,40, lutut
+	# (verteks |x| terbesar) di 0,40..0,46, dan betis menyilang
+	# (verteks z terbesar) LEBIH DEPAN dari lutut.
+	var _drape_verts: PackedVector3Array = (npc._drape.mesh as ArrayMesh).surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+	var _y_min := 999.0
+	var _x_max := 0.0
+	var _y_di_x_max := 0.0
+	var _z_max := -999.0
+	var _z_di_x_max := 0.0
+	for _v in _drape_verts:
+		_y_min = minf(_y_min, _v.y)
+		if absf(_v.x) > _x_max:
+			_x_max = absf(_v.x)
+			_y_di_x_max = _v.y
+			_z_di_x_max = _v.z
+		_z_max = maxf(_z_max, _v.z)
+	_cek("DRAPE v6: alas di lantai (verteks terbawah y >= 0.40)", _y_min >= 0.40)
+	_cek("DRAPE v6: lutut menyentuh lantai (y lutut 0.40..0.46)", _y_di_x_max >= 0.40 and _y_di_x_max <= 0.46)
+	_cek("DRAPE v6: betis menyilang paling depan (z depan > z lutut)", _z_max > _z_di_x_max)
+	_cek("DRAPE v6: rotasi drape melawan condong visual (-0.20)", is_equal_approx(npc._drape.rotation.x, -0.20))
 	_cek("JUNTAI bersila: juntai SEMBUNYI (bukan duduk kursi)", not npc._juntai.visible)
 
 	# ---------- BUG 3: duduk di KURSI = kaki menjuntai (NPC) ----------
@@ -276,8 +303,8 @@ func _ready() -> void:
 		ustadzah._sarung.scale.is_equal_approx(Vector3(0.75, 0.50, 0.75)))
 	# DRAPE v5 abaya: motif lipatan paha menyilang juga ada di gamis.
 	var _drape_abaya := (SantriPlayer.build_visual("Tes", MissionData.OUTFIT_USTADZAH)["drape"] as MeshInstance3D).material_override as StandardMaterial3D
-	_cek("DRAPE v5 abaya: garis lipatan emas di (20,41)",
-		_drape_abaya.albedo_texture != null and _drape_abaya.albedo_texture.get_image().get_pixel(20, 41).is_equal_approx(Color("#c9a227")))
+	_cek("DRAPE v6 abaya: garis lipatan emas di (24,41)",
+		_drape_abaya.albedo_texture != null and _drape_abaya.albedo_texture.get_image().get_pixel(24, 41).is_equal_approx(Color("#c9a227")))
 
 	# ---------- "ke_kursi": node tiba di TANAH, bukan di tinggi kursi ----------
 	var npc2 := _npc_baru("Budi", Vector3(-3.4, 0, 24.0), MissionData.OUTFIT_DEFAULT, false)

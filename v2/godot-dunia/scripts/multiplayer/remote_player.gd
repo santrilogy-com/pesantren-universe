@@ -341,6 +341,13 @@ func _lerp_pakaian(delta: float, target: Dictionary) -> void:
 	if _drape != null:
 		_drape.scale = _drape.scale.lerp(target["drape_scale"], k)
 		_drape.visible = _drape.scale.length_squared() > 0.0025
+		# DRAPE v6 (Kirana): drape TIDAK ikut condong badan —
+		# rotasi node drape melawan condong visual (remote 0,08)
+		# supaya alas drape tetap DATAR di lantai; tanpa ini lutut
+		# + cincin bawah terkubur di bawah lantai (akar masalah
+		# v1–v5, terukur cek_drape_dunia.gd).
+		if _visual != null:
+			_drape.rotation.x = -_visual.rotation.x
 	if _juntai != null:
 		_juntai.scale = _juntai.scale.lerp(target["juntai_scale"], k)
 		_juntai.visible = _juntai.scale.length_squared() > 0.0025

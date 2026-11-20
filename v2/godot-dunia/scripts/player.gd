@@ -627,7 +627,7 @@ static func _motif_batik_putri() -> StandardMaterial3D:
 # tekstur 256x128 yang dipetakan sama seperti UV drape (u = sudut/2π,
 # v = pinggang->hem) digambari garis lipatan mengikuti paha menyilang:
 # dua garis emas diagonal membentuk belah ketupat di muka depan — dari
-# puncak pinggang (u≈0,03) melebar ke tiap lutut (u≈±0,127, v≈0,60)
+# puncak pinggang (u≈0,03) melebar ke tiap lutut (u≈±0,162, v≈0,60)
 # lalu kembali ke tengah bawah (u≈0, v=1) mengikuti betis bersilang —
 # plus lembah tengah GELAP (bayangan di antara lutut) dan sorot terang
 # di tiap lutut supaya lutut terbaca bulat. Garis emas digambar di atas
@@ -698,11 +698,13 @@ static func _motif_drape_bersila(outfit: Dictionary, pakai_abaya: bool) -> Stand
 	else:
 		_isi_parang(img, warna)
 	# --- Garis lipatan: belah ketupat paha menyilang ---
-	# Puncak pinggang (u≈0,03 / v≈0,08) -> lutut (u≈0,127 / v≈0,60)
+	# Puncak pinggang (u≈0,03 / v≈0,08) -> lutut (u≈0,162 / v≈0,60)
 	# -> tengah bawah (u≈0,02 / v=1). Cermin di sisi kiri.
+	# v6: titik lutut digeser ke u=0,162 mengikuti arah lutut
+	# geometri baru (±1,02 rad, lutut di sisi — referensi lotus).
 	var gelap := warna.darkened(0.3)
-	var lipat_kanan: Array[Vector2] = [Vector2(8, 10), Vector2(33, 76), Vector2(5, 127)]
-	var lipat_kiri: Array[Vector2] = [Vector2(248, 10), Vector2(223, 76), Vector2(251, 127)]
+	var lipat_kanan: Array[Vector2] = [Vector2(8, 10), Vector2(42, 76), Vector2(5, 127)]
+	var lipat_kiri: Array[Vector2] = [Vector2(248, 10), Vector2(214, 76), Vector2(251, 127)]
 	for garis in [lipat_kanan, lipat_kiri]:
 		for s in range(garis.size() - 1):
 			_garis_tebal(img, garis[s], garis[s + 1], gelap, 9.0)
@@ -717,8 +719,28 @@ static func _motif_drape_bersila(outfit: Dictionary, pakai_abaya: bool) -> Stand
 		for x in range(252, 256):
 			img.set_pixel(x, y, lembah)
 	# --- Sorot lutut: lutut menangkap cahaya, terbaca bulat ---
-	_sorot_lutut(img, Vector2(33, 76), 16.0, krem, 0.25)
-	_sorot_lutut(img, Vector2(223, 76), 16.0, krem, 0.25)
+	_sorot_lutut(img, Vector2(42, 76), 16.0, krem, 0.25)
+	_sorot_lutut(img, Vector2(214, 76), 16.0, krem, 0.25)
+	# --- Lipatan horizontal (v7): garis lekuk setinggi lutut ---
+	# Memecah bidang samping + belakang jadi "pinggang + alas"
+	# (bukan dinding/kerucut polos). y=79 (v≈0,62) garis gelap
+	# 5 px + sorot tipis di bawahnya (y=82..83). Kuat di belakang
+	# (x=128) dan sisi (x=64/192), samar di depan (x=0/256) supaya
+	# motif V depan tidak terganggu.
+	var lipat_gelap := warna.darkened(0.4)
+	for x in range(256):
+		var s := 0.3 + 0.7 * absf(sin(PI * float(x) / 256.0))
+		for y in range(77, 82):
+			img.set_pixel(x, y, img.get_pixel(x, y).lerp(lipat_gelap, 0.55 * s))
+		for y in range(82, 84):
+			img.set_pixel(x, y, img.get_pixel(x, y).lerp(krem, 0.30 * s))
+	# --- Lipatan tengah-belakang (v7): lekuk vertikal di u=0,5 ---
+	# Kain berkumpul di tengah belakang (th=π) — memecah kerucut
+	# polos jadi dua massa. x=126..130, y=20..75, memudar di ujung.
+	for y in range(20, 76):
+		var t := sin(PI * float(y - 20) / 56.0)
+		for x in range(126, 131):
+			img.set_pixel(x, y, img.get_pixel(x, y).lerp(lipat_gelap, 0.5 * t))
 	var tex := ImageTexture.create_from_image(img)
 	var m := StandardMaterial3D.new()
 	m.albedo_texture = tex
@@ -1093,20 +1115,62 @@ static func _gauss_bump(d: float, sigma: float) -> float:
 ## 0,32/0,27, sigma 0,28 — lutut lebih bulat menonjol); garis
 ## lipatan paha menyilang kini lewat MOTIF drape khusus
 ## (_motif_drape_bersila), bukan geometri lagi.
+## v6 (Kirana, 20 Nov 2026 — Mas 08:00 WIB "Aneh.. coba kamu nyari
+## referensi orang duduk bersila", rombak pakai 3 referensi foto):
+## AKAR masalah v1–v5 ketemu (terukur cek_drape_dunia.gd): visual
+## condong 0,20 (NPC) / 0,08 (pemain) saat bersila menekan muka
+## depan drape ke bawah — cincin bawah + lutut TERKUBUR ~20 cm di
+## bawah lantai (verteks terbawah dunia y=-0,198, lutut y=-0,067)!
+## Yang terlihat di foto selama ini hanya potongan drape di atas
+## lantai — makanya selalu terbaca "rok kecil". Perbaikan: (1)
+## rotasi node drape melawan condong visual (di _lerp_pakaian /
+## _terapkan_pakaian — dunia_y drape = lokal_y - 0,42, alas DATAR
+## di lantai); (2) cincin dasar naik ke y=0,42 (= lantai); (3)
+## alas lebih LEBAR + RENDAH ikut referensi lotus (lebar ~1,04,
+## tinggi 0,41, rasio ~2,6; lutut di sisi ±1,02 rad, bukan diagonal
+## depan); (4) tonjolan BETIS MENYILANG — massa horizontal betis
+## bersilang di muka depan (cincin 2..4), paling depan di antara
+## kedua lutut, seperti di foto lotus. Motif V emas dipertahankan
+## (titik lutut digeser ke u=0,162 mengikuti arah lutut baru).
+## v7 (Kirana, 20 Nov 2026 — verdict Mas 08:32 WIB "Dari depan ok,
+## dari belakang sama samping aneh"): DEPAN v6.1 sudah OK — jangan
+## diubah. Diagnosa foto belakang (baru, v61diag): belakang = kerucut
+## halus tanpa lipatan, garis vertikal emas terbaca seperti rok/
+## lonceng, pinggang sempit (r 0,19) di bawah torso = "boneka di
+## atas tatakan". Samping = dinding tegak karena "turun depan" hanya
+## menurunkan strip depan (th≈0), cincin atas di sisi (th≈±π/2)
+## tetap setinggi pinggang. Perbaikan: (1) TURUN SAMPING — turun
+## juga diterapkan di sisi (Gaussian sempit σ=0,35 di th≈±π/2):
+## profil samping jadi baji (tinggi di belakang 0,83, landai ke
+## ~0,50 di sisi/depan); lutut (±1,02) hampir tak kena (faktor
+## ~0,08), tangan (±0,46) dan belakang (π) tak kena. (2) TONJOLAN
+## PANTAT — kolom ke-7 cincin: radius belakang (th≈π) membesar di
+## cincin atas (0,07/0,06/0,04/0,02) supaya pinggang belakang
+## membulat selebar torso, bukan kerucut sempit. (3) MOTIF: garis
+## lipatan horizontal di v≈0,62 + lipatan tengah-belakang di u=0,5
+## (_motif_drape_bersila) supaya belakang terbaca kain berlipat,
+## bukan lonceng polos. Cincin bawah + tes lantai v6 TIDAK berubah.
 static func _bangun_drape_bersila(bahan: Material) -> MeshInstance3D:
+	# [y_dasar, r0, amp, cz, naik, turun_depan, pantat]
 	var cincin: Array = [
-		[0.78, 0.22, 0.00, 0.00, 0.00],
-		[0.64, 0.24, 0.05, 0.02, 0.00],
-		[0.52, 0.26, 0.14, 0.05, 0.00],
-		[0.44, 0.29, 0.32, 0.09, 0.02],
-		[0.37, 0.29, 0.27, 0.10, 0.08],
-		[0.30, 0.28, 0.12, 0.08, 0.14],
+		[0.83, 0.19, 0.00, 0.00, 0.00, 0.30, 0.07],
+		[0.72, 0.23, 0.06, 0.02, 0.00, 0.22, 0.06],
+		[0.62, 0.27, 0.15, 0.05, 0.01, 0.12, 0.04],
+		[0.54, 0.30, 0.24, 0.08, 0.03, 0.05, 0.02],
+		[0.47, 0.32, 0.28, 0.10, 0.05, 0.00, 0.00],
+		[0.43, 0.33, 0.28, 0.12, 0.07, 0.00, 0.00],
+		[0.42, 0.33, 0.26, 0.13, 0.09, 0.00, 0.00],
 	]
 	var seg := 40
-	var arah_lutut := 0.80
+	var arah_lutut := 1.02
 	var sigma := 0.28
-	var arah_lipat := 0.45
+	var arah_lipat := 0.58
 	var sigma_lipat := 0.13
+	# BETIS MENYILANG (v6, ikut referensi lotus): tonjolan depan
+	# lebar di cincin tengah (ri 2..4) — massa horizontal betis
+	# bersilang di muka depan, paling depan di antara kedua lutut.
+	var amp_betis := 0.08
+	var sigma_betis := 0.55
 	var verts := PackedVector3Array()
 	var normals := PackedVector3Array()
 	var uvs := PackedVector2Array()
@@ -1117,10 +1181,23 @@ static func _bangun_drape_bersila(bahan: Material) -> MeshInstance3D:
 		var amp: float = cincin[ri][2]
 		var cz: float = cincin[ri][3]
 		var naik: float = cincin[ri][4]
+		var turun: float = cincin[ri][5]
+		var pantat: float = cincin[ri][6]
 		for si in seg + 1:
 			var th := TAU * float(si) / float(seg)
 			var tonjol := _gauss_bump(th - arah_lutut, sigma) + _gauss_bump(th + arah_lutut, sigma)
 			var r := r0 + amp * tonjol
+			# PANTAT (v7): tonjolan belakang di cincin atas — pinggang
+			# belakang membulat (r 0,19 -> 0,26 di cincin atas),
+			# bukan kerucut sempit di bawah torso. Gaussian lebar
+			# σ=0,6 di th=π; sisi (±π/2) dan lutut (±1,02) tak kena.
+			if pantat > 0.0:
+				r += pantat * _gauss_bump(th - PI, 0.6)
+			# BETIS MENYILANG (v6): tonjolan depan lebar di cincin
+			# tengah (ri 2..4) — massa horizontal betis bersilang
+			# di muka depan, paling depan di antara kedua lutut.
+			if ri >= 2 and ri <= 4:
+				r += amp_betis * _gauss_bump(th, sigma_betis)
 			# LIPATAN VERTIKAL (v4.1): dua lembah kain di muka depan,
 			# di antara lembah tengah dan tiap lutut — garis lipatan
 			# dari pinggang ke hem, diperdalam (0,06) supaya terbaca
@@ -1128,6 +1205,13 @@ static func _bangun_drape_bersila(bahan: Material) -> MeshInstance3D:
 			if ri >= 1:
 				r -= 0.06 * (_gauss_bump(th - arah_lipat, sigma_lipat) + _gauss_bump(th + arah_lipat, sigma_lipat))
 			var y := y_dasar + naik * (1.0 - clampf(tonjol, 0.0, 1.0)) * maxf(0.0, cos(th))
+			# TURUN DEPAN + TURUN SAMPING (v6.1 + v7): muka depan DAN
+			# sisi cincin atas TURUN ke pangkuan (y≈0,50-0,53) —
+			# Gaussian sempit σ=0,35 di th=0 dan th=±π/2; tangan
+			# (th≈0,46) hampir tak kena, lutut (±1,02) kena ~0,03
+			# saja, belakang (π) tak kena. Profil samping jadi baji
+			# rendah: tinggi di belakang (pinggang), landai ke depan.
+			y -= turun * (_gauss_bump(th, 0.35) + _gauss_bump(th - PI / 2.0, 0.35) + _gauss_bump(th + PI / 2.0, 0.35))
 			verts.append(Vector3(r * sin(th), y, cz + r * cos(th)))
 			normals.append(Vector3(sin(th), 0.0, cos(th)).normalized())
 			uvs.append(Vector2(float(si) / float(seg), float(ri) / float(cincin.size() - 1)))
@@ -1140,7 +1224,7 @@ static func _bangun_drape_bersila(bahan: Material) -> MeshInstance3D:
 			var d := c + 1
 			idx.append_array([a, b, c, b, d, c])
 	var pusat_idx := verts.size()
-	verts.append(Vector3(0, 0.28, 0.05))
+	verts.append(Vector3(0, 0.41, 0.10))
 	normals.append(Vector3(0, -1, 0))
 	uvs.append(Vector2(0.5, 1.0))
 	var cincin_akhir := (cincin.size() - 1) * langkah
@@ -2790,6 +2874,13 @@ func _lerp_pakaian(delta: float, target: Dictionary) -> void:
 	if _drape != null:
 		_drape.scale = _drape.scale.lerp(target["drape_scale"], k)
 		_drape.visible = _drape.scale.length_squared() > 0.0025
+		# DRAPE v6: drape TIDAK ikut condong badan — rotasi node
+		# drape melawan condong visual (NPC 0,20 / pemain 0,08)
+		# supaya alas drape tetap DATAR di lantai; tanpa ini lutut
+		# + cincin bawah terkubur ~20 cm di bawah lantai (akar
+		# masalah v1–v5, terukur cek_drape_dunia.gd).
+		if _visual != null:
+			_drape.rotation.x = -_visual.rotation.x
 	if _juntai != null:
 		_juntai.scale = _juntai.scale.lerp(target["juntai_scale"], k)
 		_juntai.visible = _juntai.scale.length_squared() > 0.0025
