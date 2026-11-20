@@ -58,6 +58,7 @@ var _sarung_trim: MeshInstance3D = null
 var _lutut_l: MeshInstance3D = null
 var _lutut_r: MeshInstance3D = null
 var _drape: MeshInstance3D = null
+var _juntai: MeshInstance3D = null
 var _torso: MeshInstance3D = null
 var _peci: MeshInstance3D = null
 
@@ -161,6 +162,7 @@ func _pasang_visual(built: Dictionary) -> void:
 	_lutut_l = built["lutut_l"]
 	_lutut_r = built["lutut_r"]
 	_drape = built["drape"]
+	_juntai = built["juntai"]
 	_torso = built["torso"]
 	_peci = built["peci"]
 	_rig = AnimasiMixamo.rig_dari_built(built)
@@ -339,6 +341,9 @@ func _lerp_pakaian(delta: float, target: Dictionary) -> void:
 	if _drape != null:
 		_drape.scale = _drape.scale.lerp(target["drape_scale"], k)
 		_drape.visible = _drape.scale.length_squared() > 0.0025
+	if _juntai != null:
+		_juntai.scale = _juntai.scale.lerp(target["juntai_scale"], k)
+		_juntai.visible = _juntai.scale.length_squared() > 0.0025
 	if _torso != null:
 		_torso.scale = _torso.scale.lerp(target["torso_scale"], k)
 	if _peci != null:

@@ -99,6 +99,7 @@ var _sarung_trim: MeshInstance3D
 var _lutut_l: MeshInstance3D
 var _lutut_r: MeshInstance3D
 var _drape: MeshInstance3D
+var _juntai: MeshInstance3D
 var _torso: MeshInstance3D
 # RONDE 20 — ikut sholat berjamaah? Satpam TIDAK (tetap di pos).
 var _ikut_sholat: bool = true
@@ -219,6 +220,7 @@ func setup(nama_santri: String, pos: Vector3, wps: Array[Vector3], outfit: Dicti
 	_lutut_l = built["lutut_l"]
 	_lutut_r = built["lutut_r"]
 	_drape = built["drape"]
+	_juntai = built["juntai"]
 	_torso = built["torso"]
 	# ANIMASI-MIXAMO: rig untuk modul animasi.
 	_rig = AnimasiMixamo.rig_dari_built(built)
@@ -985,6 +987,9 @@ func _terapkan_pakaian(delta: float, target: Dictionary) -> void:
 	if _drape != null:
 		_drape.scale = _drape.scale.lerp(target["drape_scale"], k)
 		_drape.visible = _drape.scale.length_squared() > 0.0025
+	if _juntai != null:
+		_juntai.scale = _juntai.scale.lerp(target["juntai_scale"], k)
+		_juntai.visible = _juntai.scale.length_squared() > 0.0025
 	if _torso != null:
 		_torso.scale = _torso.scale.lerp(target["torso_scale"], k)
 
