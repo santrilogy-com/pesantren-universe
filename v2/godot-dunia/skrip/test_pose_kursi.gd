@@ -193,6 +193,28 @@ func _ready() -> void:
 	_cek("DRAPE v6: lutut menyentuh lantai (y lutut 0.40..0.46)", _y_di_x_max >= 0.40 and _y_di_x_max <= 0.46)
 	_cek("DRAPE v6: betis menyilang paling depan (z depan > z lutut)", _z_max > _z_di_x_max)
 	_cek("DRAPE v6: rotasi drape melawan condong visual (-0.20)", is_equal_approx(npc._drape.rotation.x, -0.20))
+	# DRAPE v7/v7.2 (Kirana, 20 Nov 2026 — verdict Mas 08:32 WIB
+	# "Dari depan ok, dari belakang sama samping aneh"): tepi atas
+	# drape turun di SISI (turun samping, ~0,53 bukan pinggang
+	# 0,83) dan turun 0,08 di BELAKANG atas (lekuk U dangkal,
+	# 0,75). Cek dari verteks: strip sisi (|x|>0,15, |z|<0,02 —
+	# hanya verteks th≈±π/2) dan belakang (z<-0,15).
+	var _y_sisi_max := 0.0
+	var _y_belakang_max := 0.0
+	for _v in _drape_verts:
+		if absf(_v.x) > 0.15 and absf(_v.z) < 0.02:
+			_y_sisi_max = maxf(_y_sisi_max, _v.y)
+		if _v.z < -0.15:
+			_y_belakang_max = maxf(_y_belakang_max, _v.y)
+	_cek("DRAPE v7: sisi atas turun (y maks strip sisi 0.50..0.56)", _y_sisi_max >= 0.50 and _y_sisi_max <= 0.56)
+	_cek("DRAPE v7.2: belakang atas turun (y maks belakang 0.70..0.80)", _y_belakang_max >= 0.70 and _y_belakang_max <= 0.80)
+	# DRAPE v7 motif: lipatan horizontal setinggi lutut (y=79)
+	# lebih gelap dari garis emas di atasnya (y=60) pada kolom
+	# yang sama (x=64, sisi — jauh dari V depan dan lekuk tengah).
+	var _mat_v7 := (_visual_tes["drape"] as MeshInstance3D).material_override as StandardMaterial3D
+	var _img_v7 := _mat_v7.albedo_texture.get_image()
+	_cek("DRAPE v7: lipatan horizontal lebih gelap dari garis di atasnya",
+		_img_v7.get_pixel(64, 79).get_luminance() < _img_v7.get_pixel(64, 60).get_luminance() * 0.85)
 	_cek("JUNTAI bersila: juntai SEMBUNYI (bukan duduk kursi)", not npc._juntai.visible)
 
 	# ---------- BUG 3: duduk di KURSI = kaki menjuntai (NPC) ----------
