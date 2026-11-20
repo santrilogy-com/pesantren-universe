@@ -946,22 +946,16 @@ static func peci_model_untuk(nama: String) -> String:
 	return "nasional" if abs(nama.hash()) % 2 == 0 else "bulat"
 
 
-## DRAPE BERSILA v4 — tonjolan Gaussian di arah lutut (helper loft).
-## REVISI v4 (Kirana, 20 Nov 2026 — verdict Mas 06:55 WIB "Tidak
-## seperti bersila" atas drape v3.1): v3.1 TERLALU KECIL — lebar
-## cuma 0,64, terbaca rok kecil ber-hem W, bukan orang bersila.
-## Ukur headless (cek_lutut.gd): lutut asli di (±0,244, 0,423,
-## 0,182) — arah ±0,93 rad (53°) dari depan, jarak 0,304 +
-## kapsul 0,085. v3 menonjol di 0,83 rad dengan r cuma 0,42 —
-## lutut hampir menembus sisi drape. Yang baru: tonjolan DI ARAH
-## LUTUT ASLI (0,93 rad), amplitudo lebih besar (0,24 — r 0,50
-## di tinggi lutut, lutut tertutup dengan margin 0,11), sigma
-## lebih sempit (0,26 — dua massa JELAS terpisah, bukan satu
-## gundukan), alas lebih lebar (lebar total ~0,85), PLUS lipatan
-## vertikal: dua lembah kain di muka depan (±0,45 rad, di antara
-## lembah tengah dan tiap lutut) supaya muka depan terbaca paha
-## menyilang, bukan permukaan mulus. Lutut + betis TETAP tertutup
-## sarung (tidak ada kulit kelihatan) — yang berubah siluetnya.
+## DRAPE BERSILA v4.2 — perbaikan cacat v4.1: hem tengah naik 0,28
+## membuat cincin bawah (y 0,58) LEBIH TINGGI dari cincin di
+## atasnya (y 0,45) — permukaan melipat balik, kelihatan seperti
+## lipatan kain menonjol di depan bawah (foto samping v4.1).
+## ATURAN: naik hem HARUS bertahap dan turun monoton — cincin
+## bawah di tengah tidak boleh lebih tinggi dari cincin di
+## atasnya. Naik: cincin 3 = 0,02, cincin 4 = 0,08, cincin 5 =
+## 0,14 -> y tengah 0,46 / 0,45 / 0,44 (turun monoton, tidak ada
+## inversi). Lengkung W tetap ada (0,14 di tengah vs 0,30 di
+## lutut).
 static func _gauss_bump(d: float, sigma: float) -> float:
 	var w := wrapf(d, -PI, PI)
 	return exp(-(w * w) / (sigma * sigma))
@@ -982,16 +976,16 @@ static func _gauss_bump(d: float, sigma: float) -> float:
 ## v = tinggi cincin.
 static func _bangun_drape_bersila(bahan: Material) -> MeshInstance3D:
 	var cincin: Array = [
-		[0.88, 0.22, 0.00, 0.00, 0.00],
-		[0.70, 0.235, 0.05, 0.02, 0.00],
-		[0.56, 0.25, 0.14, 0.04, 0.00],
-		[0.46, 0.26, 0.24, 0.06, 0.02],
-		[0.38, 0.27, 0.20, 0.06, 0.08],
-		[0.30, 0.27, 0.12, 0.05, 0.22],
+		[0.78, 0.22, 0.00, 0.00, 0.00],
+		[0.64, 0.24, 0.05, 0.02, 0.00],
+		[0.52, 0.26, 0.14, 0.05, 0.00],
+		[0.44, 0.29, 0.27, 0.09, 0.02],
+		[0.37, 0.29, 0.22, 0.10, 0.08],
+		[0.30, 0.28, 0.12, 0.08, 0.14],
 	]
 	var seg := 40
-	var arah_lutut := 0.93
-	var sigma := 0.26
+	var arah_lutut := 0.80
+	var sigma := 0.32
 	var arah_lipat := 0.45
 	var sigma_lipat := 0.13
 	var verts := PackedVector3Array()
@@ -1008,12 +1002,12 @@ static func _bangun_drape_bersila(bahan: Material) -> MeshInstance3D:
 			var th := TAU * float(si) / float(seg)
 			var tonjol := _gauss_bump(th - arah_lutut, sigma) + _gauss_bump(th + arah_lutut, sigma)
 			var r := r0 + amp * tonjol
-			# LIPATAN VERTIKAL (v4): dua lembah kain di muka depan,
+			# LIPATAN VERTIKAL (v4.1): dua lembah kain di muka depan,
 			# di antara lembah tengah dan tiap lutut — garis lipatan
-			# dari pinggang ke hem. Hanya di cincin tengah/bawah
-			# (ri >= 2), bukan di pinggang.
-			if ri >= 2:
-				r -= 0.035 * (_gauss_bump(th - arah_lipat, sigma_lipat) + _gauss_bump(th + arah_lipat, sigma_lipat))
+			# dari pinggang ke hem, diperdalam (0,06) supaya terbaca
+			# di pencahayaan datar. Dari cincin ri >= 1.
+			if ri >= 1:
+				r -= 0.06 * (_gauss_bump(th - arah_lipat, sigma_lipat) + _gauss_bump(th + arah_lipat, sigma_lipat))
 			var y := y_dasar + naik * (1.0 - clampf(tonjol, 0.0, 1.0)) * maxf(0.0, cos(th))
 			verts.append(Vector3(r * sin(th), y, cz + r * cos(th)))
 			normals.append(Vector3(sin(th), 0.0, cos(th)).normalized())
