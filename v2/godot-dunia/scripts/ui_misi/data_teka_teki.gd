@@ -6,7 +6,7 @@ class_name DataTekaTeki
 ##
 ## LOGIKA/DATA MURNI, tanpa UI: tampilan panel dikerjakan DialogMisi
 ## (tampilkan_tanya / tampilkan_pesan), wiring ke main.gd.
-## Semua teks = TEKS DRAF — menunggu tashih Mas (§9 butir 17).
+## Semua teks = VERBATIM — tashih Mas lolos (§9 butir 17).
 ##
 ## ATURAN (draf §4): satu baris singkat, menunjuk ke lokasi TANPA
 ## menyebut namanya langsung. Nama lokasi hanya ada di kolom kiri
@@ -16,9 +16,9 @@ class_name DataTekaTeki
 ## (sanusi_lokasi / fatimah_lokasi) — TIDAK ada kunci save baru
 ## untuk lokasi. Tetap TANPA marker di peta (§9 butir 18).
 
-## 12 teka-teki (putra 6 + putri 6) — 11 VERBATIM draf Laras +
-## 1 BARU "taman_putra" (Raka, 20 Nov 2026 — pengganti
-## "masjid_besar"; TEKS DRAF, menunggu tashih Mas).
+## 12 teka-teki (putra 6 + putri 6) — SEMUA VERBATIM.
+## "taman_putra" (Raka, 20 Nov 2026 — pengganti "masjid_besar")
+## DI-ACC Mas verbatim 20 Nov 11:17 WIB ("ACC, pakai ini").
 const TEKA_TEKI: Dictionary = {
 	# --- Putra (LokasiAcak.KANDIDAT) ---
 	"surau": "Tempat sholat berjamaah paling ramai di pesantren — beliau sering duduk di sana menunggu waktu sholat.",
@@ -27,9 +27,8 @@ const TEKA_TEKI: Dictionary = {
 	"perpustakaan_taman": "Tempat buku-buku akan tinggal — lahannya masih berpapan, tapi beliau kadang membaca di sekitar sana.",
 	# BARU (Raka, 20 Nov 2026 — pengganti "masjid_besar" yang
 	# DIHAPUS dari LokasiAcak: (64,-24) zona larangan putra).
-	# TEKS DRAF — menunggu tashih Mas (§9 butir 17), bukan verbatim
-	# draf Laras. Aturan draf §4 tetap: tidak menyebut nama lokasi
-	# ("Taman Putra") langsung.
+	# VERBATIM — DI-ACC Mas 20 Nov 11:17 WIB. Aturan draf §4
+	# tetap: tidak menyebut nama lokasi ("Taman Putra") langsung.
 	"taman_putra": "Tempat duduk santai di antara bunga, tak jauh dari plaza — beliau suka menikmati teduh di sana.",
 	"kantin": "Kalau perut lapar, santri larinya ke mana? Ke sanalah beliau mungkin pergi.",
 	# --- Putri (LokasiAcak.KANDIDAT_PUTRI, semua live) ---

@@ -1,0 +1,141 @@
+{
+  "hasil": {
+    "langkah": [
+      {
+        "nama": "boot-game",
+        "waktu": "2026-11-20T04:31:06.947Z",
+        "siap": true
+      },
+      {
+        "nama": "canvas-rect",
+        "waktu": "2026-11-20T04:31:08.449Z",
+        "left": 0,
+        "top": 0,
+        "width": 1280,
+        "height": 720
+      },
+      {
+        "nama": "muat-video",
+        "waktu": "2026-11-20T04:31:11.550Z",
+        "ada": true,
+        "durasi": 30,
+        "posisi": 0,
+        "ditonton": 0,
+        "jeda": true,
+        "berakhir": false,
+        "tampil": true,
+        "autoplay": null,
+        "src": "http://127.0.0.1:8932/episode-contoh.mp4"
+      },
+      {
+        "nama": "autoplay-tanpa-gestur",
+        "waktu": "2026-11-20T04:31:11.550Z",
+        "ditolak": "belum-tercatat",
+        "catatan": "metadata mungkin belum sempat memicu uji autoplay"
+      },
+      {
+        "nama": "putar-6dtk",
+        "waktu": "2026-11-20T04:31:18.114Z",
+        "ada": true,
+        "durasi": 30,
+        "posisi": 4.436975,
+        "ditonton": 4.206957,
+        "jeda": false,
+        "berakhir": false,
+        "tampil": true,
+        "autoplay": null,
+        "src": "http://127.0.0.1:8932/episode-contoh.mp4"
+      },
+      {
+        "nama": "jeda-posisi-diam",
+        "waktu": "2026-11-20T04:31:21.246Z",
+        "posisiA": 4.808583,
+        "posisiB": 4.808583,
+        "diam": true
+      },
+      {
+        "nama": "seek-25",
+        "waktu": "2026-11-20T04:31:22.938Z",
+        "ada": true,
+        "durasi": 30,
+        "posisi": 25,
+        "ditonton": 4.737636,
+        "jeda": true,
+        "berakhir": false,
+        "tampil": true,
+        "autoplay": null,
+        "src": "http://127.0.0.1:8932/episode-contoh.mp4",
+        "ditontonSebelumSeek": 4.737636,
+        "selisihDitonton": 0
+      },
+      {
+        "nama": "putar-sampai-habis",
+        "waktu": "2026-11-20T04:31:29.123Z",
+        "ada": true,
+        "durasi": 30,
+        "posisi": 29.399524,
+        "ditonton": 9.087856,
+        "jeda": false,
+        "berakhir": false,
+        "tampil": true,
+        "autoplay": null,
+        "src": "http://127.0.0.1:8932/episode-contoh.mp4"
+      },
+      {
+        "nama": "gate-80-persen",
+        "waktu": "2026-11-20T04:31:50.744Z",
+        "ada": true,
+        "durasi": 30,
+        "posisi": 20.783355,
+        "ditonton": 24.850472,
+        "jeda": false,
+        "berakhir": false,
+        "tampil": true,
+        "autoplay": null,
+        "src": "http://127.0.0.1:8932/episode-contoh.mp4",
+        "tercapai": true,
+        "butuhDetik": 24
+      },
+      {
+        "nama": "sembunyikan",
+        "waktu": "2026-11-20T04:31:52.115Z",
+        "tampil": false
+      },
+      {
+        "nama": "tampilkan",
+        "waktu": "2026-11-20T04:31:53.034Z",
+        "tampil": true
+      },
+      {
+        "nama": "layar-penuh",
+        "waktu": "2026-11-20T04:31:54.716Z",
+        "fullscreenElement": true
+      }
+    ],
+    "gagal": [],
+    "ringkasan": "SEMUA UJI LOLOS"
+  },
+  "consoleLog": [
+    "log: Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org",
+    "log: OpenGL API OpenGL ES 3.0 (WebGL 2.0 (OpenGL ES 3.0 Chromium)) - Compatibility - Using Device: WebKit - WebKit WebGL",
+    "log: Build configuration: Emscripten 4.0.20, single-threaded, no GDExtension support.",
+    "log: [SPIKE] Spike dimulai. di_web=true jsb=true",
+    "log: [SPIKE] SIAP",
+    "log: [SPIKE] SIAP",
+    "warn: [.WebGL-0x149c01bf8a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warn: [.WebGL-0x149c01bf8a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warn: [.WebGL-0x149c01bf8a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warn: [.WebGL-0x149c01bf8a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)",
+    "log: [SPIKE] tombol: Muat Video",
+    "log: [SpikeVideo] muat -> dibuat",
+    "log: [SPIKE] tombol: Putar",
+    "log: [SPIKE] tombol: Jeda",
+    "log: [SPIKE] tombol: Seek ke 25 dtk (uji gate — TIDAK boleh menambah hitungan)",
+    "log: [SPIKE] tombol: Putar",
+    "log: [SPIKE] tombol: Seek ke 5 dtk",
+    "log: [SPIKE] tombol: Putar",
+    "log: [SPIKE] tombol: Sembunyikan",
+    "log: [SPIKE] tombol: Tampilkan",
+    "log: [SPIKE] tombol: Layar Penuh"
+  ]
+}

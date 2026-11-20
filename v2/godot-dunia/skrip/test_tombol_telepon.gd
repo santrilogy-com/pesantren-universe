@@ -281,7 +281,9 @@ func _run() -> void:
 		# Stempel versi sumber (Tara, 19 Nov 2026): format YYYYMMDD-N,
 		# bukan ID deployment — bandingkan dengan konstanta di ui.gd
 		# supaya tes tidak basi saat Eka menaikkan stempel tiap staging.
-		_cek("E2 stempel build teks 'Build 20261119-4' (teks=%s)" % ui._stempel_label.text, ui._stempel_label.text == "Build 20261119-4")
+		# Perbaikan gate -5: bandingkan LANGSUNG ke PesantrenUI.BUILD_STAMP
+		# (sebelumnya string hardcoded "20261119-4" — basi begitu stempel naik).
+		_cek("E2 stempel build teks 'Build %s' (teks=%s)" % [PesantrenUI.BUILD_STAMP, ui._stempel_label.text], ui._stempel_label.text == "Build " + PesantrenUI.BUILD_STAMP)
 		_cek("E3 stempel build IGNORE (tak blokir sentuhan)", ui._stempel_label.mouse_filter == Control.MOUSE_FILTER_IGNORE)
 		_cek("E4 stempel build terlihat", ui._stempel_label.visible)
 		_cek("E5 stempel build rect di dalam layar", _rect_di_layar(ui._stempel_label.get_global_rect()))
