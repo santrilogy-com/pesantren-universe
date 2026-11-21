@@ -140,7 +140,7 @@ bpy.ops.mesh.primitive_uv_sphere_add(segments=24, ring_count=16, radius=0.045,
                                      location=(0, 0.525, 1.435))
 nose = bpy.context.active_object
 nose.name = "Hidung"
-nose.scale = (0.9, 0.7, 1.1)
+nose.scale = (0.9, 0.55, 0.9)
 bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
 link_obj(nose, CHAR); scene.collection.objects.unlink(nose)
 set_mat(nose, SKIN)
@@ -286,12 +286,12 @@ bezier_tube("SerbanEkor", [(0, 1.98), (0, 1.80), (0, 1.60)],
 
 # ---------- KACAMATA CAT-EYE ----------
 # Outline 2D (x, z) lensa kanan, pusat ~(0.22, 1.58). Sayap terangkat ke ujung luar.
-LENS_R = [(0.045, 1.615), (0.10, 1.632), (0.18, 1.645), (0.28, 1.655),
-          (0.37, 1.668), (0.44, 1.688), (0.448, 1.625), (0.44, 1.585),
+LENS_R = [(0.045, 1.615), (0.10, 1.632), (0.18, 1.64), (0.28, 1.648),
+          (0.37, 1.668), (0.445, 1.70), (0.448, 1.625), (0.44, 1.585),
           (0.425, 1.545), (0.40, 1.505), (0.32, 1.485), (0.22, 1.475),
           (0.12, 1.485), (0.05, 1.505), (0.035, 1.545), (0.035, 1.58),
           (0.04, 1.60)]
-FRAME_Y = 0.56
+FRAME_Y = 0.55
 
 def flat_shape(name, pts_xz, y_plane, mat, thick=0.025, bev=0.004):
     # balik urutan agar normal menghadap kamera (-Y / depan karakter +Y)
@@ -341,7 +341,7 @@ for side, sign in (("R", 1), ("L", -1)):
 
 # jembatan hidung: lengkung Bezier di atas hidung
 br = bezier_tube("JembatanKacamata", [(-0.06, 1.575), (0.0, 1.615), (0.06, 1.575)],
-                 0.565, 0.014, BLACK)
+                 0.555, 0.014, BLACK)
 GLASSES.append(br)
 
 # tangkai ke telinga
@@ -360,7 +360,7 @@ def tube_between(p1, p2, r, mat, name):
     return ob
 
 for side, sign in (("R", 1), ("L", -1)):
-    t = tube_between((sign * 0.43, 0.47, 1.60), (sign * 0.53, -0.02, 1.56),
+    t = tube_between((sign * 0.43, 0.46, 1.60), (sign * 0.53, -0.02, 1.56),
                      0.014, BLACK, f"Tangkai{side}")
     GLASSES.append(t)
 
