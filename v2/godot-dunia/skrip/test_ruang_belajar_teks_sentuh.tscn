@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://skrip/test_ruang_belajar_teks_sentuh.gd" id="1_rb_teks_sentuh"]
+
+[node name="TestRuangBelajarTeksSentuh" type="Node"]
+script = ExtResource("1_rb_teks_sentuh")

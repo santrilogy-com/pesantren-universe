@@ -439,6 +439,19 @@ func _tampilkan_pilihan() -> void:
 		"narasi", "pesan":
 			# LANJUT MANUAL: selalu tombol, tidak pernah otomatis.
 			_tambah_tombol_lanjut("Lanjut ›")
+		"cek":
+			# Node cek v4 ("Paham? Fahimtum?"): render nod.opsi
+			# sebagai tombol outline (pola tombol soal); tiap
+			# tombol mengikuti "ke"-nya. "Belum" maks 1x per cek
+			# secara struktural — node ulang punya "berikut"
+			# melewati cek, jadi tidak ada jalan kembali ke cek
+			# yang sama dalam satu sesi.
+			var opsi_cek: Array = nod.get("opsi", [])
+			for o in opsi_cek:
+				var od: Dictionary = o
+				var bc := GayaMisi.buat_tombol_outline(String(od.get("teks", "")))
+				bc.pressed.connect(_on_cek_ditekan.bind(od))
+				_pilihan_box.add_child(bc)
 		"soal":
 			var grid := GridContainer.new()
 			grid.columns = 2
@@ -482,11 +495,12 @@ func _bersihkan_pilihan() -> void:
 
 ## Lanjut dari node narasi/pesan (tombol Lanjut / ketuk
 ## gelembung): "berikut" eksplisit dulu (node pujian/teguran
-## soal), lalu node berikutnya di tulang punggung. Materi +10
-## di-emit saat meninggalkan node narasi terakhir (n5) ke l1.
+## soal, node ulang u1-u4), lalu node berikutnya di tulang
+## punggung. Materi +10 di-emit saat meninggalkan node narasi
+## terakhir (p_latihan) ke l1.
 func _lanjut_pesan() -> void:
 	var nod := _node_saat_ini
-	if String(nod.get("id", "")) == "n5":
+	if String(nod.get("id", "")) == "p_latihan" and not _baca_ulang:
 		_emit_materi()
 	var berikut := String(nod.get("berikut", ""))
 	if berikut == "":
@@ -503,6 +517,16 @@ func _emit_materi() -> void:
 		return
 	_materi_selesai = true
 	langkah_selesai.emit("materi", DataChatModul01.POIN_MATERI)
+
+
+## Pilihan node cek ("Paham, lanjut ›" / "Belum, jelaskan lagi"):
+## catat jawaban player ke Riwayat + tampilkan node "ke"-nya
+## (gelembung player menampilkan jawaban yang dipilih).
+func _on_cek_ditekan(opsi: Dictionary) -> void:
+	var teks_opsi := String(opsi.get("teks", ""))
+	if not _baca_ulang:
+		_riwayat.append({"dari": "pemain", "teks": teks_opsi})
+	_tampilkan_node(DataChatModul01.cari(String(opsi.get("ke", ""))), teks_opsi)
 
 
 func _on_soal_ditekan(idx: int) -> void:

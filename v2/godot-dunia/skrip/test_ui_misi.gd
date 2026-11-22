@@ -149,7 +149,7 @@ func _ready() -> void:
 	# Keputusan Mas 22 Nov 16:03 — misi pindah dari VIDEO ke TEKS,
 	# lanjut manual (TIDAK ada auto-advance, TIDAK ada timer);
 	# alur penuh (narasi 5 node + latihan + kuis + tugas) diuji di
-	# test_ruang_belajar_teks.gd — di sini hanya kontrak dasar:
+	# test_ruang_belajar_v4.gd — di sini hanya kontrak dasar:
 	# tampil, bicara, pilihan, sinyal.
 	var rb := RuangBelajarUI.new()
 	add_child(rb)
@@ -161,19 +161,23 @@ func _ready() -> void:
 	rb.selesai.connect(func(total: int) -> void: rb_selesai_ev.append(total))
 	rb.papan_berubah.connect(func(judul: String, baris: PackedStringArray) -> void: rb_papan.append([judul, baris]))
 	rb.tampilkan("Ust. Sanusi", save_rb)
-	_cek("RB teks: tampil + node n1 + pengajar + papan NAHWU DASAR", rb.visible and rb.node_saat_ini() == "n1" and _ada_teks(rb, "Ust. Sanusi") and rb_papan == [["NAHWU DASAR", PackedStringArray(["Modul 01 — Mengenal Kata", "akhir kata berubah = i'rab"])]])
-	_cek("RB teks: TIDAK ADA teks mengetik / penghitung pesan", not _ada_teks(rb, "mengetik") and not _ada_teks(rb, "dari 13"))
+	_cek("RB teks: tampil + node p1 + pengajar + papan NAHWU DASAR", rb.visible and rb.node_saat_ini() == "p1" and _ada_teks(rb, "Ust. Sanusi") and rb_papan == [["NAHWU DASAR", PackedStringArray(["Modul 01 — Mengenal Kata"])]])
+	_cek("RB teks: TIDAK ADA teks mengetik / penghitung pesan", not _ada_teks(rb, "mengetik") and not _ada_teks(rb, "dari 28"))
 	_cek("RB teks: sedang bicara + pilihan BELUM tampil + tombol tidak terkunci", rb.sedang_bicara() and rb._pilihan_box.get_child_count() == 0 and not rb.ada_tombol_terkunci())
 	rb._selesaikan_bicara()
 	var jml_lanjut := 0
 	for c in rb._pilihan_box.get_children():
 		if not c.is_queued_for_deletion() and c is Button:
 			jml_lanjut += 1
-	_cek("RB teks: n1 selesai -> tombol Lanjut tampil, tombol tidak terkunci", not rb.sedang_bicara() and jml_lanjut == 1 and not rb.ada_tombol_terkunci())
+	_cek("RB teks: p1 selesai -> tombol Lanjut tampil, tombol tidak terkunci", not rb.sedang_bicara() and jml_lanjut == 1 and not rb.ada_tombol_terkunci())
 	rb._lanjut_pesan()
-	_cek("RB teks: lanjut -> node n2 (kalam) + papan KALAM", rb.node_saat_ini() == "n2" and (rb_papan[-1] as Array)[0] == "KALAM")
+	_cek("RB teks: lanjut -> node n1 + papan NAHWU", rb.node_saat_ini() == "n1" and (rb_papan[-1] as Array)[0] == "NAHWU")
 	rb._selesaikan_bicara()
-	_cek("RB teks: n2 selesai -> tetap 1 tombol Lanjut (tanpa cabang Paham/Belum)", rb._pilihan_box.get_child_count() == 1 and not rb.ada_tombol_terkunci())
+	var jml_pilihan := 0
+	for c in rb._pilihan_box.get_children():
+		if not c.is_queued_for_deletion() and c is Button:
+			jml_pilihan += 1
+	_cek("RB teks: n1 selesai -> tetap 1 tombol Lanjut (tanpa cabang Paham/Belum)", jml_pilihan == 1 and not rb.ada_tombol_terkunci())
 	rb.tutup()
 	_cek("RB teks: tutup() sembunyi tanpa sinyal tambahan", not rb.visible and rb_selesai_ev.is_empty())
 	rb.queue_free()

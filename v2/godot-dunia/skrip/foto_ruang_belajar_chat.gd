@@ -9,7 +9,7 @@ extends Node
 ##   HOME=/tmp/iso-rb-foto DISPLAY=:96 godot --path . --resolution 1280x720 --audio-driver Dummy --scene res://skrip/foto_ruang_belajar_chat.tscn
 ##   HOME=/tmp/iso-rb-foto DISPLAY=:96 godot --path . --resolution 1280x720 --audio-driver Dummy --scene res://skrip/foto_ruang_belajar_chat.tscn -- --putri
 ## Nama file BARU di v2/foto-ui/ — jangan timpa yang lama.
-## Foto: n1 bicara, n2 bicara (papan KALAM), n2 tombol Lanjut, l1 soal.
+## Foto: p1 bicara, n1 bicara, n2 bicara (papan KALAM), c1 pilihan, l1 soal.
 
 const OUT_DIR := "/home/hatch/workspace/pesantren-verse/v2/foto-ui/"
 
@@ -64,9 +64,9 @@ func _ready() -> void:
 	_main._save["nama"] = "Foto Misi"
 	_main._save["petunjuk_tombol_ditutup"] = true
 	_main._save["onboarding"] = {"langkah": 5, "modul": 1, "sanusi_lokasi": "", "tes_lulus": 0, "selesai": false}
-	# Foto SELALU dari n1 — hapus posisi resume (RB menyimpan
+	# Foto SELALU dari p1 — hapus posisi resume (RB menyimpan
 	# rb_chat_pos ke save selama jalan; tanpa reset, run berikut
-	# me-resume di l1/l2, bukan n1).
+	# me-resume di l1/l2, bukan p1).
 	_main._save["rb_chat_pos"] = ""
 	_main._save["rb_chat_modul"] = 0
 	_main._save["rb_fase"] = ""
@@ -97,8 +97,14 @@ func _ready() -> void:
 	_main._manajer_misi.buka_ruang_belajar(pengajar, _main._save)
 	var rb = _main._manajer_misi._ruang_belajar
 	print("FOTO-CEK buka: panel='%s' adegan=%s guru_duduk=%s" % [_main._manajer_misi.panel_terbuka(), str(_main._dialog_adegan_aktif), str(guru.sedang_duduk_belajar())])
-	# n1 sedang bicara (teks progresif + kursor, tanpa pilihan).
+	# p1 sedang bicara (teks progresif + kursor, tanpa pilihan).
 	await _tunggu(1.5)
+	print("FOTO-CEK p1: node='%s' bicara=%s" % [rb.node_saat_ini(), str(rb.sedang_bicara())])
+	await _foto(awalan + "-p1-bicara-meja.png")
+	# n1 sedang bicara (papan NAHWU): selesaikan p1, tekan Lanjut.
+	rb._selesaikan_bicara()
+	rb._lanjut_pesan()
+	await _tunggu(1.2)
 	print("FOTO-CEK n1: node='%s' bicara=%s" % [rb.node_saat_ini(), str(rb.sedang_bicara())])
 	await _foto(awalan + "-n1-bicara-meja.png")
 	# n2 sedang bicara (papan KALAM): selesaikan n1, tekan Lanjut.
@@ -107,15 +113,24 @@ func _ready() -> void:
 	await _tunggu(1.2)
 	print("FOTO-CEK n2: node='%s' bicara=%s" % [rb.node_saat_ini(), str(rb.sedang_bicara())])
 	await _foto(awalan + "-n2-bicara-meja.png")
-	# n2 selesai -> tombol Lanjut tampil aktif penuh (tanpa cabang).
+	# c1 selesai -> 2 pilihan (Paham/Belum) tampil aktif penuh.
+	rb._selesaikan_bicara()
+	rb._lanjut_pesan()
 	rb._selesaikan_bicara()
 	await _tunggu(0.5)
-	print("FOTO-CEK n2 lanjut: node='%s' bicara=%s" % [rb.node_saat_ini(), str(rb.sedang_bicara())])
-	await _foto(awalan + "-n2-lanjut-meja.png")
-	# Jalan ke l1 (manual): Lanjut n3, n4, n5, lalu l1.
-	for i in range(4):
+	print("FOTO-CEK c1 pilihan: node='%s' bicara=%s" % [rb.node_saat_ini(), str(rb.sedang_bicara())])
+	await _foto(awalan + "-c1-pilihan-meja.png")
+	# Jalan ke l1 (manual): "Paham" di tiap cek, Lanjut di narasi.
+	rb._on_cek_ditekan((DataChatModul01.cari("c1").get("opsi", []) as Array)[0])
+	var pengaman := 0
+	while rb.node_saat_ini() != "l1" and pengaman < 40:
+		pengaman += 1
 		rb._selesaikan_bicara()
-		rb._lanjut_pesan()
+		var nod := DataChatModul01.cari(rb.node_saat_ini())
+		if String(nod.get("tipe", "")) == "cek":
+			rb._on_cek_ditekan((nod.get("opsi", []) as Array)[0])
+		else:
+			rb._lanjut_pesan()
 	await _tunggu(0.5)
 	print("FOTO-CEK l1: node='%s' bicara=%s" % [rb.node_saat_ini(), str(rb.sedang_bicara())])
 	rb._selesaikan_bicara()

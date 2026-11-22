@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://skrip/test_cek_pck_20261119_6.gd" id="1_pck6"]
+
+[node name="TestCekPck20261119_6" type="Node"]
+script = ExtResource("1_pck6")
