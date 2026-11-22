@@ -64,7 +64,7 @@ func _ready() -> void:
 	for i in 3:
 		await get_tree().process_frame
 
-	# Materi (m1-m2 bicara) — adegan belajar dulu (ustadz duduk +
+	# Materi (n1-n2 bicara) — adegan belajar dulu (ustadz duduk +
 	# papan tulis + kamera dialog), lalu buka chat.
 	_main._mulai_adegan_belajar()
 	_main._manajer_misi.buka_ruang_belajar("Ust. Sanusi", _main._save)
@@ -72,19 +72,11 @@ func _ready() -> void:
 		await get_tree().process_frame
 	print("FOTO-CEK materi: panel='%s' (harap ruang_belajar)" % _main._manajer_misi.panel_terbuka())
 	await _foto(_prefix + "-materi.png")
-	# Latihan (soal l1) — jalan manual ke l1 (chat baru: tidak ada
-	# lagi _ke_langkah; alur digerakkan lewat opsi/Lanjut).
+	# Latihan (soal l1) — jalan manual ke l1 (lanjut n1->n5, lalu l1).
 	var rb_lebar = _main._manajer_misi._ruang_belajar
-	rb_lebar.set_auto(false)
-	rb_lebar._selesaikan_bicara()
-	rb_lebar._lanjut_pesan()
-	rb_lebar._selesaikan_bicara()
-	rb_lebar._on_opsi_ditekan((DataChatModul01.cari("m2").get("opsi", []) as Array)[0])
-	for i in range(4):
+	for i in range(5):
 		rb_lebar._selesaikan_bicara()
 		rb_lebar._lanjut_pesan()
-	rb_lebar._selesaikan_bicara()
-	rb_lebar._on_opsi_ditekan((DataChatModul01.cari("m7").get("opsi", []) as Array)[0])
 	rb_lebar._selesaikan_bicara()
 	for i in 10:
 		await get_tree().process_frame

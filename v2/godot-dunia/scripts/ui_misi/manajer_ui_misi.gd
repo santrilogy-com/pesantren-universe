@@ -16,12 +16,14 @@ extends CanvasLayer
 signal dialog_selesai
 signal ruang_belajar_langkah(jenis: String, poin: int)
 signal ruang_belajar_selesai(poin_total: int)
-## RUANG BELAJAR CHAT (Sinta, 19 Nov 2026 — §7+§8): penutupan
+## RUANG BELAJAR TEKS (Sinta, 22 Nov 2026 — keputusan Mas 16:03:
+## misi pindah dari VIDEO ke TEKS, lanjut MANUAL): penutupan
 ## eksplisit (× / "Tutup"), isi papan tulis di dunia, dan titik
-## resume (rb_chat_pos + rb_chat_modul).
+## resume (rb_chat_pos + rb_chat_modul + rb_fase + rb_node_terakhir).
+## TIDAK ADA chip Auto lagi — auto-advance dihapus (22 Nov).
 signal ruang_belajar_ditutup
 signal ruang_belajar_papan(judul: String, baris: PackedStringArray)
-signal ruang_belajar_kemajuan(pos_id: String, modul: int)
+signal ruang_belajar_kemajuan(pos_id: String, modul: int, fase: String, node_terakhir: String)
 signal tes_selesai(lulus: bool, skor: int, bagian: String, mesin: MesinKuis)
 ## TEKA-TEKI (Raka, 18 Nov 2026): pemain memilih "Tanya tentang
 ## guru" di layar tanya — main menghitung teka-tekinya lalu membuka
@@ -52,11 +54,6 @@ var _ruang_belajar: RuangBelajarUI
 var _tes: TesKenaikanUI
 var _panel_misi: PanelMisiUI
 var _terbuka: PanelContainer = null
-## RUANG BELAJAR CHAT (§7): chip "Auto" kecil di kiri atas
-## layar — milik manajer (bukan panel) supaya posisinya tetap
-## di pojok layar saat panel menempel bawah. Hanya tampil saat
-## Ruang Belajar terbuka.
-var _rb_auto_chip: Button
 ## TEKA-TEKI (Raka, 18 Nov 2026): id NPC layar tanya yang sedang
 ## terbuka — diteruskan ke main saat pemain memilih "Tanya".
 var _npc_tanya_id := ""
@@ -88,15 +85,7 @@ func _ready() -> void:
 	_ruang_belajar.ditutup.connect(_on_rb_ditutup)
 	_ruang_belajar.papan_berubah.connect(_on_rb_papan)
 	_ruang_belajar.kemajuan_disimpan.connect(_on_rb_kemajuan)
-	_ruang_belajar.auto_berubah.connect(func(_v: bool) -> void: _sinkron_chip_auto())
 	_tes.tes_selesai.connect(_on_tes_selesai)
-	# Chip Auto (Ruang Belajar chat §7) — anak manajer supaya
-	# selalu di kiri atas layar, di atas dim.
-	_rb_auto_chip = GayaMisi.buat_tombol_outline("Auto: ON")
-	_rb_auto_chip.position = Vector2(16, 16)
-	_rb_auto_chip.visible = false
-	_rb_auto_chip.pressed.connect(_on_rb_auto_chip_ditekan)
-	add_child(_rb_auto_chip)
 
 
 ## ---------- buka panel (satu saja dalam satu waktu) ----------
@@ -122,13 +111,12 @@ func buka_teka_teki(nama: String, subjudul: String, avatar: String, teks: String
 	_dialog.tampilkan_pesan(nama, subjudul, avatar, teks)
 
 
-## RUANG BELAJAR CHAT (§7+§8): panel BAWAH + dim transparan
+## RUANG BELAJAR TEKS: panel BAWAH + dim transparan
 ## (dunia tetap terlihat — ustadz duduk + papan tulis di dunia).
 ## save diteruskan untuk resume + mode baca ulang.
 func buka_ruang_belajar(pengajar: String, save: Dictionary = {}) -> void:
 	_tampilkan_bawah(_ruang_belajar, TINGGI_RUANG_BELAJAR_CHAT, LEBAR_RUANG_BELAJAR, FRAKSI_RUANG_BELAJAR, FRAKSI_TINGGI_RUANG_BELAJAR_CHAT)
 	_ruang_belajar.tampilkan(pengajar, save)
-	_sinkron_chip_auto()
 
 
 func buka_tes(bagian: String) -> void:
@@ -234,22 +222,6 @@ func _skala_layar() -> float:
 
 func _sinkron_dim() -> void:
 	_dim.visible = ada_panel_terbuka()
-	_sinkron_chip_auto()
-
-
-## Chip Auto hanya tampil saat Ruang Belajar terbuka; teksnya
-## mengikuti saklar panel (default ON).
-func _sinkron_chip_auto() -> void:
-	if _rb_auto_chip == null or _ruang_belajar == null:
-		return
-	_rb_auto_chip.visible = _ruang_belajar.visible
-	_rb_auto_chip.text = "Auto: ON" if _ruang_belajar.auto_aktif() else "Auto: OFF"
-
-
-func _on_rb_auto_chip_ditekan() -> void:
-	var baru := not _ruang_belajar.auto_aktif()
-	_ruang_belajar.set_auto(baru)
-	_sinkron_chip_auto()
 
 
 func _on_panel_visibility_changed(panel: PanelContainer) -> void:
@@ -285,8 +257,8 @@ func _on_rb_papan(judul: String, baris: PackedStringArray) -> void:
 	ruang_belajar_papan.emit(judul, baris)
 
 
-func _on_rb_kemajuan(pos_id: String, modul: int) -> void:
-	ruang_belajar_kemajuan.emit(pos_id, modul)
+func _on_rb_kemajuan(pos_id: String, modul: int, fase: String, node_terakhir: String) -> void:
+	ruang_belajar_kemajuan.emit(pos_id, modul, fase, node_terakhir)
 
 
 func _on_tes_selesai(lulus: bool, skor: int, bagian: String, mesin: MesinKuis) -> void:

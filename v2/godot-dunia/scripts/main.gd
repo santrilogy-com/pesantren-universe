@@ -4052,11 +4052,14 @@ func _on_manajer_rb_ditutup() -> void:
 
 
 ## Titik resume percakapan (sinyal kemajuan_disimpan dari panel)
-## -> kunci save rb_chat_pos + rb_chat_modul (default_data sudah
-## punya keduanya, jadi load_data tidak membuangnya).
-func _on_manajer_rb_kemajuan(pos_id: String, modul: int) -> void:
+## -> kunci save rb_chat_pos + rb_chat_modul + rb_fase +
+## rb_node_terakhir (default_data sudah punya keempatnya, jadi
+## load_data tidak membuangnya).
+func _on_manajer_rb_kemajuan(pos_id: String, modul: int, fase: String, node_terakhir: String) -> void:
 	_save["rb_chat_pos"] = pos_id
 	_save["rb_chat_modul"] = modul
+	_save["rb_fase"] = fase
+	_save["rb_node_terakhir"] = node_terakhir
 	SantriSave.save_data(_save)
 
 

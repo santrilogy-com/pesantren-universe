@@ -1,58 +1,63 @@
 class_name RuangBelajarUI
 extends PanelContainer
-## Ruang Belajar — chat gaya Genshin (Sinta, 19 Nov 2026).
-## Konsep v2/konsep/KONSEP-RUANG-BELAJAR-CHAT-v1.md §7+§8 (ACC Mas
-## 19 Nov 15:18 — versi DUDUK): ustadz DUDUK di dunia (adegan di
-## main.gd), kotak dialog bawah gelap tembus pandang + garis emas
-## tepi atas, nama emas, gelembung kecil player, pilihan melayang,
-## Auto (chip milik manajer, kiri atas layar), Riwayat, bilah emas
-## tipis TANPA teks penghitung (koreksi Mas 15:09).
+## Ruang Belajar — NARASI TEKS, LANJUT MANUAL (Sinta, 22 Nov 2026).
+## Keputusan Mas 22 Nov 16:03 WIB: karakter BERHENTI dulu, project
+## Godot lanjut; misi Ruang Belajar pindah dari VIDEO ke TEKS —
+## narasi guru ditulis detail dan lengkap, pakai dialog TETAP, tapi
+## TIDAK otomatis lanjut — pemain yang menentukan lanjut/tidaknya.
+## Konsep video v3 DITUNDA (spike pemutar video TIDAK di-port).
+## Kotak dialog bawah gelap tembus pandang + garis emas tepi atas,
+## nama emas, gelembung kecil player, Riwayat, bilah emas tipis
+## TANPA teks penghitung (koreksi Mas 15:09).
 ##
 ## KONTRAK (tetap — manajer/main tidak berubah): class_name,
 ## sinyal langkah_selesai(jenis, poin) / selesai(poin_total) /
 ## ditutup, tampilkan(pengajar, save). Sinyal BARU: papan_berubah
 ## (judul, baris) untuk papan tulis di dunia + kemajuan_disimpan
-## (pos_id, modul) untuk resume.
+## (pos_id, modul, fase, node_terakhir) untuk resume (kunci save
+## rb_chat_pos + rb_chat_modul + rb_fase + rb_node_terakhir).
 ##
 ## BICARA, bukan mengetik (§8): TIDAK ADA teks "sedang mengetik"
 ## di mana pun; huruf muncul satu-satu ±40 ms/huruf sebagai EFEK
 ## BICARA (kursor blok emas yang digambar — "[bgcolor]" di
 ## RichTextLabel, BUKAN glif font); tap kotak dialog = tampil
-## penuh; pilihan TIDAK TAMPIL selama ustadz bicara, muncul
-## langsung AKTIF penuh begitu kalimat selesai.
+## penuh saat bicara, LANJUT ke node berikut bila sudah selesai.
 ##
-## Aturan pilihan (§8): tombol jawaban TIDAK PERNAH redup/
-## terkunci. Opsi soal yang sudah dijawab salah DIHILANGKAN dari
-## pilihan saat soal diulang (bukan di-disabled) — "dimatikan"
-## §2 tanpa pernah menampilkan tombol redup.
+## LANJUT MANUAL — TIDAK ADA auto-advance, TIDAK ADA timer:
+## setelah ucapan selesai, tombol emas "Lanjut ›" tampil dan
+## pemain yang mengetuknya (atau mengetuk gelembung dialog).
+## TIDAK ADA chip Auto lagi (dihapus dari manajer juga).
 ##
-## Alur: DataChatModul01 (14 pesan + cabang Belum maks 2x).
-## Poin: materi +10 / latihan +15 / kuis +10 = 35 (sinyal
-## langkah_selesai per langkah + selesai(35) di penutup).
-## Resume: rb_chat_pos = id node BERIKUTNYA yang akan tampil
-## (bukan indeks — cabang b1/b2 membuat indeks linear tidak
-## stabil; disimpan tiap node mulai, dibersihkan saat tuntas).
+## Aturan pilihan: tombol jawaban TIDAK PERNAH redup/terkunci.
+## Opsi soal yang sudah dijawab salah DIHILANGKAN dari pilihan
+## saat soal diulang (bukan di-disabled) — "dimatikan" §2 tanpa
+## pernah menampilkan tombol redup.
+##
+## Alur: DataChatModul01 (narasi n1–n5 CONTOH + latihan l1–l5 +
+## kuis k1 + penutup + tugas). Poin: materi +10 / latihan +15 /
+## kuis +10 / tugas +5 = 40 (sinyal langkah_selesai per langkah +
+## selesai(40) di tugas). Resume: rb_chat_pos = id node BERIKUTNYA
+## yang akan tampil (disimpan tiap node mulai, dibersihkan saat
+## tuntas); rb_fase = fase sesi ("narasi"/"latihan"/"kuis"/
+## "penutup"/"tugas"/"selesai"); rb_node_terakhir = id node narasi
+## TERAKHIR yang ditampilkan ("" bila belum ada).
 ## Buka ulang setelah tuntas = mode baca ulang (tanpa poin).
 ## PERBAIKAN dari UI lama: mode baca ulang dulu memakai cek
 ## string pada rb_selesai (Array) sehingga selesai SEBAGIAN
 ## (mis. baru materi) sudah dianggap tuntas — kini ketiga
 ## langkah dicek satu-satu.
 ## MesinKuis TIDAK dipakai: graf node DataChatModul01 SUDAH
-## menjadi mesin keadaan (pengulangan soal + cabang) — data
-## soal/opsi/jawaban benar tetap dipakai ulang dari DataModul01
-## lewat DataChatModul01.opsi_soal()/benar_soal().
+## menjadi mesin keadaan (pengulangan soal) — data soal/opsi/
+## jawaban benar tetap dipakai ulang dari DataModul01 lewat
+## DataChatModul01.opsi_soal()/benar_soal().
 
 signal langkah_selesai(jenis: String, poin: int)
 signal selesai(poin_total: int)
 signal ditutup
 signal papan_berubah(judul: String, baris: PackedStringArray)
-signal kemajuan_disimpan(pos_id: String, modul: int)
-## Chip Auto milik manajer — emit tiap set_auto berubah supaya
-## teks chip tidak pernah basi (foto memanggil set_auto langsung).
-signal auto_berubah(v: bool)
+signal kemajuan_disimpan(pos_id: String, modul: int, fase: String, node_terakhir: String)
 
 const BICARA_MS_PER_HURUF := 40
-const JEDA_OTOMATIS_DETIK := 0.8
 
 var _pengajar := "Ust. Sanusi"
 var _modul := 1
@@ -61,12 +66,12 @@ var _teks_penuh := ""
 var _huruf_tampil := 0
 var _sedang_bicara := false
 var _kursor_nyala := true
-var _auto := true
 var _baca_ulang := false
 var _materi_selesai := false
 var _latihan_selesai := false
 var _kuis_selesai := false
-var _ulang_materi := false
+var _tugas_selesai := false
+var _narasi_terakhir := ""
 var _opsi_salah: Array = []
 var _riwayat: Array = []
 var _lanjut_tampil := false
@@ -83,7 +88,6 @@ var _log_overlay: PanelContainer
 var _log_list: VBoxContainer
 var _timer_bicara: Timer
 var _timer_kedip: Timer
-var _timer_otomatis: Timer
 
 
 func _ready() -> void:
@@ -200,7 +204,8 @@ func _ready() -> void:
 	log_v.add_child(gulir)
 	_log_overlay.add_child(log_v)
 	add_child(_log_overlay)
-	# Timer: bicara (per huruf), kedip kursor, jeda otomatis.
+	# Timer: bicara (per huruf) + kedip kursor. TIDAK ADA timer
+	# otomatis lanjut — pemain yang mengetuk "Lanjut" (22 Nov).
 	_timer_bicara = Timer.new()
 	_timer_bicara.wait_time = float(BICARA_MS_PER_HURUF) / 1000.0
 	_timer_bicara.timeout.connect(_on_timer_bicara)
@@ -209,11 +214,6 @@ func _ready() -> void:
 	_timer_kedip.wait_time = 0.5
 	_timer_kedip.timeout.connect(_on_timer_kedip)
 	add_child(_timer_kedip)
-	_timer_otomatis = Timer.new()
-	_timer_otomatis.wait_time = JEDA_OTOMATIS_DETIK
-	_timer_otomatis.one_shot = true
-	_timer_otomatis.timeout.connect(_on_timer_otomatis)
-	add_child(_timer_otomatis)
 	visible = false
 
 
@@ -230,7 +230,8 @@ func tampilkan(pengajar: String, save: Dictionary = {}) -> void:
 	_materi_selesai = false
 	_latihan_selesai = false
 	_kuis_selesai = false
-	_ulang_materi = false
+	_tugas_selesai = false
+	_narasi_terakhir = ""
 	_opsi_salah.clear()
 	_riwayat.clear()
 	_hentikan_timer()
@@ -245,19 +246,6 @@ func tampilkan(pengajar: String, save: Dictionary = {}) -> void:
 		_tampilkan_node(DataChatModul01.cari(pos))
 	else:
 		_tampilkan_node(DataChatModul01.cari(DataChatModul01.id_pertama()))
-
-
-## Auto ON/OFF (chip milik manajer). Bila dinyalakan saat sedang
-## menunggu tombol Lanjut, lanjut otomatis sekarang.
-func set_auto(v: bool) -> void:
-	_auto = v
-	auto_berubah.emit(v)
-	if _auto and not _sedang_bicara and _lanjut_tampil and not _baca_ulang:
-		_timer_otomatis.start()
-
-
-func auto_aktif() -> bool:
-	return _auto
 
 
 ## Id node yang sedang tampil (untuk tes + foto).
@@ -297,6 +285,17 @@ func _semua_tombol(n: Node) -> Array[Button]:
 	return out
 
 
+## Pembicara node — naskah ditulis sekali (Sanusi) tapi dipakai
+## dua versi: santri putri belajar dari Ustzh. Fatimah, jadi nama
+## ustadz di node di-resolve ke pengajar sesi ini. Nama lain
+## (bukan Sanusi/Fatimah) diteruskan apa adanya.
+func _pembicara_node(nod: Dictionary) -> String:
+	var p := String(nod.get("pembicara", _pengajar))
+	if p.contains("Sanusi") or p.contains("Fatimah"):
+		return _pengajar
+	return p
+
+
 func _bangun_log_resume(resume_id: String) -> void:
 	_riwayat.clear()
 	for id in DataChatModul01.jalur_log(resume_id):
@@ -323,6 +322,9 @@ func _tampilkan_node(nod: Dictionary, jawaban_player: String = "") -> void:
 		_gelembung_box.visible = true
 	else:
 		_gelembung_box.visible = false
+	var pembicara := _pembicara_node(nod)
+	_nama_label.text = pembicara
+	_avatar.atur_tipe("ustadzah" if pembicara.contains("Fatimah") else "sanusi")
 	var papan: Dictionary = nod.get("papan", {})
 	if not papan.is_empty():
 		var baris := PackedStringArray()
@@ -330,7 +332,7 @@ func _tampilkan_node(nod: Dictionary, jawaban_player: String = "") -> void:
 			baris.append(String(b))
 		papan_berubah.emit(String(papan.get("judul", "")), baris)
 	var pid := String(nod.get("id", ""))
-	if DataChatModul01.SPINE.has(pid) or pid == "b1" or pid == "b2":
+	if DataChatModul01.SPINE.has(pid):
 		_bilah_progres.value = float(DataChatModul01.indeks_progres(pid)) / float(DataChatModul01.jumlah_pesan())
 	_simpan_kemajuan(pid)
 	_teks_penuh = String(nod.get("teks", ""))
@@ -350,11 +352,13 @@ func _tampilkan_node(nod: Dictionary, jawaban_player: String = "") -> void:
 
 
 func _simpan_kemajuan(id: String) -> void:
-	# Hanya node nyata yang disimpan sebagai titik resume
-	# (node sementara "_benar"/"_salah" tidak — titik resume
-	# tetap di soal yang sedang dijawab).
-	if id == "" or DataChatModul01.SPINE.has(id) or id == "b1" or id == "b2":
-		kemajuan_disimpan.emit(id, _modul)
+	# Hanya node tulang punggung yang disimpan sebagai titik
+	# resume (node sementara "_benar"/"_salah" tidak — titik
+	# resume tetap di soal yang sedang dijawab).
+	if id == "" or DataChatModul01.SPINE.has(id):
+		if DataChatModul01.fase_node(id) == "narasi":
+			_narasi_terakhir = id
+		kemajuan_disimpan.emit(id, _modul, DataChatModul01.fase_node(id), _narasi_terakhir)
 
 
 func _render_teks() -> void:
@@ -381,14 +385,9 @@ func _on_timer_kedip() -> void:
 	_render_teks()
 
 
-func _on_timer_otomatis() -> void:
-	if not _auto:
-		_tampilkan_pilihan()
-		return
-	_lanjut_pesan()
-
-
-## Tap kotak dialog = tampil penuh (lewati ucapan).
+## Tap kotak dialog: saat bicara = tampil penuh (lewati ucapan);
+## bila ucapan sudah selesai dan tombol Lanjut tampil = lanjut
+## ke node berikut (ketuk gelembung = ketuk Lanjut).
 func _on_kotak_gui_input(event: InputEvent) -> void:
 	var ketuk := false
 	if event is InputEventMouseButton:
@@ -396,8 +395,12 @@ func _on_kotak_gui_input(event: InputEvent) -> void:
 		ketuk = mb.button_index == MOUSE_BUTTON_LEFT and mb.pressed
 	elif event is InputEventScreenTouch:
 		ketuk = (event as InputEventScreenTouch).pressed
-	if ketuk and _sedang_bicara:
+	if not ketuk:
+		return
+	if _sedang_bicara:
 		_selesaikan_bicara()
+	elif _lanjut_tampil:
+		_lanjut_pesan()
 
 
 func _selesaikan_bicara() -> void:
@@ -416,7 +419,7 @@ func _bicara_selesai() -> void:
 	if not _baca_ulang:
 		_riwayat.append({"dari": "ustadz", "teks": _teks_penuh})
 	var pid := String(_node_saat_ini.get("id", ""))
-	if DataChatModul01.SPINE.has(pid) or pid == "b1" or pid == "b2":
+	if DataChatModul01.SPINE.has(pid):
 		_bilah_progres.value = float(DataChatModul01.indeks_progres(pid) + 1) / float(DataChatModul01.jumlah_pesan())
 	_tampilkan_pilihan()
 
@@ -426,32 +429,16 @@ func _tampilkan_pilihan() -> void:
 	var nod := _node_saat_ini
 	var tipe := String(nod.get("tipe", ""))
 	if _baca_ulang:
-		if tipe == "penutup":
+		# Baca ulang: tidak ada poin — tugas pun langsung Tutup.
+		if tipe == "tugas":
 			_tambah_tombol_tutup()
 		else:
-			var teks := "Lanjut ›"
-			var opsi: Array = nod.get("opsi", [])
-			if opsi.size() > 0:
-				teks = String(opsi[0].get("teks", teks))
-			_tambah_tombol_lanjut(teks)
+			_tambah_tombol_lanjut("Lanjut ›")
 		return
 	match tipe:
-		"pesan":
-			if _auto:
-				_timer_otomatis.start()
-			else:
-				var teks2 := "Lanjut ›"
-				var opsi2: Array = nod.get("opsi", [])
-				if opsi2.size() > 0:
-					teks2 = String(opsi2[0].get("teks", teks2))
-				_tambah_tombol_lanjut(teks2)
-		"cek":
-			var opsi3: Array = nod.get("opsi", [])
-			for i in opsi3.size():
-				var o: Dictionary = opsi3[i]
-				var b := GayaMisi.buat_tombol_emas(String(o.get("teks", ""))) if i == 0 else GayaMisi.buat_tombol_outline(String(o.get("teks", "")))
-				b.pressed.connect(_on_opsi_ditekan.bind(o))
-				_pilihan_box.add_child(b)
+		"narasi", "pesan":
+			# LANJUT MANUAL: selalu tombol, tidak pernah otomatis.
+			_tambah_tombol_lanjut("Lanjut ›")
 		"soal":
 			var grid := GridContainer.new()
 			grid.columns = 2
@@ -468,8 +455,10 @@ func _tampilkan_pilihan() -> void:
 				b2.pressed.connect(_on_soal_ditekan.bind(i))
 				grid.add_child(b2)
 			_pilihan_box.add_child(grid)
-		"penutup":
-			_tambah_tombol_tutup()
+		"tugas":
+			var b := GayaMisi.buat_tombol_emas("Terima Tugas ✓")
+			b.pressed.connect(_on_terima_tugas)
+			_pilihan_box.add_child(b)
 
 
 func _tambah_tombol_lanjut(teks: String) -> void:
@@ -491,42 +480,22 @@ func _bersihkan_pilihan() -> void:
 		c.queue_free()
 
 
-## Lanjut dari node "pesan" (otomatis / tombol Lanjut / opsi
-## tunggal b2): "berikut" eksplisit dulu, lalu opsi tunggal,
-## lalu node berikutnya di tulang punggung.
+## Lanjut dari node narasi/pesan (tombol Lanjut / ketuk
+## gelembung): "berikut" eksplisit dulu (node pujian/teguran
+## soal), lalu node berikutnya di tulang punggung. Materi +10
+## di-emit saat meninggalkan node narasi terakhir (n5) ke l1.
 func _lanjut_pesan() -> void:
-	_timer_otomatis.stop()
 	var nod := _node_saat_ini
+	if String(nod.get("id", "")) == "n5":
+		_emit_materi()
 	var berikut := String(nod.get("berikut", ""))
 	if berikut == "":
-		var opsi: Array = nod.get("opsi", [])
-		if opsi.size() > 0:
-			berikut = String(opsi[0].get("ke", ""))
-		else:
-			var i := DataChatModul01.SPINE.find(String(nod.get("id", "")))
-			if i >= 0 and i + 1 < DataChatModul01.SPINE.size():
-				berikut = DataChatModul01.SPINE[i + 1]
+		var i := DataChatModul01.SPINE.find(String(nod.get("id", "")))
+		if i >= 0 and i + 1 < DataChatModul01.SPINE.size():
+			berikut = DataChatModul01.SPINE[i + 1]
 	if berikut == "":
 		return
 	_tampilkan_node(DataChatModul01.cari(berikut))
-
-
-func _on_opsi_ditekan(opsi: Dictionary) -> void:
-	var teks_opsi := String(opsi.get("teks", ""))
-	if not _baca_ulang:
-		_riwayat.append({"dari": "pemain", "teks": teks_opsi})
-	var ke := String(opsi.get("ke", ""))
-	if ke == "ulang":
-		if _ulang_materi:
-			_emit_materi()
-			_tampilkan_node(DataChatModul01.cari("l1"), teks_opsi)
-		else:
-			_ulang_materi = true
-			_tampilkan_node(DataChatModul01.cari("m2"), teks_opsi)
-		return
-	if String(_node_saat_ini.get("id", "")) == "m7" and ke == "l1":
-		_emit_materi()
-	_tampilkan_node(DataChatModul01.cari(ke), teks_opsi)
 
 
 func _emit_materi() -> void:
@@ -567,6 +536,15 @@ func _node_berikut_setelah_soal(id: String) -> String:
 	return "penutup"
 
 
+## Terima tugas (+5, sekali saja) -> tombol berubah jadi Tutup.
+func _on_terima_tugas() -> void:
+	if not _tugas_selesai:
+		_tugas_selesai = true
+		langkah_selesai.emit("tugas", DataChatModul01.POIN_TUGAS)
+	_bersihkan_pilihan()
+	_tambah_tombol_tutup()
+
+
 func _on_tutup_penutup() -> void:
 	if not _baca_ulang:
 		selesai.emit(DataChatModul01.POIN_TOTAL)
@@ -592,7 +570,6 @@ func _tutup_riwayat() -> void:
 func _hentikan_timer() -> void:
 	_timer_bicara.stop()
 	_timer_kedip.stop()
-	_timer_otomatis.stop()
 
 
 ## Tutup panel TANPA sinyal (dipanggil manajer — tutup_semua() +

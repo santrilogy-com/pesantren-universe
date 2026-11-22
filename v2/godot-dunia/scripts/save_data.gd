@@ -56,6 +56,15 @@ static func default_data() -> Dictionary:
 		# + modul yang sedang berjalan. "" = tidak ada resume.
 		"rb_chat_pos": "",
 		"rb_chat_modul": 0,
+		# RUANG BELAJAR TEKS (Sinta, 22 Nov 2026 — keputusan Mas
+		# 16:03: misi pindah dari VIDEO ke TEKS, lanjut MANUAL):
+		# fase sesi belajar ("narasi"/"latihan"/"kuis"/"penutup"/
+		# "tugas"/"selesai") + id node narasi TERAKHIR yang
+		# ditampilkan ("" bila belum ada). WAJIB ada di
+		# default_data (load_data membuang kunci yang tidak ada
+		# di sini — pelajaran bug flag pop-up Tara).
+		"rb_fase": "",
+		"rb_node_terakhir": "",
 		"baca_bab": [], # bab kitab yang dibaca di rak kitab, mis.
 		# ["jurumiyah:3"] — syarat badge "Bisa Baca Kitab Kuning"
 		# (A4); ditulis reader (gelombang 2).

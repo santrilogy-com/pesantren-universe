@@ -1,5 +1,6 @@
 extends Node
-## Foto Ruang Belajar CHAT Genshin (Sinta, 19 Nov 2026 — §8).
+## Foto Ruang Belajar TEKS (Sinta, 22 Nov 2026 — keputusan Mas
+## 16:03: misi pindah dari VIDEO ke TEKS, lanjut MANUAL).
 ## Membuka dialog belajar via adegan (ustadz DUDUK + papan tulis
 ## kecil + kamera dialog + HUD sembunyi), layar 1280x720.
 ## Jalankan di Xvfb :96 (layar 1280x720) — pola jalan tes yang
@@ -8,7 +9,7 @@ extends Node
 ##   HOME=/tmp/iso-rb-foto DISPLAY=:96 godot --path . --resolution 1280x720 --audio-driver Dummy --scene res://skrip/foto_ruang_belajar_chat.tscn
 ##   HOME=/tmp/iso-rb-foto DISPLAY=:96 godot --path . --resolution 1280x720 --audio-driver Dummy --scene res://skrip/foto_ruang_belajar_chat.tscn -- --putri
 ## Nama file BARU di v2/foto-ui/ — jangan timpa yang lama.
-## Foto: m1 bicara, m2 bicara (papan KALAM), m2 pilihan, l1 soal.
+## Foto: n1 bicara, n2 bicara (papan KALAM), n2 tombol Lanjut, l1 soal.
 
 const OUT_DIR := "/home/hatch/workspace/pesantren-verse/v2/foto-ui/"
 
@@ -63,11 +64,13 @@ func _ready() -> void:
 	_main._save["nama"] = "Foto Misi"
 	_main._save["petunjuk_tombol_ditutup"] = true
 	_main._save["onboarding"] = {"langkah": 5, "modul": 1, "sanusi_lokasi": "", "tes_lulus": 0, "selesai": false}
-	# Foto SELALU dari m1 — hapus posisi resume (RB menyimpan
+	# Foto SELALU dari n1 — hapus posisi resume (RB menyimpan
 	# rb_chat_pos ke save selama jalan; tanpa reset, run berikut
-	# me-resume di l1/l2, bukan m1).
+	# me-resume di l1/l2, bukan n1).
 	_main._save["rb_chat_pos"] = ""
 	_main._save["rb_chat_modul"] = 0
+	_main._save["rb_fase"] = ""
+	_main._save["rb_node_terakhir"] = ""
 	SantriSave.save_data(_main._save)
 	_main._masuk_pesantren("Foto Misi")
 	_main._pos_legal_terakhir = PesantrenBuilder.SPAWN
@@ -87,36 +90,32 @@ func _ready() -> void:
 		await get_tree().process_frame
 	var awalan := "foto-rb-chat-fatimah" if _putri else "foto-rb-chat-sanusi"
 	var pengajar := "Ustzh. Fatimah" if _putri else "Ust. Sanusi"
-	# Buka adegan belajar + dialog. Auto MATI dari awal — kalau
-	# tidak, Auto menekan Lanjut sendiri dan node lari sebelum foto.
+	# Buka adegan belajar + dialog. Lanjut MANUAL — tidak ada Auto
+	# yang menekan Lanjut sendiri (dihapus 22 Nov), node tidak
+	# akan lari sebelum foto.
 	_main._mulai_adegan_belajar()
 	_main._manajer_misi.buka_ruang_belajar(pengajar, _main._save)
 	var rb = _main._manajer_misi._ruang_belajar
-	rb.set_auto(false)
 	print("FOTO-CEK buka: panel='%s' adegan=%s guru_duduk=%s" % [_main._manajer_misi.panel_terbuka(), str(_main._dialog_adegan_aktif), str(guru.sedang_duduk_belajar())])
-	# m1 sedang bicara (teks progresif + kursor, tanpa pilihan).
+	# n1 sedang bicara (teks progresif + kursor, tanpa pilihan).
 	await _tunggu(1.5)
-	print("FOTO-CEK m1: node='%s' bicara=%s" % [rb.node_saat_ini(), str(rb.sedang_bicara())])
-	await _foto(awalan + "-m1-bicara-meja.png")
-	# m2 sedang bicara (papan KALAM): selesaikan m1, tekan Lanjut.
+	print("FOTO-CEK n1: node='%s' bicara=%s" % [rb.node_saat_ini(), str(rb.sedang_bicara())])
+	await _foto(awalan + "-n1-bicara-meja.png")
+	# n2 sedang bicara (papan KALAM): selesaikan n1, tekan Lanjut.
 	rb._selesaikan_bicara()
 	rb._lanjut_pesan()
 	await _tunggu(1.2)
-	print("FOTO-CEK m2: node='%s' bicara=%s" % [rb.node_saat_ini(), str(rb.sedang_bicara())])
-	await _foto(awalan + "-m2-bicara-meja.png")
-	# m2 selesai -> pilihan Paham/Belum tampil aktif penuh.
+	print("FOTO-CEK n2: node='%s' bicara=%s" % [rb.node_saat_ini(), str(rb.sedang_bicara())])
+	await _foto(awalan + "-n2-bicara-meja.png")
+	# n2 selesai -> tombol Lanjut tampil aktif penuh (tanpa cabang).
 	rb._selesaikan_bicara()
 	await _tunggu(0.5)
-	print("FOTO-CEK m2 pilihan: node='%s' bicara=%s" % [rb.node_saat_ini(), str(rb.sedang_bicara())])
-	await _foto(awalan + "-m2-pilihan-meja.png")
-	# Jalan ke l1 (manual, auto OFF): Paham di m2, lanjut m3-m6,
-	# Paham di m7, lalu soal l1.
-	rb._on_opsi_ditekan((DataChatModul01.cari("m2").get("opsi", []) as Array)[0])
+	print("FOTO-CEK n2 lanjut: node='%s' bicara=%s" % [rb.node_saat_ini(), str(rb.sedang_bicara())])
+	await _foto(awalan + "-n2-lanjut-meja.png")
+	# Jalan ke l1 (manual): Lanjut n3, n4, n5, lalu l1.
 	for i in range(4):
 		rb._selesaikan_bicara()
 		rb._lanjut_pesan()
-	rb._selesaikan_bicara()
-	rb._on_opsi_ditekan((DataChatModul01.cari("m7").get("opsi", []) as Array)[0])
 	await _tunggu(0.5)
 	print("FOTO-CEK l1: node='%s' bicara=%s" % [rb.node_saat_ini(), str(rb.sedang_bicara())])
 	rb._selesaikan_bicara()
