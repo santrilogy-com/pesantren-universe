@@ -33,8 +33,9 @@ extends PanelContainer
 ## saat soal diulang (bukan di-disabled) — "dimatikan" §2 tanpa
 ## pernah menampilkan tombol redup.
 ##
-## Alur: DataChatModul01 (narasi n1–n5 CONTOH + latihan l1–l5 +
-## kuis k1 + penutup + tugas). Poin: materi +10 / latihan +15 /
+## Alur: DataChatModul01–04 (narasi + latihan l1–l5 +
+## kuis k1 + penutup + tugas; dispatch lewat _chat dari _modul).
+## Poin: materi +10 / latihan +15 /
 ## kuis +10 / tugas +5 = 40 (sinyal langkah_selesai per langkah +
 ## selesai(40) di tugas). Resume: rb_chat_pos = id node BERIKUTNYA
 ## yang akan tampil (disimpan tiap node mulai, dibersihkan saat
@@ -46,10 +47,13 @@ extends PanelContainer
 ## string pada rb_selesai (Array) sehingga selesai SEBAGIAN
 ## (mis. baru materi) sudah dianggap tuntas — kini ketiga
 ## langkah dicek satu-satu.
-## MesinKuis TIDAK dipakai: graf node DataChatModul01 SUDAH
+## MesinKuis TIDAK dipakai: graf node DataChatModul0X SUDAH
 ## menjadi mesin keadaan (pengulangan soal) — data soal/opsi/
-## jawaban benar tetap dipakai ulang dari DataModul01 lewat
-## DataChatModul01.opsi_soal()/benar_soal().
+## jawaban benar tetap dipakai ulang dari DataModul0X lewat
+## DataChatModul0X.opsi_soal()/benar_soal().
+## Dispatch modul (Sinta, 22 Nov 23:0X): _chat = kelas data
+## sesuai _modul (1→01, 2→02, 3→03, 4→04); modul di luar
+## 1–4 (mis. Jurumiyah 05+) jatuh ke 01 sebagai fallback.
 
 signal langkah_selesai(jenis: String, poin: int)
 signal selesai(poin_total: int)
@@ -61,6 +65,7 @@ const BICARA_MS_PER_HURUF := 40
 
 var _pengajar := "Ust. Sanusi"
 var _modul := 1
+var _chat = DataChatModul01
 var _node_saat_ini: Dictionary = {}
 var _teks_penuh := ""
 var _huruf_tampil := 0
@@ -222,6 +227,18 @@ func _ready() -> void:
 func tampilkan(pengajar: String, save: Dictionary = {}) -> void:
 	_pengajar = pengajar
 	_modul = int(Onboarding.baca(save).get("modul", 1))
+	# Dispatch data chat per modul (Sinta, 22 Nov 23:0X): kelas
+	# GDScript disimpan di _chat (untyped) — pemanggilan statik
+	# _chat.cari()/SPINE/POIN_* bekerja lewat resource skrip.
+	match _modul:
+		2:
+			_chat = DataChatModul02
+		3:
+			_chat = DataChatModul03
+		4:
+			_chat = DataChatModul04
+		_:
+			_chat = DataChatModul01
 	_nama_label.text = pengajar
 	_avatar.atur_tipe("ustadzah" if pengajar.contains("Fatimah") else "sanusi")
 	var sudah: Array = save.get("rb_selesai", [])
@@ -240,12 +257,12 @@ func tampilkan(pengajar: String, save: Dictionary = {}) -> void:
 	var pos := String(save.get("rb_chat_pos", ""))
 	if _baca_ulang:
 		_bangun_log_baca_ulang()
-		_tampilkan_node(DataChatModul01.cari(DataChatModul01.id_pertama()))
-	elif pos != "" and not DataChatModul01.cari(pos).is_empty():
+		_tampilkan_node(_chat.cari(_chat.id_pertama()))
+	elif pos != "" and not _chat.cari(pos).is_empty():
 		_bangun_log_resume(pos)
-		_tampilkan_node(DataChatModul01.cari(pos))
+		_tampilkan_node(_chat.cari(pos))
 	else:
-		_tampilkan_node(DataChatModul01.cari(DataChatModul01.id_pertama()))
+		_tampilkan_node(_chat.cari(_chat.id_pertama()))
 
 
 ## Id node yang sedang tampil (untuk tes + foto).
@@ -298,16 +315,16 @@ func _pembicara_node(nod: Dictionary) -> String:
 
 func _bangun_log_resume(resume_id: String) -> void:
 	_riwayat.clear()
-	for id in DataChatModul01.jalur_log(resume_id):
-		var n := DataChatModul01.cari(id)
+	for id in _chat.jalur_log(resume_id):
+		var n := _chat.cari(id)
 		if not n.is_empty():
 			_riwayat.append({"dari": "ustadz", "teks": String(n.get("teks", ""))})
 
 
 func _bangun_log_baca_ulang() -> void:
 	_riwayat.clear()
-	for id in DataChatModul01.SPINE:
-		var n := DataChatModul01.cari(id)
+	for id in _chat.SPINE:
+		var n := _chat.cari(id)
 		if not n.is_empty():
 			_riwayat.append({"dari": "ustadz", "teks": String(n.get("teks", ""))})
 
@@ -332,8 +349,8 @@ func _tampilkan_node(nod: Dictionary, jawaban_player: String = "") -> void:
 			baris.append(String(b))
 		papan_berubah.emit(String(papan.get("judul", "")), baris)
 	var pid := String(nod.get("id", ""))
-	if DataChatModul01.SPINE.has(pid):
-		_bilah_progres.value = float(DataChatModul01.indeks_progres(pid)) / float(DataChatModul01.jumlah_pesan())
+	if _chat.SPINE.has(pid):
+		_bilah_progres.value = float(_chat.indeks_progres(pid)) / float(_chat.jumlah_pesan())
 	_simpan_kemajuan(pid)
 	_teks_penuh = String(nod.get("teks", ""))
 	if _baca_ulang:
@@ -355,10 +372,10 @@ func _simpan_kemajuan(id: String) -> void:
 	# Hanya node tulang punggung yang disimpan sebagai titik
 	# resume (node sementara "_benar"/"_salah" tidak — titik
 	# resume tetap di soal yang sedang dijawab).
-	if id == "" or DataChatModul01.SPINE.has(id):
-		if DataChatModul01.fase_node(id) == "narasi":
+	if id == "" or _chat.SPINE.has(id):
+		if _chat.fase_node(id) == "narasi":
 			_narasi_terakhir = id
-		kemajuan_disimpan.emit(id, _modul, DataChatModul01.fase_node(id), _narasi_terakhir)
+		kemajuan_disimpan.emit(id, _modul, _chat.fase_node(id), _narasi_terakhir)
 
 
 func _render_teks() -> void:
@@ -419,8 +436,8 @@ func _bicara_selesai() -> void:
 	if not _baca_ulang:
 		_riwayat.append({"dari": "ustadz", "teks": _teks_penuh})
 	var pid := String(_node_saat_ini.get("id", ""))
-	if DataChatModul01.SPINE.has(pid):
-		_bilah_progres.value = float(DataChatModul01.indeks_progres(pid) + 1) / float(DataChatModul01.jumlah_pesan())
+	if _chat.SPINE.has(pid):
+		_bilah_progres.value = float(_chat.indeks_progres(pid) + 1) / float(_chat.jumlah_pesan())
 	_tampilkan_pilihan()
 
 
@@ -457,7 +474,7 @@ func _tampilkan_pilihan() -> void:
 			grid.columns = 2
 			grid.add_theme_constant_override("h_separation", 10)
 			grid.add_theme_constant_override("v_separation", 10)
-			var opsi4: Array = DataChatModul01.opsi_soal(nod)
+			var opsi4: Array = _chat.opsi_soal(nod)
 			for i in opsi4.size():
 				if _opsi_salah.has(i):
 					continue
@@ -504,19 +521,19 @@ func _lanjut_pesan() -> void:
 		_emit_materi()
 	var berikut := String(nod.get("berikut", ""))
 	if berikut == "":
-		var i := DataChatModul01.SPINE.find(String(nod.get("id", "")))
-		if i >= 0 and i + 1 < DataChatModul01.SPINE.size():
-			berikut = DataChatModul01.SPINE[i + 1]
+		var i := _chat.SPINE.find(String(nod.get("id", "")))
+		if i >= 0 and i + 1 < _chat.SPINE.size():
+			berikut = _chat.SPINE[i + 1]
 	if berikut == "":
 		return
-	_tampilkan_node(DataChatModul01.cari(berikut))
+	_tampilkan_node(_chat.cari(berikut))
 
 
 func _emit_materi() -> void:
 	if _materi_selesai:
 		return
 	_materi_selesai = true
-	langkah_selesai.emit("materi", DataChatModul01.POIN_MATERI)
+	langkah_selesai.emit("materi", _chat.POIN_MATERI)
 
 
 ## Pilihan node cek ("Paham, lanjut ›" / "Belum, jelaskan lagi"):
@@ -526,13 +543,13 @@ func _on_cek_ditekan(opsi: Dictionary) -> void:
 	var teks_opsi := String(opsi.get("teks", ""))
 	if not _baca_ulang:
 		_riwayat.append({"dari": "pemain", "teks": teks_opsi})
-	_tampilkan_node(DataChatModul01.cari(String(opsi.get("ke", ""))), teks_opsi)
+	_tampilkan_node(_chat.cari(String(opsi.get("ke", ""))), teks_opsi)
 
 
 func _on_soal_ditekan(idx: int) -> void:
 	var nod := _node_saat_ini
-	var benar := DataChatModul01.benar_soal(nod)
-	var opsi: Array = DataChatModul01.opsi_soal(nod)
+	var benar := _chat.benar_soal(nod)
+	var opsi: Array = _chat.opsi_soal(nod)
 	var teks_opsi := String(opsi[idx]) if idx >= 0 and idx < opsi.size() else ""
 	if not _baca_ulang:
 		_riwayat.append({"dari": "pemain", "teks": teks_opsi})
@@ -541,10 +558,10 @@ func _on_soal_ditekan(idx: int) -> void:
 		var berikut := _node_berikut_setelah_soal(String(nod.get("id", "")))
 		if String(nod.get("id", "")) == "l5" and not _latihan_selesai:
 			_latihan_selesai = true
-			langkah_selesai.emit("latihan", DataChatModul01.POIN_LATIHAN)
+			langkah_selesai.emit("latihan", _chat.POIN_LATIHAN)
 		if String(nod.get("id", "")) == "k1" and not _kuis_selesai:
 			_kuis_selesai = true
-			langkah_selesai.emit("kuis", DataChatModul01.POIN_KUIS)
+			langkah_selesai.emit("kuis", _chat.POIN_KUIS)
 		var puji := {"id": String(nod.get("id", "")) + "_benar", "tipe": "pesan", "teks": String(nod.get("benar", "")), "berikut": berikut}
 		_tampilkan_node(puji, teks_opsi)
 	else:
@@ -554,9 +571,9 @@ func _on_soal_ditekan(idx: int) -> void:
 
 
 func _node_berikut_setelah_soal(id: String) -> String:
-	var i := DataChatModul01.SPINE.find(id)
-	if i >= 0 and i + 1 < DataChatModul01.SPINE.size():
-		return DataChatModul01.SPINE[i + 1]
+	var i := _chat.SPINE.find(id)
+	if i >= 0 and i + 1 < _chat.SPINE.size():
+		return _chat.SPINE[i + 1]
 	return "penutup"
 
 
@@ -564,14 +581,14 @@ func _node_berikut_setelah_soal(id: String) -> String:
 func _on_terima_tugas() -> void:
 	if not _tugas_selesai:
 		_tugas_selesai = true
-		langkah_selesai.emit("tugas", DataChatModul01.POIN_TUGAS)
+		langkah_selesai.emit("tugas", _chat.POIN_TUGAS)
 	_bersihkan_pilihan()
 	_tambah_tombol_tutup()
 
 
 func _on_tutup_penutup() -> void:
 	if not _baca_ulang:
-		selesai.emit(DataChatModul01.POIN_TOTAL)
+		selesai.emit(_chat.POIN_TOTAL)
 		_simpan_kemajuan("")
 	_tutup()
 
