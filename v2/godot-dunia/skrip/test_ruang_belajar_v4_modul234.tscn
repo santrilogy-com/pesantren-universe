@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://skrip/test_ruang_belajar_v4_modul234.gd" id="1_rb_v4_m234"]
+
+[node name="TestRuangBelajarV4Modul234" type="Node"]
+script = ExtResource("1_rb_v4_m234")

@@ -93,6 +93,28 @@ func _ready() -> void:
 		await get_tree().process_frame
 		await get_tree().process_frame
 		_cek("Sentuh 5: ketuk tombol Belum -> node ulang u1", rb.node_saat_ini() == "u1")
+	# Modul 02 lewat SENTUH (dispatch _chat — port 22 Nov 23:05):
+	# buka ulang dengan save modul 2, ketuk gelembung -> n1.
+	mj.tutup_semua()
+	await get_tree().process_frame
+	var save2 := SantriSave.default_data()
+	save2["onboarding"] = {"modul": 2}
+	var papan2: Array = []
+	rb.papan_berubah.connect(func(judul: String, baris: PackedStringArray) -> void: papan2.append([judul, baris]))
+	mj.buka_ruang_belajar("Ust. Sanusi", save2)
+	for i in 5:
+		await get_tree().process_frame
+	_cek("Sentuh M02: panel terbuka modul 2 + papan NAHWU DASAR / Modul 02 + node p1 bicara", mj.panel_terbuka() == "ruang_belajar" and rb.node_saat_ini() == "p1" and rb.sedang_bicara() and papan2 == [["NAHWU DASAR", PackedStringArray(["Modul 02 — Isim Lebih Dalam"])]])
+	_cek("Sentuh M02: _chat = DataChatModul02 (dispatch per modul)", rb._chat == DataChatModul02)
+	var pusat2: Vector2 = rb._kotak_dialog.get_global_rect().get_center()
+	_ketuk_layar(pusat2)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_cek("Sentuh M02: ketuk gelembung saat bicara -> tampil penuh, node tetap p1", not rb.sedang_bicara() and rb.node_saat_ini() == "p1")
+	_ketuk_layar(pusat2)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_cek("Sentuh M02: ketuk gelembung setelah selesai -> lanjut ke n1", rb.node_saat_ini() == "n1")
 	mj.tutup_semua()
 	print("TES RUANG BELAJAR TEKS SENTUH: %d lulus, %d gagal" % [_lulus, _gagal])
 	get_tree().quit(0 if _gagal == 0 else 1)

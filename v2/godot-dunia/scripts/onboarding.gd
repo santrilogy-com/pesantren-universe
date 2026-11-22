@@ -70,7 +70,14 @@ class_name Onboarding
 ## Jumlah langkah §1A.
 const JUMLAH_LANGKAH := 7
 ## Jumlah modul Nahwu Dasar (§2.1: 30 misi + 4 tes = 420 poin).
+## NILAI INI JANGAN DIUBAH — dipakai clamp baca() + deskripsi
+## "x dari 30" (tes gate menegaskan "1 dari 30").
 const JUMLAH_MODUL := 30
+## Modul TERAKHIR Nahwu Dasar (§9 butir 20, DIKUNCI Mas 21 Nov):
+## Nahwu Dasar = 4 Bagian (Modul 01–04). Lulus tes Modul 04 =
+## hatam; ambang ini yang dipakai lulus_tes()/kembali_belajar(),
+## BUKAN JUMLAH_MODUL (Sinta, 22 Nov 23:05).
+const MODUL_TERAKHIR_NAHWU := 4
 ## Modul pertama (§1A langkah 5): Nahwu Dasar Bagian 1 Modul 01.
 const MODUL_PERTAMA := "Nahwu Dasar Bagian 1 — Modul 01 \"Mengenal Kata\""
 ## Tes kenaikan (§1A langkah 6 + §2.1): kuis 10 soal, lulus ≥8/10.
@@ -277,7 +284,7 @@ static func lulus_tes(save: Dictionary) -> int:
 	if int(ob["langkah"]) != 6:
 		return int(ob["langkah"])
 	ob["tes_lulus"] = int(ob["tes_lulus"]) + 1
-	if int(ob["modul"]) >= JUMLAH_MODUL:
+	if int(ob["modul"]) >= MODUL_TERAKHIR_NAHWU:
 		ob["selesai"] = true
 		ob["langkah"] = JUMLAH_LANGKAH
 		_tulis(save, ob)
@@ -317,7 +324,7 @@ static func kembali_belajar(save: Dictionary) -> int:
 	var ob := baca(save)
 	if bool(ob["selesai"]):
 		return JUMLAH_LANGKAH
-	if int(ob["modul"]) >= JUMLAH_MODUL:
+	if int(ob["modul"]) >= MODUL_TERAKHIR_NAHWU:
 		ob["selesai"] = true
 		ob["langkah"] = JUMLAH_LANGKAH
 		_tulis(save, ob)

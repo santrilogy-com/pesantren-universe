@@ -521,7 +521,7 @@ func _lanjut_pesan() -> void:
 		_emit_materi()
 	var berikut := String(nod.get("berikut", ""))
 	if berikut == "":
-		var i := _chat.SPINE.find(String(nod.get("id", "")))
+		var i: int = _chat.SPINE.find(String(nod.get("id", "")))
 		if i >= 0 and i + 1 < _chat.SPINE.size():
 			berikut = _chat.SPINE[i + 1]
 	if berikut == "":
@@ -571,7 +571,7 @@ func _on_soal_ditekan(idx: int) -> void:
 
 
 func _node_berikut_setelah_soal(id: String) -> String:
-	var i := _chat.SPINE.find(id)
+	var i: int = _chat.SPINE.find(id)
 	if i >= 0 and i + 1 < _chat.SPINE.size():
 		return _chat.SPINE[i + 1]
 	return "penutup"

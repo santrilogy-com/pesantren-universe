@@ -306,7 +306,7 @@ var _outfit_baris: Dictionary = {}
 # ATURAN: Eka menaikkan stempel ini tiap kali staging (N naik per
 # staging di hari yang sama, reset ke 1 tiap tanggal baru), SEBELUM
 # export — supaya stempel di HP Mas selalu = isi source yang di-stage.
-const BUILD_STAMP := "20261119-6"
+const BUILD_STAMP := "20261119-7"
 var _stempel_label: Label
 
 

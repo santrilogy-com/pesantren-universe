@@ -27,9 +27,10 @@ extends PanelContainer
 ## - "petunjuk" hanya tampil bila kunci itu ada di soal (bank tes
 ##   N1.T saat ini TIDAK punya petunjuk — hanya latihan yang punya;
 ##   mockup menampilkannya sebagai contoh).
-## - Bagian N2/N3/N4: bank soal BELUM ADA (A2 menunggu tashih) ->
-##   kartu "belum tersedia" + tombol Tutup; TIDAK mulai sesi kosong,
-##   TIDAK crash.
+## - Bagian N2/N3/N4: bank soal ADA sejak port Modul 02–04
+##   (Sinta, 22 Nov 23:05 — DataModul02/03/04.kuis_soal());
+##   kartu "belum tersedia" hanya untuk bagian di luar N1–N4
+##   (mis. Jurumiyah, belum ada bank).
 ## - Penutup oleh pemain (footer "Keluar", tombol "Tutup") meng-emit
 ##   ditutup; tutup() menutup diam-diam tanpa sinyal (untuk
 ##   penutupan programatik oleh main.gd).
@@ -129,8 +130,9 @@ func _ready() -> void:
 	kaki.add_child(chat_chip)
 
 
-## Tampilkan tes untuk satu Bagian ("N1".."N4"). N1 memakai
-## DataModul01.kuis_soal(); N2-N4 bank belum ada -> kartu
+## Tampilkan tes untuk satu Bagian ("N1".."N4"). Bank soal per
+## Bagian: N1 = DataModul01.kuis_soal(), N2 = DataModul02,
+## N3 = DataModul03, N4 = DataModul04; bagian lain -> kartu
 ## "belum tersedia". Panel hidden sebelum tampilkan() dipanggil.
 func tampilkan(bagian: String) -> void:
 	_bagian = bagian
@@ -143,8 +145,17 @@ func tampilkan(bagian: String) -> void:
 	_jawaban_benar_teks = ""
 	_bank_tersedia = false
 	_mesin = MesinKuis.new()
-	if _nomor_bagian(bagian) == 1:
-		var bank: Array = DataModul01.kuis_soal()
+	var bank: Array = []
+	match _nomor_bagian(bagian):
+		1:
+			bank = DataModul01.kuis_soal()
+		2:
+			bank = DataModul02.kuis_soal()
+		3:
+			bank = DataModul03.kuis_soal()
+		4:
+			bank = DataModul04.kuis_soal()
+	if not bank.is_empty():
 		if _mesin.mulai(bank, MesinKuis.JENIS_TES):
 			_bank_tersedia = true
 	visible = true

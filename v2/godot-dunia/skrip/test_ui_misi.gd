@@ -218,15 +218,24 @@ func _ready() -> void:
 	_cek("Tes: 10 salah -> gagal + skor 0", tes2_hasil.get("lulus", true) == false and int(tes2_hasil.get("skor", -1)) == 0)
 	_cek("Tes: kartu BELUM LULUS tampil", _ada_teks(tes2, "BELUM LULUS"))
 	tes2.tutup()
-	# Bank belum tersedia (N2-N4).
+	# Bank N2 ADA (port Modul 02, Sinta 22 Nov 23:05 — DataModul02).
+	# Pertanyaan dirender buat_label_campur (satu label PER KATA) —
+	# jadi yang dicek teks utuh opsi A soal 1 (Button).
 	var tes3 := TesKenaikanUI.new()
 	add_child(tes3)
 	tes3.tampilkan("N2")
-	_cek("Tes: N2 bank belum ada -> 'belum tersedia' tanpa crash", tes3.visible and _ada_teks(tes3, "belum tersedia"))
+	_cek("Tes: N2 bank ADA -> opsi A soal 1 tampil (bukan 'belum tersedia')", tes3.visible and _ada_teks(tes3, "Makrifat menunjuk yang sudah tertentu") and not _ada_teks(tes3, "belum tersedia"))
 	tes3.tutup()
+	# Bank belum tersedia (N5 = Jurumiyah, belum ada).
+	var tes4 := TesKenaikanUI.new()
+	add_child(tes4)
+	tes4.tampilkan("N5")
+	_cek("Tes: N5 bank belum ada -> 'belum tersedia' tanpa crash", tes4.visible and _ada_teks(tes4, "belum tersedia"))
+	tes4.tutup()
 	tes.queue_free()
 	tes2.queue_free()
 	tes3.queue_free()
+	tes4.queue_free()
 
 	# ---------- H. PanelMisiUI ----------
 	var pm := PanelMisiUI.new()

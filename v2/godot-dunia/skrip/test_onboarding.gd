@@ -116,6 +116,20 @@ func _ready() -> void:
 	sh["onboarding"] = obh
 	_cek("Lulus tes modul terakhir -> hatam (7)", Onboarding.lulus_tes(sh) == 7)
 	_cek("Hatam tercatat selesai", Onboarding.selesai(sh))
+	# Ambang hatam BARU (Sinta, 22 Nov 23:05 — §9 butir 20): Nahwu
+	# Dasar = 4 Bagian (Modul 01–04); lulus tes Modul 04 = hatam.
+	var sh4 := _save_baru()
+	var obh4 := Onboarding.baca(sh4)
+	obh4["langkah"] = 6
+	obh4["modul"] = 4
+	sh4["onboarding"] = obh4
+	_cek("Lulus tes Modul 04 -> hatam (7) — Nahwu Dasar = 4 Bagian", Onboarding.lulus_tes(sh4) == 7 and Onboarding.selesai(sh4))
+	var sh5 := _save_baru()
+	var obh5 := Onboarding.baca(sh5)
+	obh5["langkah"] = 6
+	obh5["modul"] = 3
+	sh5["onboarding"] = obh5
+	_cek("Lulus tes Modul 03 -> kembali belajar (5), modul 4 (bukan hatam)", Onboarding.lulus_tes(sh5) == 5 and int(Onboarding.baca(sh5)["modul"]) == 4 and not Onboarding.selesai(sh5))
 	var mh := Onboarding.misi_aktif(sh)
 	_cek("Misi aktif hatam judul Hatam", String(mh["judul"]).begins_with("Hatam"))
 	_cek("Maju setelah hatam tetap 7", Onboarding.maju(sh) == 7)
